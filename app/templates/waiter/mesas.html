@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Mesas - Panel Mesero - ConectaResto MVP{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <div class="panel-header">
+        <h1>{{ panel_title }}</h1>
+        <p class="panel-subtitle">Rol: <strong>{{ user.rol }}</strong> · Usuario: {{ user.username }}</p>
+    </div>
+
+    <div class="flash" id="flash-mesas" style="display:none;"></div>
+
+    <div class="mesas-actions" style="margin-bottom: 24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+        <div class="field" style="margin-bottom:0;">
+            <label for="mesa-id">Número de mesa</label>
+            <input type="number" id="mesa-id" min="1" placeholder="Ej: 1" />
+        </div>
+        <button class="btn btn-primary" id="abrir-servicio">Abrir servicio</button>
+    </div>
+
+    <h2 style="margin-bottom:16px; color:#2c3e50;">Servicios activos</h2>
+    <div id="servicios-list">
+        <p style="color:#666;">Cargando servicios...</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const flashEl = document.getElementById('flash-mesas');
+    const serviciosList = document.getElementById('servicios-list');
+    const abrirBtn = document.getElementById('abrir-servicio');
+    const mesaInput = document.getElementById('mesa-id');
+
+    function showFlash(message, type) {
+        flashEl.style.display = 'block';
+        flashEl.className = 'flash ' + type;
+        flashEl.textContent = message;
+    }
+
+    function hideFlash() {
+        flashEl.style.display = 'none';
+    }
+
+    async function fetchJson(url, options = {}) {
+        const headers = { 'X-CSRF-Token': csrfToken, 'Content-Type': 'application/json', ...options.headers };
+        const response = await fetch(url, { ...options, headers });
+        const data = await response.json().catch(() => ({}));
+        return { ok: response.ok, status: response.status, data };
+    }
+
+    async function loadServicios() {
+        hideFlash();
+        const res = await fetchJson('/servicios?estado=ACTIVO');
+        if (!res.ok) {
+            serviciosList.innerHTML = '<p style="color:#c0392b;">Error al cargar servicios.</p>';
+            return;
+        }
+        const servicios = res.data.data || res.data || [];
+        if (servicios.length === 0) {
+            serviciosList.innerHTML = '<p style="color:#666;">No hay servicios activos.</p>';
+            return;
+        }
+        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Mesa</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Pedidos</th></tr></thead><tbody>';
+        for (const s of servicios) {
+            html += '<tr><td style="padding:8px;border-bottom:1px solid #eee;">#' + s.mesa_id + '</td><td style="padding:8px;border-bottom:1px solid #eee;"><span style="background:#e8f6f3;color:#117a65;padding:4px 8px;border-radius:4px;font-size:0.85rem;">' + s.estado + '</span></td><td style="padding:8px;border-bottom:1px solid #eee;">';
+            if (s.pedidos && s.pedidos.length > 0) {
+                html += '<ul style="margin:0;padding-left:16px;">';
+                for (const p of s.pedidos) {
+                    html += '<li>Pedido #' + p.id + ' - ' + p.estado + ' (' + p.estado_preparacion + ') - Total: $' + p.total + '</li>';
+                }
+                html += '</ul>';
+            } else {
+                html += '<span style="color:#999;">Sin pedidos</span>';
+            }
+            html += '</td></tr>';
+        }
+        html += '</tbody></table>';
+        serviciosList.innerHTML = html;
+    }
+
+    abrirBtn.addEventListener('click', async function() {
+        hideFlash();
+        const mesaId = parseInt(mesaInput.value, 10);
+        if (!mesaId || mesaId <= 0) {
+            showFlash('Ingresa un número de mesa válido', 'error');
+            return;
+        }
+        const res = await fetchJson('/servicios', {
+            method: 'POST',
+            body: JSON.stringify({ mesa_id: mesaId }),
+        });
+        if (res.ok) {
+            showFlash('Servicio abierto para la mesa #' + mesaId, '');
+            flashEl.style.backgroundColor = '#e8f6f3';
+            flashEl.style.color = '#117a65';
+            flashEl.style.border = '1px solid #a9dfbf';
+            mesaInput.value = '';
+            loadServicios();
+        } else {
+            showFlash(res.data.error || 'Error al abrir servicio', 'error');
+        }
+    });
+
+    loadServicios();
+});
+</script>
+{% endblock %}
