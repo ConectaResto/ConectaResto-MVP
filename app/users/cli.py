@@ -3,7 +3,10 @@ from flask.cli import with_appcontext
 
 from app.extensions import db
 from app.models import Rol, Usuario
-from app.users.service import ensure_roles, get_rol_by_name
+from app.models.category import Category
+from app.models.mesa import Mesa
+from app.models.product import Product
+from app.users.service import ensure_roles, get_rol_by_name, seed_demo
 
 
 @click.command("init-roles")
@@ -43,3 +46,21 @@ def create_admin(username, email, password):
     db.session.add(user)
     db.session.commit()
     click.echo(f"Usuario administrador creado: {username}")
+
+
+@click.command("seed-demo")
+@click.option(
+    "--password",
+    envvar="SEED_PASSWORD",
+    prompt="Contraseña para usuarios de demostración",
+    hide_input=True,
+    confirmation_prompt=True,
+)
+@with_appcontext
+def seed_demo_cmd(password):
+    """Crea datos de demostración: roles, usuarios, mesas, categorías y productos."""
+    if not click.confirm("¿Está seguro de crear datos de demostración en esta base de datos?"):
+        click.echo("Operación cancelada.")
+        return
+    seed_demo(password=password)
+    click.echo("Datos de demostración creados exitosamente.")
