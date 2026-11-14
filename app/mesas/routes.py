@@ -1,5 +1,7 @@
-from flask import Blueprint, request
+from flask import Blueprint, current_app, request, Response
 from sqlalchemy.exc import IntegrityError
+
+import segno
 
 from app.auth.decorators import roles_required
 from app.common.responses import error_response, success_response
@@ -106,3 +108,16 @@ def update_table(mesa_id):
     for key, value in data.items():
         setattr(mesa, key, value)
     return save(mesa)
+
+
+@mesas_bp.get("/admin/mesas/<int:mesa_id>/qr.svg")
+@roles_required("ADMIN")
+def qr_table(mesa_id):
+    mesa = db.get_or_404(Mesa, mesa_id)
+    base_url = current_app.config.get("PUBLIC_BASE_URL")
+    if not base_url:
+        return error_response("PUBLIC_BASE_URL no configurada", 500)
+    menu_url = f"{base_url.rstrip('/')}/public/mesas/{mesa.public_token}/menu"
+    qr = segno.make(menu_url)
+    svg = qr.svg_inline(scale=4, border=1)
+    return Response(svg, mimetype="image/svg+xml")

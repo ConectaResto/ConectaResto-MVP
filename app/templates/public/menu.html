@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menú público - Mesa {{ mesa.numero }}</title>
+</head>
+<body>
+<h1>Menú público</h1>
+<p>Mesa <strong>{{ mesa.numero }}</strong></p>
+<nav>
+  <p><a href="{{ url_for('categories.list_all') }}">Categorías</a></p>
+  <p><a href="{{ url_for('products.list_all_products') }}">Productos disponibles</a></p>
+</nav>
+<p><small>ConectaResto - menú público sin autenticación.</small></p>
+</body>
+</html>
