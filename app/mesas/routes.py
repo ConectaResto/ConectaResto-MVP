@@ -1,5 +1,7 @@
-from flask import Blueprint, request
+from flask import Blueprint, current_app, request, Response
 from sqlalchemy.exc import IntegrityError
+
+import segno
 
 from app.auth.decorators import roles_required
 from app.common.responses import error_response, success_response
@@ -7,14 +9,17 @@ from app.extensions import db
 from app.models import Mesa
 
 
-mesas_bp = Blueprint("mesas", __name__, url_prefix="/admin/mesas")
+mesas_bp = Blueprint("mesas", __name__)
 
 
-def serialize(mesa):
-    return {
+def serialize(mesa, *, include_public_token=True):
+    data = {
         "id": mesa.id, "numero": mesa.numero,
-        "estado": mesa.estado, "public_token": mesa.public_token,
+        "estado": mesa.estado,
     }
+    if include_public_token:
+        data["public_token"] = mesa.public_token
+    return data
 
 
 def validate(data, creating=False):
@@ -42,14 +47,38 @@ def save(mesa, status_code=200):
     return success_response(serialize(mesa), status_code=status_code)
 
 
-@mesas_bp.get("")
+@mesas_bp.get("/mesas")
+@roles_required("WAITER")
+def consultar_mesas():
+    consulta = db.select(Mesa).order_by(Mesa.numero)
+    for campo in ("id", "numero"):
+        valor = request.args.get(campo)
+        if valor is not None:
+            try:
+                valor = int(valor)
+            except ValueError:
+                return error_response(f"{campo} debe ser un entero positivo valido", 400)
+            if not 0 < valor <= 2147483647:
+                return error_response(f"{campo} debe ser un entero positivo valido", 400)
+            consulta = consulta.where(getattr(Mesa, campo) == valor)
+    estado = request.args.get("estado")
+    if estado is not None:
+        error = validate({"estado": estado})
+        if error:
+            return error_response(error, 400)
+        consulta = consulta.where(Mesa.estado == estado)
+    mesas = db.session.execute(consulta).scalars()
+    return success_response([serialize(mesa, include_public_token=False) for mesa in mesas])
+
+
+@mesas_bp.get("/admin/mesas")
 @roles_required("ADMIN")
 def list_tables():
     mesas = db.session.execute(db.select(Mesa).order_by(Mesa.numero)).scalars()
     return success_response([serialize(mesa) for mesa in mesas])
 
 
-@mesas_bp.post("")
+@mesas_bp.post("/admin/mesas")
 @roles_required("ADMIN")
 def create_table():
     data = request.get_json(silent=True)
@@ -61,14 +90,14 @@ def create_table():
     return save(mesa, 201)
 
 
-@mesas_bp.get("/<int:mesa_id>")
+@mesas_bp.get("/admin/mesas/<int:mesa_id>")
 @roles_required("ADMIN")
 def get_table(mesa_id):
     mesa = db.get_or_404(Mesa, mesa_id)
     return success_response(serialize(mesa))
 
 
-@mesas_bp.patch("/<int:mesa_id>")
+@mesas_bp.patch("/admin/mesas/<int:mesa_id>")
 @roles_required("ADMIN")
 def update_table(mesa_id):
     mesa = db.get_or_404(Mesa, mesa_id)
@@ -79,3 +108,16 @@ def update_table(mesa_id):
     for key, value in data.items():
         setattr(mesa, key, value)
     return save(mesa)
+
+
+@mesas_bp.get("/admin/mesas/<int:mesa_id>/qr.svg")
+@roles_required("ADMIN")
+def qr_table(mesa_id):
+    mesa = db.get_or_404(Mesa, mesa_id)
+    base_url = current_app.config.get("PUBLIC_BASE_URL")
+    if not base_url:
+        return error_response("PUBLIC_BASE_URL no configurada", 500)
+    menu_url = f"{base_url.rstrip('/')}/public/mesas/{mesa.public_token}/menu"
+    qr = segno.make(menu_url)
+    svg = qr.svg_inline(scale=4, border=1)
+    return Response(svg, mimetype="image/svg+xml")

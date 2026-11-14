@@ -7,8 +7,8 @@ Las escrituras utilizan la protección CSRF global y el encabezado
 | Método y ruta | Entrada | Rol |
 |---|---|---|
 | POST /servicios | `{"mesa_id": 1}` | WAITER |
-| GET /servicios | Filtro opcional `estado=ACTIVO` o `CERRADO` | WAITER |
-| GET /servicios/<id> | Servicio con todos sus pedidos | WAITER |
+| GET /servicios | Filtro opcional `estado=ACTIVO` o `CERRADO` | WAITER, CASHIER |
+| GET /servicios/<id> | Servicio con todos sus pedidos | WAITER, CASHIER |
 | POST /servicios/<id>/pedidos | `{"items": [{"producto_id": 7, "cantidad": 2}]}` | WAITER |
 | GET /pedidos | Filtro opcional `estado` | WAITER, KITCHEN |
 | GET /pedidos/<id> | Pedido y detalles con precios históricos | WAITER, KITCHEN |
@@ -16,6 +16,26 @@ Las escrituras utilizan la protección CSRF global y el encabezado
 | POST /pedidos/<id>/enviar-cocina | Cuerpo vacío o `{}` | WAITER |
 | PATCH /pedidos/<id>/preparacion | `{"estado": "EN_COCINA"}` o `LISTO_PARA_SERVIR` | KITCHEN |
 | POST /pedidos/<id>/entregar | Cuerpo vacío o `{}` | WAITER |
+
+## Consultas operativas
+
+`GET /mesas` permite a WAITER consultar `id`, `numero` y `estado`, ordenados
+por número visible. Los filtros opcionales `id`, `numero` y `estado` se
+combinan mediante AND. Los dos primeros son enteros positivos hasta
+2147483647. Los estados admitidos son DISPONIBLE, OCUPADA y CERRADA.
+Un filtro inválido devuelve 400. Una búsqueda sin coincidencias devuelve
+200 con `data: []`. Esta consulta utiliza la sesión existente y devuelve
+exclusivamente esos tres campos de mesa. Las rutas `/admin/mesas` conservan
+su contrato y permiso ADMIN.
+
+`GET /servicios?estado=ACTIVO` permite a CASHIER descubrir servicios sin
+conocer sus IDs. Reutiliza la misma respuesta del listado de WAITER,
+incluidos `pedidos`, `total` decimal como cadena y `pago` (objeto o null).
+Sin filtro se listan todos los servicios. También se admite estado CERRADO.
+El frontend puede distinguir servicios activos con pago registrado para
+cerrarlos, servicios sin pago con pedidos entregados y total positivo para
+cobrarlos, y servicios vacíos para cerrarlos sin pago. Las operaciones de
+caja vuelven a validar el estado al ejecutarse.
 
 Cocina consulta exclusivamente pedidos con preparación distinta de `NO_ENVIADO`.
 Cualquier WAITER puede autorizar y operar pedidos. ADMIN tiene los permisos

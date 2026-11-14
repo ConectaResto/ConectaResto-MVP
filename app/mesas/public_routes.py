@@ -1,8 +1,8 @@
-"""Public table lookup and order creation through the shared order service."""
+"""Public table lookup, menu and order creation through the shared order service."""
 
 import re
 
-from flask import Blueprint, request, url_for
+from flask import Blueprint, render_template, request, url_for
 
 from app.common.responses import error_response, success_response
 from app.extensions import db
@@ -11,7 +11,10 @@ from app.pedidos.routes import responder_error
 from app.pedidos.service import PedidoError, crear_pedido
 
 
-public_mesas_bp = Blueprint("public_mesas", __name__, url_prefix="/public/mesas")
+public_mesas_bp = Blueprint(
+    "public_mesas", __name__, url_prefix="/public/mesas",
+    template_folder="../templates",
+)
 
 
 def _find_public_table(token, *, lock=False):
@@ -36,6 +39,14 @@ def get_public_table(token):
             "products": url_for("products.list_all_products"),
         },
     })
+
+
+@public_mesas_bp.get("/<token>/menu")
+def public_menu(token):
+    mesa = _find_public_table(token)
+    if mesa is None:
+        return error_response("Mesa no encontrada", 404)
+    return render_template("public/menu.html", mesa=mesa)
 
 
 @public_mesas_bp.post("/<token>/pedidos")

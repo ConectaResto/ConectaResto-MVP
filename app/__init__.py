@@ -10,6 +10,7 @@ def create_app(config_name=None):
 
     config_class = get_config(config_name)
     app.config.from_object(config_class)
+    app.config["PUBLIC_BASE_URL"] = os.environ.get("PUBLIC_BASE_URL")
     if config_class is get_config("production") and (
         not app.config["SECRET_KEY"]
         or app.config["SECRET_KEY"] == "dev-secret-key-change-in-production"
