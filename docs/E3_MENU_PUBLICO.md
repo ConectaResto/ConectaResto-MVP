@@ -124,12 +124,12 @@ Los GET internos conservan sus permisos. La semántica CSRF y los bloqueos
 de base de datos existentes se mantienen; concurrencia MySQL no se acredita
 con SQLite.
 
-No hay generador QR en requirements.txt ni bibliotecas `qrcode` o `segno`
-instaladas en el entorno existente. Por decisión recibida, el QR gráfico
-permanece pendiente, sin dependencias nuevas.
-La URL base/dominio sigue pendiente según el plan; no se deriva del Host
-recibido ni se envían tokens a generadores externos. Un enlace relativo no
-equivale a una imagen QR escaneable.
+El QR gráfico se genera localmente con `segno` (en `requirements.txt`),
+sin servicios externos. La URL base se configura con `PUBLIC_BASE_URL`
+(obligatoria, sin predeterminado `localhost`; no se deriva del `Host` ni se
+envían tokens a generadores externos). Véase `docs/QR_PUBLICO.md`,
+`app/mesas/routes.py`, `app/mesas/public_routes.py` y
+`tests/test_qr_publico.py`.
 
 No se modifica ningún modelo, migración, frontend ni servicio de pedidos.
 No se instalan dependencias nuevas.
