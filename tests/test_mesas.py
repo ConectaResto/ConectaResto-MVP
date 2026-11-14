@@ -162,3 +162,70 @@ def test_token_collision_returns_conflict(client, admin_headers, monkeypatch):
     assert client.post("/admin/mesas", json={"numero": 1}, headers=admin_headers).status_code == 201
     assert client.post("/admin/mesas", json={"numero": 2}, headers=admin_headers).status_code == 409
     assert len(client.get("/admin/mesas").json["data"]) == 1
+
+
+def test_listar_mesas_waiter_listado_ordenado_sin_public_token(client):
+    waiter_headers = authenticate(client, "WAITER")
+    from app.models import Mesa
+    db.session.add_all([Mesa(numero=3), Mesa(numero=1), Mesa(numero=2)])
+    db.session.commit()
+    response = client.get("/mesas", headers=waiter_headers)
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert len(data) == 3
+    assert [m["numero"] for m in data] == [1, 2, 3]
+    for m in data:
+        assert set(m.keys()) == {"id", "numero", "estado"}
+        assert "public_token" not in m
+
+
+def test_listar_mesas_waiter_filtros(client):
+    waiter_headers = authenticate(client, "WAITER")
+    from app.models import Mesa
+    db.session.add_all([
+        Mesa(numero=1, estado="DISPONIBLE"),
+        Mesa(numero=2, estado="OCUPADA"),
+        Mesa(numero=3, estado="OCUPADA"),
+    ])
+    db.session.commit()
+    response = client.get("/mesas?estado=OCUPADA", headers=waiter_headers)
+    assert response.status_code == 200
+    assert [m["numero"] for m in response.json["data"]] == [2, 3]
+    response = client.get("/mesas?numero=2", headers=waiter_headers)
+    assert response.status_code == 200
+    assert len(response.json["data"]) == 1
+    assert response.json["data"][0]["numero"] == 2
+    response = client.get("/mesas?estado=OCUPADA&numero=3", headers=waiter_headers)
+    assert response.status_code == 200
+    assert len(response.json["data"]) == 1
+    assert response.json["data"][0]["numero"] == 3
+
+
+@pytest.mark.parametrize("params", [
+    {"id": "0"}, {"id": "-1"}, {"id": "abc"}, {"id": "2147483648"},
+    {"numero": "0"}, {"numero": "-1"}, {"numero": "abc"}, {"numero": "2147483648"},
+    {"estado": "INVALIDO"},
+])
+def test_listar_mesas_waiter_filtros_invalidos_devuelven_400(client, params):
+    waiter_headers = authenticate(client, "WAITER")
+    response = client.get("/mesas", query_string=params, headers=waiter_headers)
+    assert response.status_code == 400
+
+
+def test_listar_mesas_waiter_sin_coincidencias_devuelve_200_vacio(client):
+    waiter_headers = authenticate(client, "WAITER")
+    response = client.get("/mesas?estado=OCUPADA", headers=waiter_headers)
+    assert response.status_code == 200
+    assert response.json["data"] == []
+
+
+@pytest.mark.parametrize("rol", [None, "ADMIN", "KITCHEN", "CASHIER"])
+def test_listar_mesas_waiter_permisos(client, rol):
+    if rol:
+        headers = authenticate(client, rol)
+    else:
+        headers = {"X-CSRF-Token": client.get("/auth/csrf").json["data"]["csrf_token"]}
+    expected = 403 if rol else 401
+    response = client.get("/mesas", headers=headers)
+    assert response.status_code == expected
+    assert response.json["success"] is False

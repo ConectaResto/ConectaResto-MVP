@@ -49,6 +49,9 @@ document.getElementById('login-form').addEventListener('submit', async function(
         });
 
         if (response.ok) {
+            document.querySelectorAll('.flash.error').forEach(function(el) {
+                el.remove();
+            });
             const data = await response.json();
             window.location.href = data.data.rol === 'ADMIN'
                 ? '/admin'
@@ -59,12 +62,18 @@ document.getElementById('login-form').addEventListener('submit', async function(
                 : '/cashier';
         } else {
             const err = await response.json();
+            document.querySelectorAll('.flash.error').forEach(function(el) {
+                el.remove();
+            });
             const hint = document.createElement('p');
             hint.className = 'flash error';
             hint.textContent = err.error || 'Error al iniciar sesión';
             form.insertAdjacentElement('afterend', hint);
         }
     } catch (err) {
+        document.querySelectorAll('.flash.error').forEach(function(el) {
+            el.remove();
+        });
         const hint = document.createElement('p');
         hint.className = 'flash error';
         hint.textContent = 'Error de conexión al iniciar sesión';

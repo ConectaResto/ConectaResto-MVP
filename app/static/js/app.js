@@ -77,9 +77,12 @@ async function verifyPanelAccess() {
 
             // Si estamos en un panel, verificar que el rol coincida
             const currentPath = window.location.pathname;
-            const expectedPath = rolToPath(userRol);
-            if (expectedPath && !currentPath.startsWith(expectedPath)) {
-                window.location.href = expectedPath;
+            const validPaths = rolPaths(userRol);
+            const isValidPath = validPaths.some(function(p) {
+                return currentPath === p || currentPath.startsWith(p + '/');
+            });
+            if (!isValidPath) {
+                window.location.href = validPaths[0];
             }
         } else {
             // No autenticado
@@ -101,4 +104,20 @@ function rolToPath(rol) {
         'CASHIER': '/cashier',
     };
     return map[rol] || null;
+}
+
+
+function rolPaths(rol) {
+    const lower = rol.toLowerCase();
+    const base = '/' + lower;
+    const panel = '/panel/' + lower;
+    const paths = [base, panel];
+
+    if (lower === 'waiter') {
+        paths.push('/waiter/mesas', '/waiter/pedidos');
+    } else if (lower === 'kitchen') {
+        paths.push('/kitchen/pedidos');
+    }
+
+    return paths;
 }
