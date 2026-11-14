@@ -305,3 +305,109 @@ def test_waiter_pedidos_requires_auth(client):
 def test_kitchen_pedidos_requires_auth(client):
     response = client.get("/kitchen/pedidos", follow_redirects=False)
     assert response.status_code in (200, 302)
+
+
+# ---------- Regresión: bucle de redirecciones en paneles directos ----------
+def test_admin_can_access_panel_admin_direct(client, admin_user):
+    login(client, "admin1", "admin-pass")
+    response = client.get("/panel/admin", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Panel ADMIN" in html
+
+
+def test_waiter_can_access_panel_waiter_direct(client, waiter_user):
+    login(client, "mesero1", "waiter-pass")
+    response = client.get("/panel/waiter", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Panel Mesero" in html
+
+
+def test_kitchen_can_access_panel_kitchen_direct(client, kitchen_user):
+    login(client, "cocina1", "kitchen-pass")
+    response = client.get("/panel/kitchen", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Panel Cocina" in html
+
+
+def test_cashier_can_access_panel_cashier_direct(client, cashier_user):
+    login(client, "caja1", "cashier-pass")
+    response = client.get("/panel/cashier", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Panel Caja" in html
+
+
+def test_admin_cannot_access_panel_waiter(client, admin_user):
+    login(client, "admin1", "admin-pass")
+    response = client.get("/panel/waiter", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_waiter_cannot_access_panel_admin(client, waiter_user):
+    login(client, "mesero1", "waiter-pass")
+    response = client.get("/panel/admin", follow_redirects=True)
+    assert response.status_code == 403
+
+
+# ---------- Regresión: aislamiento de roles entre paneles ----------
+def test_admin_cannot_access_panel_kitchen(client, admin_user):
+    login(client, "admin1", "admin-pass")
+    response = client.get("/panel/kitchen", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_admin_cannot_access_panel_cashier(client, admin_user):
+    login(client, "admin1", "admin-pass")
+    response = client.get("/panel/cashier", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_waiter_cannot_access_panel_kitchen(client, waiter_user):
+    login(client, "mesero1", "waiter-pass")
+    response = client.get("/panel/kitchen", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_waiter_cannot_access_panel_cashier(client, waiter_user):
+    login(client, "mesero1", "waiter-pass")
+    response = client.get("/panel/cashier", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_kitchen_cannot_access_panel_admin(client, kitchen_user):
+    login(client, "cocina1", "kitchen-pass")
+    response = client.get("/panel/admin", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_kitchen_cannot_access_panel_waiter(client, kitchen_user):
+    login(client, "cocina1", "kitchen-pass")
+    response = client.get("/panel/waiter", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_kitchen_cannot_access_panel_cashier(client, kitchen_user):
+    login(client, "cocina1", "kitchen-pass")
+    response = client.get("/panel/cashier", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_cashier_cannot_access_panel_admin(client, cashier_user):
+    login(client, "caja1", "cashier-pass")
+    response = client.get("/panel/admin", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_cashier_cannot_access_panel_waiter(client, cashier_user):
+    login(client, "caja1", "cashier-pass")
+    response = client.get("/panel/waiter", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_cashier_cannot_access_panel_kitchen(client, cashier_user):
+    login(client, "caja1", "cashier-pass")
+    response = client.get("/panel/kitchen", follow_redirects=True)
+    assert response.status_code == 403
