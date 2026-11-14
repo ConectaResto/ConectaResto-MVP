@@ -110,7 +110,7 @@ def update_table(mesa_id):
     return save(mesa)
 
 
-@mesas_bp.get("/<int:mesa_id>/qr.svg")
+@mesas_bp.get("/admin/mesas/<int:mesa_id>/qr.svg")
 @roles_required("ADMIN")
 def qr_table(mesa_id):
     mesa = db.get_or_404(Mesa, mesa_id)
