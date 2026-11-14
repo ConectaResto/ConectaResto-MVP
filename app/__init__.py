@@ -35,4 +35,7 @@ def create_app(config_name=None):
     app.register_blueprint(auth_bp)
     app.before_request(protect_csrf)
 
+    from app.mesas.routes import mesas_bp
+    app.register_blueprint(mesas_bp)
+
     return app
