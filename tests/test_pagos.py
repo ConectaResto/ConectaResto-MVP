@@ -1,5 +1,7 @@
 import pytest
 from decimal import Decimal
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
 
 from app import create_app
 from app.extensions import db
@@ -14,6 +16,9 @@ from app.models.usuario import Usuario
 @pytest.fixture
 def servicio(app):
     with app.app_context():
+        # Habilitar foreign_keys en SQLite (no aplicadas por defecto)
+        db.session.execute(text("PRAGMA foreign_keys=ON"))
+
         mesa = Mesa(numero=1, estado="DISPONIBLE")
         db.session.add(mesa)
         db.session.commit()
@@ -105,13 +110,11 @@ def test_un_servicio_no_puede_tener_dos_pagos(app, servicio):
             importe=Decimal("20.00"),
         )
         db.session.add(pago2)
-        try:
+        with pytest.raises(IntegrityError):
             db.session.commit()
-            assert False, "Debería haberse rechazado el segundo pago"
-        except Exception:
-            db.session.rollback()
+        db.session.rollback()
 
-        # Verificar que solo existe un pago
+        # Verificar que solo existe un pago y no se persitió el segundo
         pagos = db.session.query(Pago).filter_by(servicio_id=servicio.id).all()
         assert len(pagos) == 1
         assert pagos[0].importe == Decimal("30.00")
@@ -131,11 +134,13 @@ def test_pago_requiere_servicio_existente(app, servicio):
             importe=Decimal("10.00"),
         )
         db.session.add(pago)
-        try:
+        with pytest.raises(IntegrityError):
             db.session.commit()
-            assert False, "Debería haberse rechazado el pago con servicio inexistente"
-        except Exception:
-            db.session.rollback()
+        db.session.rollback()
+
+        # Verificar que el pago rechazado no persistió
+        pagos = db.session.query(Pago).filter_by(servicio_id=99999).all()
+        assert len(pagos) == 0
 
 
 def test_importe_no_puede_ser_nulo(app, servicio):
@@ -152,11 +157,13 @@ def test_importe_no_puede_ser_nulo(app, servicio):
             importe=None,
         )
         db.session.add(pago)
-        try:
+        with pytest.raises(IntegrityError):
             db.session.commit()
-            assert False, "Debería haberse rechazado el pago sin importe"
-        except Exception:
-            db.session.rollback()
+        db.session.rollback()
+
+        # Verificar que el pago rechazado no persistió
+        pagos = db.session.query(Pago).filter_by(servicio_id=servicio.id).all()
+        assert len(pagos) == 0
 
 
 def test_importe_debe_ser_positivo(app, servicio):
@@ -167,17 +174,31 @@ def test_importe_debe_ser_positivo(app, servicio):
             username="mesero_test"
         ).one()
 
-        pago = Pago(
+        # Importe cero debe ser rechazado
+        pago_cero = Pago(
             servicio_id=servicio.id,
             registrado_por_id=registrado_por.id,
             importe=Decimal("0.00"),
         )
-        db.session.add(pago)
-        try:
+        db.session.add(pago_cero)
+        with pytest.raises(IntegrityError):
             db.session.commit()
-            assert False, "Debería haberse rechazado el importe cero"
-        except Exception:
-            db.session.rollback()
+        db.session.rollback()
+
+        # Importe negativo debe ser rechazado
+        pago_negativo = Pago(
+            servicio_id=servicio.id,
+            registrado_por_id=registrado_por.id,
+            importe=Decimal("-10.00"),
+        )
+        db.session.add(pago_negativo)
+        with pytest.raises(IntegrityError):
+            db.session.commit()
+        db.session.rollback()
+
+        # Verificar que ninguno de los dos pagos rechazados persistió
+        pagos = db.session.query(Pago).filter_by(servicio_id=servicio.id).all()
+        assert len(pagos) == 0
 
 
 def test_pago_requiere_registrado_por(app, servicio):
@@ -191,8 +212,10 @@ def test_pago_requiere_registrado_por(app, servicio):
             importe=Decimal("10.00"),
         )
         db.session.add(pago)
-        try:
+        with pytest.raises(IntegrityError):
             db.session.commit()
-            assert False, "Debería haberse rechazado el pago sin registrado_por_id"
-        except Exception:
-            db.session.rollback()
+        db.session.rollback()
+
+        # Verificar que el pago rechazado no persistió
+        pagos = db.session.query(Pago).filter_by(servicio_id=servicio.id).all()
+        assert len(pagos) == 0
