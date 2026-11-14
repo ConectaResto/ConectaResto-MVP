@@ -2,13 +2,44 @@ from datetime import datetime, timezone
 
 from app.catalog.service import get_product
 from app.extensions import db
-from app.models import DetallePedido, Pedido, Servicio, Usuario
+from app.models import DetallePedido, Mesa, Pago, Pedido, Servicio, Usuario
 
 
 class PedidoError(ValueError):
     def __init__(self, message, status_code=400):
         super().__init__(message)
         self.status_code = status_code
+
+
+def bloquear_servicio(servicio_id):
+    """Serializa pedidos y caja en MySQL y SQLite dentro de la transacción actual."""
+    if type(servicio_id) is not int or not 0 < servicio_id <= 2147483647:
+        raise PedidoError("Servicio no encontrado", 404)
+    mesa_id = db.session.execute(
+        db.select(Servicio.mesa_id).where(Servicio.id == servicio_id)
+    ).scalar_one_or_none()
+    if mesa_id is None:
+        raise PedidoError("Servicio no encontrado", 404)
+    # SQLite ignora FOR UPDATE. Esta escritura obtiene su bloqueo antes de leer.
+    # MySQL mantiene el bloqueo de la fila hasta commit o rollback.
+    # Mesa antes de servicio conserva el orden del adaptador público y la apertura.
+    db.session.execute(
+        db.update(Mesa).where(Mesa.id == mesa_id)
+        .values(estado=Mesa.estado, updated_at=Mesa.updated_at)
+        .execution_options(synchronize_session=False)
+    )
+    db.session.execute(
+        db.update(Servicio).where(Servicio.id == servicio_id)
+        .values(estado=Servicio.estado, updated_at=Servicio.updated_at)
+        .execution_options(synchronize_session=False)
+    )
+    servicio = db.session.execute(
+        db.select(Servicio).where(Servicio.id == servicio_id)
+        .with_for_update().execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+    if servicio is None:
+        raise PedidoError("Servicio no encontrado", 404)
+    return servicio
 
 
 def crear_pedido(servicio_id, items, *, origen, creado_por_id=None):
@@ -32,14 +63,14 @@ def crear_pedido(servicio_id, items, *, origen, creado_por_id=None):
             raise PedidoError("Un pedido publico no tiene usuario creador")
         if not isinstance(items, list) or not items:
             raise PedidoError("items debe contener al menos un producto")
-        servicio = db.session.execute(
-            db.select(Servicio).where(Servicio.id == servicio_id)
-            .with_for_update().execution_options(populate_existing=True)
-        ).scalar_one_or_none()
-        if servicio is None:
-            raise PedidoError("Servicio no encontrado", 404)
+        servicio = bloquear_servicio(servicio_id)
         if servicio.estado != "ACTIVO":
             raise PedidoError("El servicio no esta activo", 409)
+        pago = db.session.execute(
+            db.select(Pago.id).where(Pago.servicio_id == servicio.id).with_for_update()
+        ).first()
+        if pago is not None:
+            raise PedidoError("El servicio ya tiene un pago registrado", 409)
         detalles = []
         for item in items:
             if not isinstance(item, dict) or set(item) != {"producto_id", "cantidad"}:
