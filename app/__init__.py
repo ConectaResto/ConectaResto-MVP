@@ -38,6 +38,9 @@ def create_app(config_name=None):
     from app.mesas.routes import mesas_bp
     app.register_blueprint(mesas_bp)
 
+    from app.mesas.public_routes import public_mesas_bp
+    app.register_blueprint(public_mesas_bp)
+
     from app.users.routes import users_bp
     app.register_blueprint(users_bp)
 

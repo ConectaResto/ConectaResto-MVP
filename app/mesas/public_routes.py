@@ -1,4 +1,4 @@
-"""Public table lookup. Blueprint registration is pending integration."""
+"""Read-only public table lookup using the existing catalog endpoints."""
 
 import re
 

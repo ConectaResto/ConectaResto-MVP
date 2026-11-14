@@ -1,14 +1,13 @@
 import pytest
 
 from app.extensions import db
-from app.mesas.public_routes import public_mesas_bp
 from app.models import Category, Mesa, Product
 
 
 @pytest.fixture
 def public_client(app):
-    # Production registration belongs to Escritorio Kilo 1; factory unchanged.
-    app.register_blueprint(public_mesas_bp)
+    # Exercise the actual factory registration; do not register routes in tests.
+    assert "public_mesas" in app.blueprints
     return app.test_client()
 
 
