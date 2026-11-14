@@ -41,7 +41,7 @@ def crear_servicio():
 
 
 @servicios_bp.get("")
-@roles_required("WAITER")
+@roles_required("WAITER", "CASHIER")
 def listar_servicios():
     consulta = db.select(Servicio).order_by(Servicio.id)
     estado = request.args.get("estado")

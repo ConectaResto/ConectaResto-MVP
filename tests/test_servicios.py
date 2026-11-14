@@ -116,7 +116,9 @@ def test_permisos_servicios(client, mesa, rol):
         ("POST", "/servicios", {"mesa_id": mesa.id}),
         ("POST", "/servicios/1/pedidos", {"items": []}),
     ]:
-        codigo = 404 if rol == "CASHIER" and method == "GET" and path == "/servicios/1" else expected
+        codigo = expected
+        if rol == "CASHIER" and method == "GET":
+            codigo = 200 if path == "/servicios" else 404
         assert client.open(path, method=method, json=data, headers=headers).status_code == codigo
     assert Servicio.query.count() == 0
 
@@ -175,3 +177,40 @@ def test_aperturas_concurrentes_crean_un_solo_servicio(tmp_path, monkeypatch):
         with app.app_context():
             db.session.remove()
             db.engine.dispose()
+
+
+def test_listar_servicios_cashier_ver_datos_reales(client, mesa):
+    _, wheaders = autenticar(client, "WAITER", "mesero")
+    creado = client.post("/servicios", json={"mesa_id": mesa.id}, headers=wheaders)
+    assert creado.status_code == 201
+    servicio_id = creado.json["data"]["id"]
+
+    _, cheaders = autenticar(client, "CASHIER", "cajero")
+    response = client.get("/servicios", headers=cheaders)
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert len(data) == 1
+    servicio = data[0]
+    assert servicio["id"] == servicio_id
+    assert servicio["mesa_id"] == mesa.id
+    assert servicio["estado"] == "ACTIVO"
+    assert servicio["pedidos"] == []
+    assert servicio["total"] == "0.00"
+    assert servicio["pago"] is None
+
+
+def test_consultar_servicio_cashier_ver_datos_reales(client, mesa):
+    _, wheaders = autenticar(client, "WAITER", "mesero")
+    creado = client.post("/servicios", json={"mesa_id": mesa.id}, headers=wheaders)
+    servicio_id = creado.json["data"]["id"]
+
+    _, cheaders = autenticar(client, "CASHIER", "cajero")
+    response = client.get(f"/servicios/{servicio_id}", headers=cheaders)
+    assert response.status_code == 200
+    servicio = response.json["data"]
+    assert servicio["id"] == servicio_id
+    assert servicio["mesa_id"] == mesa.id
+    assert servicio["estado"] == "ACTIVO"
+    assert servicio["total"] == "0.00"
+    assert servicio["pago"] is None
+    assert "pedidos" in servicio
