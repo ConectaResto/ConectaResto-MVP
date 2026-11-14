@@ -23,4 +23,6 @@ def create_app(config_name=None):
     from app.frontend.routes import frontend_bp
     app.register_blueprint(frontend_bp)
 
+    from app import models  # noqa: F401  Registra modelos con SQLAlchemy
+
     return app
