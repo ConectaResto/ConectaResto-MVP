@@ -1,12 +1,13 @@
 """Category administration blueprint.
 
-NOT registered in app/__init__.py. It must remain unregistered until the
-A-02 authorization mechanism is integrated, so no administrative endpoint
-is exposed unprotected.
+Administrative endpoints (POST, PATCH, DELETE) are protected with
+roles_required("ADMIN") from the A-02 authorization module.
+Public GET endpoints remain unprotected.
 """
 
 from flask import Blueprint, request
 
+from app.auth.decorators import roles_required
 from app.catalog.service import (
     CategoryAlreadyExists,
     CategoryNotFound,
@@ -38,6 +39,7 @@ def list_all():
 
 
 @categories_bp.post("/categories")
+@roles_required("ADMIN")
 def create():
     """Create a new active category."""
     data = request.get_json(silent=True) or {}
@@ -45,7 +47,7 @@ def create():
         category = create_category(data)
     except CategoryAlreadyExists as exc:
         return error_response(str(exc), 409)
-    return success_response(data=category.to_dict(), message="Categoría creada"), 201
+    return success_response(data=category.to_dict(), message="Categoria creada", status_code=201)
 
 
 @categories_bp.get("/categories/<int:category_id>")
@@ -53,11 +55,12 @@ def get_one(category_id):
     """Get a single active category by id."""
     category = get_category(category_id, include_inactive=False)
     if category is None:
-        return error_response("Categoría no encontrada", 404)
+        return error_response("Categoria no encontrada", 404)
     return success_response(data=category.to_dict())
 
 
 @categories_bp.patch("/categories/<int:category_id>")
+@roles_required("ADMIN")
 def update_one(category_id):
     """Update a category's name and/or description."""
     data = request.get_json(silent=True) or {}
@@ -71,6 +74,7 @@ def update_one(category_id):
 
 
 @categories_bp.delete("/categories/<int:category_id>")
+@roles_required("ADMIN")
 def deactivate_one(category_id):
     """Soft-delete a category (sets is_active = False)."""
     try:
@@ -80,8 +84,8 @@ def deactivate_one(category_id):
     except CategoryHasActiveProducts as exc:
         return error_response(str(exc), 409)
     if category is None:
-        return error_response("Categoría no encontrada o ya inactiva", 404)
-    return success_response(message="Categoría desactivada")
+        return error_response("Categoria no encontrada o ya inactiva", 404)
+    return success_response(message="Categoria desactivada")
 
 
 @products_bp.get("/products")
@@ -93,8 +97,9 @@ def list_all_products():
 
 
 @products_bp.post("/products")
+@roles_required("ADMIN")
 def create_product_route():
-    """Create a new available product."""
+    """Create a new active and available product."""
     data = request.get_json(silent=True) or {}
     try:
         product = create_product(data)
@@ -102,7 +107,7 @@ def create_product_route():
         return error_response(str(exc), 409)
     except ProductNotFound as exc:
         return error_response(str(exc), 404)
-    return success_response(data=product.to_dict(), message="Producto creado"), 201
+    return success_response(data=product.to_dict(), message="Producto creado", status_code=201)
 
 
 @products_bp.get("/products/<int:product_id>")
@@ -115,6 +120,7 @@ def get_one_product(product_id):
 
 
 @products_bp.patch("/products/<int:product_id>")
+@roles_required("ADMIN")
 def update_one_product(product_id):
     """Update a product's fields."""
     data = request.get_json(silent=True) or {}
@@ -128,8 +134,9 @@ def update_one_product(product_id):
 
 
 @products_bp.delete("/products/<int:product_id>")
+@roles_required("ADMIN")
 def deactivate_one_product(product_id):
-    """Soft-delete a product (sets disponible = False)."""
+    """Soft-delete a product (sets is_active = False)."""
     try:
         product = deactivate_product(product_id)
     except ProductNotFound as exc:

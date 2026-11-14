@@ -6,6 +6,7 @@ not registered in the Flask application (see app/__init__.py) so that no
 administrative endpoint is exposed unprotected.
 """
 
+from decimal import Decimal, InvalidOperation
 from sqlalchemy.exc import IntegrityError
 from app.extensions import db
 from app.models.category import Category
@@ -36,6 +37,41 @@ def _is_duplicate_category_name_error(exc: IntegrityError) -> bool:
             return True
 
     return False
+
+
+def _parse_decimal_price(value) -> Decimal:
+    """Convierte un valor de entrada a Decimal sin pasar por float.
+
+    Rechaza valores que no sean numericos validos.
+    """
+    if value is None or value == "":
+        raise ValueError("El precio es obligatorio")
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError, TypeError):
+        raise ValueError("El precio debe ser un numero valido")
+
+
+def _parse_bool(value, field_name: str) -> bool:
+    """Valida un booleano estrictamente.
+
+    Acepta True/False, 1/0, "true"/"false" (case-insensitive).
+    Rechaza cualquier otro valor, incluido "false" como string no vacio.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        if value in (0, 1):
+            return bool(value)
+        raise ValueError(f"{field_name} debe ser un booleano valido")
+    if isinstance(value, str):
+        lower = value.strip().lower()
+        if lower in ("true", "1", "yes", "on"):
+            return True
+        if lower in ("false", "0", "no", "off"):
+            return False
+        raise ValueError(f"{field_name} debe ser un booleano valido")
+    raise ValueError(f"{field_name} debe ser un booleano valido")
 
 
 class CategoryAlreadyExists(ValueError):
@@ -73,7 +109,7 @@ def create_category(data: dict) -> Category:
 
     existing = Category.find_by_name_case_insensitive(name)
     if existing is not None:
-        raise CategoryAlreadyExists("Ya existe una categoría con ese nombre")
+        raise CategoryAlreadyExists("Ya existe una categoria con ese nombre")
 
     category = Category(name=name, description=description, is_active=True)
     db.session.add(category)
@@ -82,7 +118,7 @@ def create_category(data: dict) -> Category:
     except IntegrityError as exc:
         db.session.rollback()
         if _is_duplicate_category_name_error(exc):
-            raise CategoryAlreadyExists("Ya existe una categoría con ese nombre")
+            raise CategoryAlreadyExists("Ya existe una categoria con ese nombre")
         raise
     return category
 
@@ -104,7 +140,7 @@ def update_category(category_id: int, data: dict, include_inactive: bool = False
     """
     category = get_category(category_id, include_inactive=include_inactive)
     if category is None:
-        raise CategoryNotFound("Categoría no encontrada")
+        raise CategoryNotFound("Categoria no encontrada")
 
     if "name" in data and data["name"] is not None:
         name = str(data["name"]).strip()
@@ -114,7 +150,7 @@ def update_category(category_id: int, data: dict, include_inactive: bool = False
             name, exclude_id=category.id
         )
         if existing is not None:
-            raise CategoryAlreadyExists("Ya existe una categoría con ese nombre")
+            raise CategoryAlreadyExists("Ya existe una categoria con ese nombre")
         category.name = name
 
     if "description" in data:
@@ -125,7 +161,7 @@ def update_category(category_id: int, data: dict, include_inactive: bool = False
     except IntegrityError as exc:
         db.session.rollback()
         if _is_duplicate_category_name_error(exc):
-            raise CategoryAlreadyExists("Ya existe una categoría con ese nombre")
+            raise CategoryAlreadyExists("Ya existe una categoria con ese nombre")
         raise
     return category
 
@@ -134,21 +170,24 @@ def deactivate_category(category_id: int):
     """Soft-delete a category by setting is_active = False.
 
     Returns None if the category does not exist or is already inactive.
+    Blocks deactivation if the category has products that are active
+    and available (is_active=True and is_available=True).
     """
     category = Category.query.filter(Category.id == category_id).first()
     if category is None:
-        raise CategoryNotFound("Categoría no encontrada")
+        raise CategoryNotFound("Categoria no encontrada")
     if not category.is_active:
         return None
-    # Bloquear desactivación si hay productos activos (regla de B-01.2)
+    # Bloquear desactivacion si hay productos activos (is_active=True)
+    # independientemente de is_available
     active_products = (
         Product.query.filter(Product.categoria_id == category_id)
-        .filter(Product.disponible.is_(True))
+        .filter(Product.is_active.is_(True))
         .count()
     )
     if active_products > 0:
         raise CategoryHasActiveProducts(
-            "No se puede desactivar la categoría: tiene productos activos asociados"
+            "No se puede desactivar la categoria: tiene productos activos asociados"
         )
 
     category.is_active = False
@@ -176,29 +215,37 @@ class ProductNotFound(ValueError):
 def list_products(include_inactive: bool = False, categoria_id: int | None = None):
     """Return products, optionally including inactive ones.
 
+    Public queries (include_inactive=False) return only products that are:
+    - is_active = True (not logically deleted)
+    - is_available = True (temporarily available)
+    - associated with an active category (Category.is_active = True)
+
     If categoria_id is provided, only products of that category are returned.
-    Public queries must pass include_inactive=False so only available
-    products are visible.
     """
-    query = Product.query
+    query = Product.query.join(Category, Product.categoria_id == Category.id)
     if not include_inactive:
-        query = query.filter(Product.disponible.is_(True))
+        query = query.filter(
+            Product.is_active.is_(True),
+            Product.is_available.is_(True),
+            Category.is_active.is_(True),
+        )
     if categoria_id is not None:
         query = query.filter(Product.categoria_id == categoria_id)
     return query.order_by(Product.created_at.asc()).all()
 
 
 def create_product(data: dict) -> Product:
-    """Create a new available product.
+    """Create a new active and available product.
 
     Validates that the category exists and is active.
     Name uniqueness within a category is validated ignoring case.
+    Price is handled as Decimal to preserve monetary precision.
     """
     name = data.get("name")
     description = data.get("description")
     price = data.get("price")
     categoria_id = data.get("categoria_id")
-    disponible = data.get("disponible", True)
+    is_available = data.get("is_available", True)
 
     if not name or not str(name).strip():
         raise ProductAlreadyExists("El nombre es obligatorio")
@@ -209,18 +256,23 @@ def create_product(data: dict) -> Product:
         raise ProductAlreadyExists("El precio es obligatorio")
 
     try:
-        price = float(price)
-    except (TypeError, ValueError):
-        raise ProductAlreadyExists("El precio debe ser un número válido")
+        price_decimal = _parse_decimal_price(price)
+    except ValueError as exc:
+        raise ProductAlreadyExists(str(exc))
 
-    if price < 0:
+    if price_decimal < 0:
         raise ProductAlreadyExists("El precio no puede ser negativo")
+
+    try:
+        is_available_bool = _parse_bool(is_available, "is_available")
+    except ValueError as exc:
+        raise ProductAlreadyExists(str(exc))
 
     categoria = Category.query.filter(Category.id == categoria_id).first()
     if categoria is None:
-        raise ProductNotFound("La categoría especificada no existe")
+        raise ProductNotFound("La categoria especificada no existe")
     if not categoria.is_active:
-        raise ProductNotFound("La categoría especificada no está activa")
+        raise ProductNotFound("La categoria especificada no esta activa")
 
     existing = (
         Product.query.filter(Product.categoria_id == categoria_id)
@@ -229,15 +281,16 @@ def create_product(data: dict) -> Product:
     )
     if existing is not None:
         raise ProductAlreadyExists(
-            "Ya existe un producto con ese nombre en esta categoría"
+            "Ya existe un producto con ese nombre en esta categoria"
         )
 
     product = Product(
         name=name,
         description=description,
-        price=price,
+        price=price_decimal,
         categoria_id=categoria_id,
-        disponible=bool(disponible),
+        is_active=True,
+        is_available=is_available_bool,
     )
     db.session.add(product)
     db.session.commit()
@@ -246,18 +299,27 @@ def create_product(data: dict) -> Product:
 
 def get_product(product_id: int, include_inactive: bool = False):
     """Return a product by id. Returns None if not found (or inactive
-    when include_inactive is False)."""
-    query = Product.query.filter(Product.id == product_id)
+    or unavailable when include_inactive is False).
+
+    Public queries also require the associated category to be active.
+    """
+    query = Product.query.join(Category, Product.categoria_id == Category.id)
+    query = query.filter(Product.id == product_id)
     if not include_inactive:
-        query = query.filter(Product.disponible.is_(True))
+        query = query.filter(
+            Product.is_active.is_(True),
+            Product.is_available.is_(True),
+            Category.is_active.is_(True),
+        )
     return query.first()
 
 
 def update_product(product_id: int, data: dict, include_inactive: bool = False):
     """Update an existing product's fields.
 
-    Updatable fields: name, description, price, categoria_id, disponible.
-    Validates name uniqueness within category ignoring case.
+    Updatable fields: name, description, price, categoria_id, is_active,
+    is_available. Validates name uniqueness within category ignoring case.
+    Price is handled as Decimal.
     """
     product = get_product(product_id, include_inactive=include_inactive)
     if product is None:
@@ -275,7 +337,7 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
         )
         if existing is not None:
             raise ProductAlreadyExists(
-                "Ya existe un producto con ese nombre en esta categoría"
+                "Ya existe un producto con ese nombre en esta categoria"
             )
         product.name = name
 
@@ -284,40 +346,50 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
 
     if "price" in data and data["price"] is not None:
         try:
-            price = float(data["price"])
-        except (TypeError, ValueError):
-            raise ProductAlreadyExists("El precio debe ser un número válido")
-        if price < 0:
+            price_decimal = _parse_decimal_price(data["price"])
+        except ValueError as exc:
+            raise ProductAlreadyExists(str(exc))
+        if price_decimal < 0:
             raise ProductAlreadyExists("El precio no puede ser negativo")
-        product.price = price
+        product.price = price_decimal
 
     if "categoria_id" in data and data["categoria_id"] is not None:
         nueva_categoria = Category.query.filter(
             Category.id == data["categoria_id"]
         ).first()
         if nueva_categoria is None:
-            raise ProductNotFound("La categoría especificada no existe")
+            raise ProductNotFound("La categoria especificada no existe")
         if not nueva_categoria.is_active:
-            raise ProductNotFound("La categoría especificada no está activa")
+            raise ProductNotFound("La categoria especificada no esta activa")
         product.categoria_id = nueva_categoria.id
 
-    if "disponible" in data:
-        product.disponible = bool(data["disponible"])
+    if "is_active" in data:
+        try:
+            product.is_active = _parse_bool(data["is_active"], "is_active")
+        except ValueError as exc:
+            raise ProductAlreadyExists(str(exc))
+
+    if "is_available" in data:
+        try:
+            product.is_available = _parse_bool(data["is_available"], "is_available")
+        except ValueError as exc:
+            raise ProductAlreadyExists(str(exc))
 
     db.session.commit()
     return product
 
 
 def deactivate_product(product_id: int):
-    """Soft-delete a product by setting disponible = False.
+    """Soft-delete a product by setting is_active = False.
 
+    This is logical deactivation, not a change of temporary availability.
     Returns None if the product does not exist or is already inactive.
     """
     product = Product.query.filter(Product.id == product_id).first()
     if product is None:
         raise ProductNotFound("Producto no encontrado")
-    if not product.disponible:
+    if not product.is_active:
         return None
-    product.disponible = False
+    product.is_active = False
     db.session.commit()
     return product
