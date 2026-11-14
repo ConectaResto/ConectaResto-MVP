@@ -38,4 +38,11 @@ def create_app(config_name=None):
     from app.mesas.routes import mesas_bp
     app.register_blueprint(mesas_bp)
 
+    from app.users.routes import users_bp
+    app.register_blueprint(users_bp)
+
+    from app.users.cli import init_roles, create_admin
+    app.cli.add_command(init_roles)
+    app.cli.add_command(create_admin)
+
     return app
