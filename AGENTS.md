@@ -72,4 +72,15 @@ Al terminar cada tarea, informar:
 
 Mantener `PLAN_DE_TRABAJO_MVP.md` y cualquier otra documentación coherente con el código real. Si el código cambia de forma que afecta al plan, actualizar la documentación correspondiente antes de considerar la tarea terminada.
 
+## 15. Equipos de desarrollo asistidos por IA
+
+El proyecto se desarrolla con dos equipos asistidos por IA sobre el mismo repositorio remoto:
+
+- **Equipo A:** Desarrollador A + ChatGPT A + Kilo + Codex.
+- **Equipo B:** Desarrollador B + ChatGPT B + Kilo.
+
+Cada equipo trabaja en su propio computador y en ramas independientes. No se modifica directamente `main`. La integración se realiza mediante Pull Requests con aprobación conjunta.
+
+Antes de iniciar cualquier tarea, consultar `docs/COORDINACION_EQUIPOS_IA.md` para conocer las reglas de coordinación, separación de responsabilidades y protección de la rama `main`. Los cambios de arquitectura, contratos compartidos, dependencias y reglas de negocio requieren consulta previa entre equipos.
+
 ---
