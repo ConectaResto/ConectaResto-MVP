@@ -2,6 +2,7 @@ from app.models.base import BaseModel
 from app.models.category import Category
 from app.models.detalle_pedido import DetallePedido
 from app.models.mesa import Mesa
+from app.models.pago import Pago
 from app.models.pedido import Pedido
 from app.models.product import Product
 from app.models.rol import Rol
@@ -18,4 +19,5 @@ __all__ = [
     "Servicio",
     "Pedido",
     "DetallePedido",
+    "Pago",
 ]
