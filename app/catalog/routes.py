@@ -130,6 +130,8 @@ def update_one_product(product_id):
         return error_response(str(exc), 404)
     except ProductAlreadyExists as exc:
         return error_response(str(exc), 409)
+    except ValueError as exc:
+        return error_response(str(exc), 400)
     return success_response(data=product.to_dict())
 
 

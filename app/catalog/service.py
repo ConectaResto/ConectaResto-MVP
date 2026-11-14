@@ -321,14 +321,16 @@ def get_product(product_id: int, include_inactive: bool = False):
 def update_product(product_id: int, data: dict, include_inactive: bool = False):
     """Update an existing product's fields.
 
-    Updatable fields: name, description, price, categoria_id, is_active,
-    is_available. Validates name uniqueness within category ignoring case.
+    Updatable fields: name, description, price, categoria_id, is_available.
+    Validates name uniqueness within category ignoring case.
     Price is handled as Decimal.
 
     For administrative updates (include_inactive=False), the product is
     located regardless of is_available, so an ADMIN can reactivate
     availability on a product that is temporarily unavailable. Public
     queries still filter by is_available=True via get_product().
+
+    is_active no puede modificarse mediante PATCH.
     """
     # Buscar producto sin filtrar por is_available, para permitir
     # reactivar disponibilidad en productos no disponibles.
@@ -343,16 +345,34 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
     if product is None:
         raise ProductNotFound("Producto no encontrado")
 
+    # is_active no puede modificarse mediante PATCH; solo se cambia
+    # mediante DELETE (desactivacion logica).
+    if "is_active" in data:
+        raise ValueError("No se puede modificar is_active mediante PATCH")
+
     # Fase 1: validar todos los campos antes de aplicar cualquier cambio.
     # Esto evita cambios parciales en la sesion si alguna validacion falla.
     changes = {}
+
+    # Determinar la categoria de destino para la comprobacion de unicidad
+    # de nombre. Si se cambia la categoria, validar que exista y este activa.
+    target_categoria_id = product.categoria_id
+    if "categoria_id" in data and data["categoria_id"] is not None:
+        nueva_categoria = Category.query.filter(
+            Category.id == data["categoria_id"]
+        ).first()
+        if nueva_categoria is None:
+            raise ProductNotFound("La categoria especificada no existe")
+        if not nueva_categoria.is_active:
+            raise ProductNotFound("La categoria especificada no esta activa")
+        target_categoria_id = nueva_categoria.id
 
     if "name" in data and data["name"] is not None:
         name = str(data["name"]).strip()
         if not name:
             raise ProductAlreadyExists("El nombre es obligatorio")
         existing = (
-            Product.query.filter(Product.categoria_id == product.categoria_id)
+            Product.query.filter(Product.categoria_id == target_categoria_id)
             .filter(db.func.lower(Product.name) == db.func.lower(name))
             .filter(Product.id != product.id)
             .first()
@@ -376,14 +396,7 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
         changes["price"] = price_decimal
 
     if "categoria_id" in data and data["categoria_id"] is not None:
-        nueva_categoria = Category.query.filter(
-            Category.id == data["categoria_id"]
-        ).first()
-        if nueva_categoria is None:
-            raise ProductNotFound("La categoria especificada no existe")
-        if not nueva_categoria.is_active:
-            raise ProductNotFound("La categoria especificada no esta activa")
-        changes["categoria_id"] = nueva_categoria.id
+        changes["categoria_id"] = target_categoria_id
 
     if "is_active" in data:
         try:

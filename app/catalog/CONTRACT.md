@@ -67,15 +67,17 @@ Errores: 404 si no existe, no esta disponible o su categoria esta inactiva.
 
 ### PATCH /products/<int:id>
 Actualiza campos de un producto. Requiere rol ADMIN.
-Campos actualizables: name, description, price, categoria_id, is_active,
-is_available. Un producto inactivo (is_active=False) puede actualizarse
-mediante PATCH para cambiar is_available de False a True.
+Campos actualizables: name, description, price, categoria_id, is_available.
+El campo is_active no puede modificarse mediante PATCH; solo cambia
+mediante DELETE (desactivacion logica). Un producto inactivo
+(is_active=False) puede actualizarse mediante PATCH para cambiar
+is_available de False a True.
 Entrada: `{"name": "string|null", "description": "string|null", "price":
-"string|null", "categoria_id": "int|null", "is_active": "boolean|null",
-"is_available": "boolean|null"}`
+"string|null", "categoria_id": "int|null", "is_available": "boolean|null"}`
 Respuesta: `{"success": true, "data": {...}}`
-Errores: 401 sin autenticacion, 403 sin rol ADMIN, 404 si no existe, 409 si
-el nombre ya existe en la categoria o el precio es invalido.
+Errores: 401 sin autenticacion, 403 sin rol ADMIN, 400 si se intenta
+modificar is_active, 404 si no existe, 409 si el nombre ya existe en la
+categoria o el precio es invalido.
 
 ### DELETE /products/<int:id>
 Desactivacion logica: establece `is_active = false`. Requiere rol ADMIN.
@@ -113,10 +115,14 @@ FK a categories.id), `is_active` (boolean, default true),
   a categorias activas.
 - No se puede desactivar una categoria que tenga al menos un producto con
   `is_active=True`.
-- `is_active` representa desactivacion logica; `is_available` representa
-  disponibilidad temporal. `PATCH` puede cambiar `is_available` pero no
-  reactiva `is_active` (eso solo se hace con `DELETE` revertido o actualizacion
-  administrativa directa).
+- `is_active` representa el estado logico del producto; la desactivacion
+  logica se realiza mediante DELETE. Un producto desactivado
+  (`is_active=False`) no puede reactivarse en B-01.
+- `is_available` representa disponibilidad temporal y puede cambiarse
+  mediante PATCH, incluida la reactivacion de `False` a `True` para un
+  ADMIN. Reactivar disponibilidad no reactiva `is_active`; son estados
+  independientes. Un producto con `is_active=False` no se consulta en
+  endpoints publicos aunque `is_available=True`.
 - Los precios se manejan internamente como `Decimal` y se serializan como
   cadena JSON (ej. `"25.50"`) para preservar precision.
 - `NaN`, `Infinity` y `-Infinity` no son precios validos.

@@ -336,8 +336,9 @@ def test_update_product_is_available(app):
         assert updated.is_available is False
 
 
-def test_update_product_is_active_manually(app):
-    """is_active puede actualizarse directamente via PATCH (para administracion)."""
+def test_update_product_is_active_rejected(app):
+    """is_active no puede modificarse mediante PATCH (desactivacion logica
+    solo via DELETE)."""
     with app.app_context():
         categoria = create_category({"name": "Bebidas"})
         created = create_product({
@@ -346,13 +347,15 @@ def test_update_product_is_active_manually(app):
             "categoria_id": categoria.id,
             "is_active": True,
         })
-        updated = update_product(
-            created.id,
-            {"is_active": False},
-            include_inactive=True,
-        )
-        assert updated.is_active is False
-        assert updated.is_available is True  # disponible no se toca
+        original_is_active = created.is_active
+        with pytest.raises(ValueError):
+            update_product(
+                created.id,
+                {"is_active": False},
+                include_inactive=False,
+            )
+        # El producto no debe cambiar
+        assert created.is_active == original_is_active
 
 
 def test_update_product_reactivate_is_available(app):
@@ -516,6 +519,8 @@ def test_create_product_is_available_false_string(app):
 
 
 def test_update_product_invalid_is_active(app):
+    """is_active no puede modificarse mediante PATCH, cualquier valor
+    debe rechazar con ValueError (HTTP 400)."""
     with app.app_context():
         categoria = create_category({"name": "Bebidas"})
         created = create_product({
@@ -523,12 +528,115 @@ def test_update_product_invalid_is_active(app):
             "price": "10.00",
             "categoria_id": categoria.id,
         })
-        with pytest.raises(ProductAlreadyExists):
+        original_is_active = created.is_active
+        with pytest.raises(ValueError):
             update_product(
                 created.id,
                 {"is_active": "maybe"},
                 include_inactive=True,
             )
+        assert created.is_active == original_is_active
+
+
+def test_update_product_atomic_invalid_boolean(app):
+    """Boolean invalido en is_available no debe aplicar cambios parciales."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        created = create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": categoria.id,
+            "is_available": True,
+        })
+        original_available = created.is_available
+        original_name = created.name
+
+        with pytest.raises(ProductAlreadyExists):
+            update_product(
+                created.id,
+                {
+                    "name": "Nuevo Nombre",
+                    "is_available": "maybe",
+                },
+                include_inactive=False,
+            )
+
+        assert created.name == original_name
+        assert created.is_available == original_available
+
+
+# ---------- Unicidad al cambiar nombre y categoria simultaneamente ----------
+
+def test_update_product_change_name_and_categoria_duplicate(app):
+    """Cambiar nombre y categoria simultaneamente donde otro producto ya
+    tiene ese nombre en la categoria de destino debe rechazar la actualizacion."""
+    with app.app_context():
+        cat1 = create_category({"name": "Bebidas"})
+        cat2 = create_category({"name": "Entradas"})
+        create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": cat1.id,
+        })
+        producto = create_product({
+            "name": "Agua",
+            "price": "5.00",
+            "categoria_id": cat2.id,
+        })
+
+        # Intentar cambiar nombre a "Coca Cola" y categoria a cat1,
+        # donde ya existe un producto con ese nombre en cat1
+        with pytest.raises(ProductAlreadyExists):
+            update_product(
+                producto.id,
+                {
+                    "name": "Coca Cola",
+                    "categoria_id": cat1.id,
+                },
+                include_inactive=False,
+            )
+
+        # El producto no debe haber cambiado
+        assert producto.name == "Agua"
+        assert producto.categoria_id == cat2.id
+
+
+def test_update_product_change_name_and_categoria_atomic(app):
+    """Cambiar nombre y categoria con nombre duplicado en destino:
+    ningun cambio parcial debe quedar pendiente."""
+    with app.app_context():
+        cat1 = create_category({"name": "Bebidas"})
+        cat2 = create_category({"name": "Entradas"})
+        create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": cat1.id,
+        })
+        producto = create_product({
+            "name": "Agua",
+            "price": "5.00",
+            "categoria_id": cat2.id,
+            "description": "Desc original",
+        })
+        original_name = producto.name
+        original_categoria_id = producto.categoria_id
+        original_description = producto.description
+
+        with pytest.raises(ProductAlreadyExists):
+            update_product(
+                producto.id,
+                {
+                    "name": "Coca Cola",
+                    "categoria_id": cat1.id,
+                    "description": "Nueva Desc",
+                },
+                include_inactive=False,
+            )
+
+        # Ningun cambio parcial debe haberse aplicado
+        assert producto.name == original_name
+        assert producto.categoria_id == original_categoria_id
+        assert producto.description == original_description
 
 
 # ---------- Price serialization ----------
@@ -872,3 +980,69 @@ def test_category_post_with_csrf_succeeds(client, admin_user):
         headers={"X-CSRF-Token": token},
     )
     assert resp.status_code == 201
+
+
+# ---------- is_active no se puede modificar via PATCH ----------
+
+def test_update_product_is_active_rejected(app):
+    """PATCH con is_active debe rechazar con ValueError (HTTP 400)."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        created = create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": categoria.id,
+            "is_active": True,
+        })
+        original_is_active = created.is_active
+        with pytest.raises(ValueError):
+            update_product(
+                created.id,
+                {"is_active": False},
+                include_inactive=False,
+            )
+        # El producto no debe cambiar
+        assert created.is_active == original_is_active
+
+
+def test_product_patch_is_active_returns_400(client, admin_user, app):
+    """PATCH /products/<id> con is_active debe devolver HTTP 400."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        created = create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": categoria.id,
+        })
+        product_id = created.id
+    login(client, "admin1", "admin-pass")
+    token = csrf_token(client)
+    resp = client.patch(
+        f"/products/{product_id}",
+        json={"is_active": False},
+        headers={"X-CSRF-Token": token},
+    )
+    assert resp.status_code == 400
+
+
+def test_product_patch_is_available_allowed(client, admin_user, app):
+    """PATCH /products/<id> con is_available debe seguir funcionando."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        created = create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": categoria.id,
+            "is_available": True,
+        })
+        product_id = created.id
+    login(client, "admin1", "admin-pass")
+    token = csrf_token(client)
+    resp = client.patch(
+        f"/products/{product_id}",
+        json={"is_available": False},
+        headers={"X-CSRF-Token": token},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["data"]["is_available"] is False
