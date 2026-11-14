@@ -78,7 +78,7 @@ async function verifyPanelAccess() {
             // Si estamos en un panel, verificar que el rol coincida
             const currentPath = window.location.pathname;
             const expectedPath = rolToPath(userRol);
-            if (expectedPath && currentPath !== expectedPath) {
+            if (expectedPath && !currentPath.startsWith(expectedPath)) {
                 window.location.href = expectedPath;
             }
         } else {

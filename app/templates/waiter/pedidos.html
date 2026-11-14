@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Pedidos - Panel Mesero - ConectaResto MVP{% endblock %}
+
+{% block content %}
+<section class="panel">
+    <div class="panel-header">
+        <h1>{{ panel_title }}</h1>
+        <p class="panel-subtitle">Rol: <strong>{{ user.rol }}</strong> · Usuario: {{ user.username }}</p>
+    </div>
+
+    <div class="flash" id="flash-pedidos" style="display:none;"></div>
+
+    <div class="pedidos-actions" style="margin-bottom:24px; display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+        <div style="flex:1; min-width:260px;">
+            <h3 style="margin-bottom:12px; color:#2c3e50;">Nuevo pedido</h3>
+            <div class="field" style="margin-bottom:10px;">
+                <label for="servicio-id">Servicio activo</label>
+                <select id="servicio-id"></select>
+            </div>
+            <div class="field" style="margin-bottom:10px; display:flex; gap:8px; align-items:flex-end;">
+                <div style="flex:1;">
+                    <label for="producto-id">Producto</label>
+                    <select id="producto-id"></select>
+                </div>
+                <div style="flex:0.3;">
+                    <label for="cantidad">Cant.</label>
+                    <input type="number" id="cantidad" min="1" value="1" style="width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:6px; font-size:1rem;" />
+                </div>
+                <button class="btn btn-primary" id="add-item" style="padding:10px 16px;">Agregar</button>
+            </div>
+            <div id="items-list" style="margin-top:10px; font-size:0.9rem; color:#555;"></div>
+            <button class="btn btn-primary" id="crear-pedido" style="margin-top:12px; width:100%;">Crear pedido</button>
+        </div>
+
+        <div style="flex:1; min-width:260px;">
+            <h3 style="margin-bottom:12px; color:#2c3e50;">Todos los pedidos</h3>
+            <div id="pedidos-list">
+                <p style="color:#666;">Cargando pedidos...</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const flashEl = document.getElementById('flash-pedidos');
+    const servicioSelect = document.getElementById('servicio-id');
+    const productoSelect = document.getElementById('producto-id');
+    const cantidadInput = document.getElementById('cantidad');
+    const addItemBtn = document.getElementById('add-item');
+    const itemsList = document.getElementById('items-list');
+    const crearPedidoBtn = document.getElementById('crear-pedido');
+    const pedidosList = document.getElementById('pedidos-list');
+
+    let items = [];
+
+    function showFlash(message, type) {
+        flashEl.style.display = 'block';
+        flashEl.className = 'flash ' + type;
+        flashEl.textContent = message;
+    }
+
+    function hideFlash() {
+        flashEl.style.display = 'none';
+    }
+
+    async function fetchJson(url, options = {}) {
+        const headers = { 'X-CSRF-Token': csrfToken, 'Content-Type': 'application/json', ...options.headers };
+        const response = await fetch(url, { ...options, headers });
+        const data = await response.json().catch(() => ({}));
+        return { ok: response.ok, status: response.status, data };
+    }
+
+    async function loadServicios() {
+        const res = await fetchJson('/servicios?estado=ACTIVO');
+        if (!res.ok) return;
+        const servicios = res.data.data || res.data || [];
+        servicioSelect.innerHTML = '';
+        for (const s of servicios) {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = 'Mesa #' + s.mesa_id + ' (Servicio #' + s.id + ')';
+            servicioSelect.appendChild(opt);
+        }
+    }
+
+    async function loadProductos() {
+        const res = await fetchJson('/products');
+        if (!res.ok) return;
+        const products = res.data.data || res.data || [];
+        productoSelect.innerHTML = '';
+        for (const p of products) {
+            if (!p.is_available) continue;
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = p.name + ' - $' + p.price;
+            productoSelect.appendChild(opt);
+        }
+    }
+
+    function renderItems() {
+        if (items.length === 0) {
+            itemsList.innerHTML = '<p style="color:#999;">Sin productos agregados.</p>';
+            return;
+        }
+        let html = '<ul style="margin:0;padding-left:16px;">';
+        let total = 0;
+        for (const [idx, it] of items.entries()) {
+            html += '<li>' + it.productoName + ' x' + it.cantidad + ' <button type="button" onclick="removeItem(' + idx + ')" style="background:none;border:none;color:#c0392b;cursor:pointer;margin-left:8px;">×</button></li>';
+            total += parseFloat(it.precio) * it.cantidad;
+        }
+        html += '</ul><strong>Total: $' + total.toFixed(2) + '</strong>';
+        itemsList.innerHTML = html;
+    }
+
+    window.removeItem = function(idx) {
+        items.splice(idx, 1);
+        renderItems();
+    };
+
+    addItemBtn.addEventListener('click', function() {
+        const productoId = parseInt(productoSelect.value, 10);
+        const cantidad = parseInt(cantidadInput.value, 10);
+        const productoText = productoSelect.options[productoSelect.selectedIndex]?.text || '';
+        const productoName = productoText.split(' - ')[0];
+        const precio = parseFloat(productoText.split('$')[1] || 0);
+
+        if (!productoId || !cantidad || cantidad <= 0) {
+            showFlash('Selecciona un producto y cantidad válida', 'error');
+            return;
+        }
+
+        items.push({ producto_id: productoId, cantidad, productoName, precio });
+        renderItems();
+        showFlash('Producto agregado al pedido', '');
+        flashEl.style.backgroundColor = '#e8f6f3';
+        flashEl.style.color = '#117a65';
+        flashEl.style.border = '1px solid #a9dfbf';
+    });
+
+    async function loadPedidos() {
+        hideFlash();
+        const res = await fetchJson('/pedidos');
+        if (!res.ok) {
+            pedidosList.innerHTML = '<p style="color:#c0392b;">Error al cargar pedidos.</p>';
+            return;
+        }
+        const pedidos = res.data.data || res.data || [];
+        if (pedidos.length === 0) {
+            pedidosList.innerHTML = '<p style="color:#666;">No hay pedidos.</p>';
+            return;
+        }
+        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">ID</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Servicio</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Preparación</th><th style="text-align:right;padding:8px;border-bottom:2px solid #ddd;">Total</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Acciones</th></tr></thead><tbody>';
+        for (const p of pedidos) {
+            html += '<tr><td style="padding:8px;border-bottom:1px solid #eee;">#' + p.id + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;">#' + p.servicio_id + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(p.estado) + '">' + p.estado + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;">' + p.estado_preparacion + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">$' + p.total + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;">';
+            if (p.estado === 'PENDIENTE' && p.estado_preparacion === 'NO_ENVIADO') {
+                html += '<button class="btn btn-primary" style="padding:6px 12px;font-size:0.85rem;" onclick="autorizarPedido(' + p.id + ')">Autorizar</button>';
+            }
+            if (p.estado === 'PENDIENTE' && p.estado_preparacion === 'NO_ENVIADO' && p.autorizado_por_id) {
+                html += '<button class="btn btn-primary" style="padding:6px 12px;font-size:0.85rem;margin-left:6px;" onclick="enviarCocina(' + p.id + ')">Enviar a cocina</button>';
+            }
+            if (p.estado === 'LISTO') {
+                html += '<button class="btn btn-primary" style="padding:6px 12px;font-size:0.85rem;" onclick="entregarPedido(' + p.id + ')">Entregar</button>';
+            }
+            html += '</td></tr>';
+        }
+        html += '</tbody></table>';
+        pedidosList.innerHTML = html;
+    }
+
+    function estadoColor(estado) {
+        const map = {
+            'PENDIENTE': 'background:#fdecea;color:#c0392b;',
+            'EN_PREPARACION': 'background:#fef9e7;color:#b7950b;',
+            'LISTO': 'background:#e8f6f3;color:#117a65;',
+            'ENTREGADO': 'background:#eafaf1;color:#27ae60;',
+        };
+        return map[estado] || '';
+    }
+
+    window.autorizarPedido = async function(pedidoId) {
+        hideFlash();
+        const res = await fetchJson('/pedidos/' + pedidoId + '/autorizar', { method: 'POST', body: '{}' });
+        if (res.ok) {
+            showFlash('Pedido #' + pedidoId + ' autorizado', '');
+            flashEl.style.backgroundColor = '#e8f6f3';
+            flashEl.style.color = '#117a65';
+            flashEl.style.border = '1px solid #a9dfbf';
+            loadPedidos();
+        } else {
+            showFlash(res.data.error || 'Error al autorizar', 'error');
+        }
+    };
+
+    window.enviarCocina = async function(pedidoId) {
+        hideFlash();
+        const res = await fetchJson('/pedidos/' + pedidoId + '/enviar-cocina', { method: 'POST', body: '{}' });
+        if (res.ok) {
+            showFlash('Pedido #' + pedidoId + ' enviado a cocina', '');
+            flashEl.style.backgroundColor = '#e8f6f3';
+            flashEl.style.color = '#117a65';
+            flashEl.style.border = '1px solid #a9dfbf';
+            loadPedidos();
+        } else {
+            showFlash(res.data.error || 'Error al enviar a cocina', 'error');
+        }
+    };
+
+    window.entregarPedido = async function(pedidoId) {
+        hideFlash();
+        const res = await fetchJson('/pedidos/' + pedidoId + '/entregar', { method: 'POST', body: '{}' });
+        if (res.ok) {
+            showFlash('Pedido #' + pedidoId + ' entregado', '');
+            flashEl.style.backgroundColor = '#e8f6f3';
+            flashEl.style.color = '#117a65';
+            flashEl.style.border = '1px solid #a9dfbf';
+            loadPedidos();
+        } else {
+            showFlash(res.data.error || 'Error al entregar', 'error');
+        }
+    };
+
+    crearPedidoBtn.addEventListener('click', async function() {
+        hideFlash();
+        const servicioId = parseInt(servicioSelect.value, 10);
+        if (!servicioId || items.length === 0) {
+            showFlash('Selecciona un servicio y agrega al menos un producto', 'error');
+            return;
+        }
+        const pedidoItems = items.map(it => ({ producto_id: it.producto_id, cantidad: it.cantidad }));
+        const res = await fetchJson('/servicios/' + servicioId + '/pedidos', {
+            method: 'POST',
+            body: JSON.stringify({ items: pedidoItems }),
+        });
+        if (res.ok) {
+            showFlash('Pedido creado exitosamente', '');
+            flashEl.style.backgroundColor = '#e8f6f3';
+            flashEl.style.color = '#117a65';
+            flashEl.style.border = '1px solid #a9dfbf';
+            items = [];
+            renderItems();
+            loadPedidos();
+            loadServicios();
+        } else {
+            showFlash(res.data.error || 'Error al crear pedido', 'error');
+        }
+    });
+
+    loadServicios();
+    loadProductos();
+    loadPedidos();
+});
+</script>
+{% endblock %}

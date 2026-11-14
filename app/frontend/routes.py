@@ -27,7 +27,7 @@ def _require_role(rol_name):
 
 
 def _panel_cards(rol_name):
-    """Tarjetas de funcionalidades por rol. Las que no tienen endpoint real están deshabilitadas."""
+    """Tarjetas de funcionalidades por rol."""
     if rol_name == "ADMIN":
         return [
             {
@@ -70,27 +70,27 @@ def _panel_cards(rol_name):
         return [
             {
                 "title": "Mesas",
-                "desc": "Ver estado de mesas y tomar pedidos.",
-                "enabled": False,
-                "url": None,
-                "btn_text": "Próximamente",
+                "desc": "Ver servicios activos y abrir mesas.",
+                "enabled": True,
+                "url": url_for("frontend.waiter_mesas"),
+                "btn_text": "Ver mesas",
             },
             {
                 "title": "Pedidos",
-                "desc": "Crear y enviar pedidos a cocina.",
-                "enabled": False,
-                "url": None,
-                "btn_text": "Próximamente",
+                "desc": "Crear, autorizar y enviar pedidos a cocina.",
+                "enabled": True,
+                "url": url_for("frontend.waiter_pedidos"),
+                "btn_text": "Gestionar pedidos",
             },
         ]
     if rol_name == "KITCHEN":
         return [
             {
                 "title": "Pedidos",
-                "desc": "Ver pedidos pendientes de preparación.",
-                "enabled": False,
-                "url": None,
-                "btn_text": "Próximamente",
+                "desc": "Ver pedidos y actualizar preparación.",
+                "enabled": True,
+                "url": url_for("frontend.kitchen_pedidos"),
+                "btn_text": "Ver pedidos",
             },
         ]
     if rol_name == "CASHIER":
@@ -171,3 +171,45 @@ def kitchen():
 @frontend_bp.get("/cashier")
 def cashier():
     return redirect(url_for("frontend.panel", rol="cashier"))
+
+
+@frontend_bp.get("/waiter/mesas")
+def waiter_mesas():
+    user = _require_role("WAITER")
+    if user == "wrong_role":
+        return render_template("unauthorized.html", user=_require_auth()), 403
+    if user is None:
+        return render_template("login.html", error="Debes iniciar sesión para acceder a este panel.")
+    return render_template(
+        "waiter/mesas.html",
+        panel_title=_PANEL_TITLES["WAITER"],
+        user={"username": user.username, "rol": user.rol.name},
+    )
+
+
+@frontend_bp.get("/waiter/pedidos")
+def waiter_pedidos():
+    user = _require_role("WAITER")
+    if user == "wrong_role":
+        return render_template("unauthorized.html", user=_require_auth()), 403
+    if user is None:
+        return render_template("login.html", error="Debes iniciar sesión para acceder a este panel.")
+    return render_template(
+        "waiter/pedidos.html",
+        panel_title=_PANEL_TITLES["WAITER"],
+        user={"username": user.username, "rol": user.rol.name},
+    )
+
+
+@frontend_bp.get("/kitchen/pedidos")
+def kitchen_pedidos():
+    user = _require_role("KITCHEN")
+    if user == "wrong_role":
+        return render_template("unauthorized.html", user=_require_auth()), 403
+    if user is None:
+        return render_template("login.html", error="Debes iniciar sesión para acceder a este panel.")
+    return render_template(
+        "kitchen/pedidos.html",
+        panel_title=_PANEL_TITLES["KITCHEN"],
+        user={"username": user.username, "rol": user.rol.name},
+    )

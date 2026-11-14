@@ -168,45 +168,50 @@ def test_cashier_can_access_cashier_panel(client, cashier_user):
 
 
 # ---------- Tarjetas por rol ----------
-def test_admin_panel_shows_enabled_cards(client, admin_user):
+def test_admin_panel_shows_disabled_cards(client, admin_user):
     login(client, "admin1", "admin-pass")
     response = client.get("/admin", follow_redirects=True)
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    # Endpoints existentes: habilitados
+    # Todas las tarjetas ADMIN están deshabilitadas
     assert "Usuarios" in html
     assert "Categorías" in html
     assert "Productos" in html
     assert "Mesas" in html
-    # Endpoint inexistente: deshabilitado / pendiente
     assert "Pedidos" in html
     assert "Pendiente" in html
 
 
-def test_waiter_panel_shows_mesas_and_pending_pedidos(client, waiter_user):
+def test_waiter_panel_shows_enabled_cards(client, waiter_user):
     login(client, "mesero1", "waiter-pass")
     response = client.get("/waiter", follow_redirects=True)
     assert response.status_code == 200
     html = response.get_data(as_text=True)
+    # Tarjetas WAITER habilitadas con URLs reales
     assert "Mesas" in html
     assert "Pedidos" in html
-    assert "Pendiente" in html
+    assert "Ver mesas" in html
+    assert "Gestionar pedidos" in html
+    assert "Pendiente" not in html
 
 
-def test_kitchen_panel_shows_pending_pedidos(client, kitchen_user):
+def test_kitchen_panel_shows_enabled_cards(client, kitchen_user):
     login(client, "cocina1", "kitchen-pass")
     response = client.get("/kitchen", follow_redirects=True)
     assert response.status_code == 200
     html = response.get_data(as_text=True)
+    # Tarjeta KITCHEN habilitada con URL real
     assert "Pedidos" in html
-    assert "Pendiente" in html
+    assert "Ver pedidos" in html
+    assert "Pendiente" not in html
 
 
-def test_cashier_panel_shows_pending_items(client, cashier_user):
+def test_cashier_panel_shows_disabled_cards(client, cashier_user):
     login(client, "caja1", "cashier-pass")
     response = client.get("/cashier", follow_redirects=True)
     assert response.status_code == 200
     html = response.get_data(as_text=True)
+    # Todas las tarjetas CASHIER están deshabilitadas
     assert "Pedidos para cobrar" in html
     assert "Cierre de caja" in html
     assert "Pendiente" in html
@@ -227,3 +232,76 @@ def test_login_redirects_if_authenticated(client, admin_user):
     login(client, "admin1", "admin-pass")
     response = client.get("/login", follow_redirects=False)
     assert response.status_code == 302
+
+
+# ---------- Nuevas rutas de mesero y cocina ----------
+def test_waiter_can_access_mesas(client, waiter_user):
+    login(client, "mesero1", "waiter-pass")
+    response = client.get("/waiter/mesas", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Mesas" in html
+    assert "Panel Mesero" in html
+
+
+def test_waiter_can_access_pedidos(client, waiter_user):
+    login(client, "mesero1", "waiter-pass")
+    response = client.get("/waiter/pedidos", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Pedidos" in html
+    assert "Panel Mesero" in html
+
+
+def test_kitchen_can_access_pedidos(client, kitchen_user):
+    login(client, "cocina1", "kitchen-pass")
+    response = client.get("/kitchen/pedidos", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Pedidos" in html
+    assert "Panel Cocina" in html
+
+
+def test_admin_cannot_access_waiter_mesas(client, admin_user):
+    login(client, "admin1", "admin-pass")
+    response = client.get("/waiter/mesas", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_admin_cannot_access_waiter_pedidos(client, admin_user):
+    login(client, "admin1", "admin-pass")
+    response = client.get("/waiter/pedidos", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_admin_cannot_access_kitchen_pedidos(client, admin_user):
+    login(client, "admin1", "admin-pass")
+    response = client.get("/kitchen/pedidos", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_waiter_cannot_access_kitchen_pedidos(client, waiter_user):
+    login(client, "mesero1", "waiter-pass")
+    response = client.get("/kitchen/pedidos", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_kitchen_cannot_access_waiter_mesas(client, kitchen_user):
+    login(client, "cocina1", "kitchen-pass")
+    response = client.get("/waiter/mesas", follow_redirects=True)
+    assert response.status_code == 403
+
+
+def test_waiter_mesas_requires_auth(client):
+    response = client.get("/waiter/mesas", follow_redirects=False)
+    assert response.status_code in (200, 302)
+
+
+def test_waiter_pedidos_requires_auth(client):
+    response = client.get("/waiter/pedidos", follow_redirects=False)
+    assert response.status_code in (200, 302)
+
+
+def test_kitchen_pedidos_requires_auth(client):
+    response = client.get("/kitchen/pedidos", follow_redirects=False)
+    assert response.status_code in (200, 302)
