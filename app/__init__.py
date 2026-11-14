@@ -10,6 +10,11 @@ def create_app(config_name=None):
 
     config_class = get_config(config_name)
     app.config.from_object(config_class)
+    if config_class is get_config("production") and (
+        not app.config["SECRET_KEY"]
+        or app.config["SECRET_KEY"] == "dev-secret-key-change-in-production"
+    ):
+        raise ValueError("Production requires a secure SECRET_KEY")
 
     db.init_app(app)
     if migrate is not None:
@@ -22,5 +27,12 @@ def create_app(config_name=None):
 
     from app.frontend.routes import frontend_bp
     app.register_blueprint(frontend_bp)
+
+    from app import models  # noqa: F401  Registra modelos con SQLAlchemy
+
+    from app.auth.routes import auth_bp
+    from app.auth.csrf import protect_csrf
+    app.register_blueprint(auth_bp)
+    app.before_request(protect_csrf)
 
     return app
