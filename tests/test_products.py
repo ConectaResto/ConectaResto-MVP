@@ -355,6 +355,33 @@ def test_update_product_is_active_manually(app):
         assert updated.is_available is True  # disponible no se toca
 
 
+def test_update_product_reactivate_is_available(app):
+    """Un ADMIN puede reactivar is_available de False a True en producto
+    que esta temporalmente no disponible."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        created = create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": categoria.id,
+            "is_available": False,
+        })
+        assert created.is_active is True
+        assert created.is_available is False
+        # Public query no lo devuelve (no disponible)
+        assert get_product(created.id, include_inactive=False) is None
+        # Admin puede actualizar y reactivar disponibilidad
+        updated = update_product(
+            created.id,
+            {"is_available": True},
+            include_inactive=False,
+        )
+        assert updated.is_active is True
+        assert updated.is_available is True
+        # Ahora el producto vuelve a estar disponible publicamente
+        assert get_product(created.id, include_inactive=False) is not None
+
+
 # ---------- Product deactivation ----------
 
 def test_deactivate_product_sets_is_active_false(app):
@@ -518,6 +545,127 @@ def test_product_to_dict_price_is_string(app):
         data = product.to_dict()
         assert data["price"] == "25.50"
         assert isinstance(data["price"], str)
+
+
+# ---------- Precios no finitos ----------
+
+def test_create_product_nan_price(app):
+    """NaN debe ser rechazado como precio invalido."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        with pytest.raises(ProductAlreadyExists):
+            create_product({
+                "name": "Coca Cola",
+                "price": "NaN",
+                "categoria_id": categoria.id,
+            })
+
+
+def test_create_product_infinity_price(app):
+    """Infinity debe ser rechazado como precio invalido."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        with pytest.raises(ProductAlreadyExists):
+            create_product({
+                "name": "Coca Cola",
+                "price": "Infinity",
+                "categoria_id": categoria.id,
+            })
+
+
+def test_create_product_negative_infinity_price(app):
+    """-Infinity debe ser rechazado como precio invalido."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        with pytest.raises(ProductAlreadyExists):
+            create_product({
+                "name": "Coca Cola",
+                "price": "-Infinity",
+                "categoria_id": categoria.id,
+            })
+
+
+def test_update_product_nan_price(app):
+    """Actualizar con precio NaN debe fallar sin cambios parciales."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        created = create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": categoria.id,
+        })
+        original_price = created.price
+        with pytest.raises(ProductAlreadyExists):
+            update_product(
+                created.id,
+                {"price": "NaN"},
+                include_inactive=False,
+            )
+        # El producto no debe cambiar
+        assert created.price == original_price
+        assert float(created.price) == 10.00
+
+
+# ---------- Atomicidad de actualizaciones ----------
+
+def test_update_product_atomic_valid_and_invalid(app):
+    """Combinar campo valido con campo invalido: no debe haber cambios
+    parciales si cualquiera falla."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        created = create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": categoria.id,
+            "description": "Desc original",
+        })
+        original_name = created.name
+        original_description = created.description
+        original_price = created.price
+
+        # Nombre valido + precio invalido: todo debe fallar
+        with pytest.raises(ProductAlreadyExists):
+            update_product(
+                created.id,
+                {
+                    "name": "Nuevo Nombre Valido",
+                    "price": "NaN",
+                },
+                include_inactive=False,
+            )
+
+        # Ningun cambio parcial debe haberse aplicado
+        assert created.name == original_name
+        assert created.description == original_description
+        assert created.price == original_price
+        assert float(created.price) == 10.00
+
+
+def test_update_product_atomic_invalid_boolean(app):
+    """Boolean invalido en is_available no debe aplicar cambios parciales."""
+    with app.app_context():
+        categoria = create_category({"name": "Bebidas"})
+        created = create_product({
+            "name": "Coca Cola",
+            "price": "10.00",
+            "categoria_id": categoria.id,
+            "is_available": True,
+        })
+        original_available = created.is_available
+        original_name = created.name
+
+        with pytest.raises(ProductAlreadyExists):
+            update_product(
+                created.id,
+                {
+                    "name": "Nuevo Nombre",
+                    "is_available": "maybe",
+                },
+                include_inactive=False,
+            )
+
+        assert created.name == original_name
+        assert created.is_available == original_available
 
 
 # ---------- Endpoint-level tests: authentication and authorization ----------

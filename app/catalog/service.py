@@ -42,14 +42,18 @@ def _is_duplicate_category_name_error(exc: IntegrityError) -> bool:
 def _parse_decimal_price(value) -> Decimal:
     """Convierte un valor de entrada a Decimal sin pasar por float.
 
-    Rechaza valores que no sean numericos validos.
+    Rechaza valores que no sean numericos validos, incluyendo NaN,
+    Infinity y -Infinity.
     """
     if value is None or value == "":
         raise ValueError("El precio es obligatorio")
     try:
-        return Decimal(str(value))
+        price_decimal = Decimal(str(value))
     except (InvalidOperation, ValueError, TypeError):
         raise ValueError("El precio debe ser un numero valido")
+    if not price_decimal.is_finite():
+        raise ValueError("El precio debe ser un valor finito")
+    return price_decimal
 
 
 def _parse_bool(value, field_name: str) -> bool:
@@ -320,10 +324,28 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
     Updatable fields: name, description, price, categoria_id, is_active,
     is_available. Validates name uniqueness within category ignoring case.
     Price is handled as Decimal.
+
+    For administrative updates (include_inactive=False), the product is
+    located regardless of is_available, so an ADMIN can reactivate
+    availability on a product that is temporarily unavailable. Public
+    queries still filter by is_available=True via get_product().
     """
-    product = get_product(product_id, include_inactive=include_inactive)
+    # Buscar producto sin filtrar por is_available, para permitir
+    # reactivar disponibilidad en productos no disponibles.
+    query = Product.query.join(Category, Product.categoria_id == Category.id)
+    query = query.filter(Product.id == product_id)
+    if not include_inactive:
+        query = query.filter(
+            Product.is_active.is_(True),
+            Category.is_active.is_(True),
+        )
+    product = query.first()
     if product is None:
         raise ProductNotFound("Producto no encontrado")
+
+    # Fase 1: validar todos los campos antes de aplicar cualquier cambio.
+    # Esto evita cambios parciales en la sesion si alguna validacion falla.
+    changes = {}
 
     if "name" in data and data["name"] is not None:
         name = str(data["name"]).strip()
@@ -339,10 +361,10 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
             raise ProductAlreadyExists(
                 "Ya existe un producto con ese nombre en esta categoria"
             )
-        product.name = name
+        changes["name"] = name
 
     if "description" in data:
-        product.description = data["description"]
+        changes["description"] = data["description"]
 
     if "price" in data and data["price"] is not None:
         try:
@@ -351,7 +373,7 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
             raise ProductAlreadyExists(str(exc))
         if price_decimal < 0:
             raise ProductAlreadyExists("El precio no puede ser negativo")
-        product.price = price_decimal
+        changes["price"] = price_decimal
 
     if "categoria_id" in data and data["categoria_id"] is not None:
         nueva_categoria = Category.query.filter(
@@ -361,19 +383,25 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
             raise ProductNotFound("La categoria especificada no existe")
         if not nueva_categoria.is_active:
             raise ProductNotFound("La categoria especificada no esta activa")
-        product.categoria_id = nueva_categoria.id
+        changes["categoria_id"] = nueva_categoria.id
 
     if "is_active" in data:
         try:
-            product.is_active = _parse_bool(data["is_active"], "is_active")
+            changes["is_active"] = _parse_bool(data["is_active"], "is_active")
         except ValueError as exc:
             raise ProductAlreadyExists(str(exc))
 
     if "is_available" in data:
         try:
-            product.is_available = _parse_bool(data["is_available"], "is_available")
+            changes["is_available"] = _parse_bool(
+                data["is_available"], "is_available"
+            )
         except ValueError as exc:
             raise ProductAlreadyExists(str(exc))
+
+    # Fase 2: aplicar todos los cambios validados de una vez.
+    for field, value in changes.items():
+        setattr(product, field, value)
 
     db.session.commit()
     return product
