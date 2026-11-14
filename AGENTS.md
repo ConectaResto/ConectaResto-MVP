@@ -74,13 +74,19 @@ Mantener `PLAN_DE_TRABAJO_MVP.md` y cualquier otra documentación coherente con 
 
 ## 15. Equipos de desarrollo asistidos por IA
 
-El proyecto se desarrolla con dos equipos asistidos por IA sobre el mismo repositorio remoto:
+El proyecto se desarrolla con cuatro agentes asistidos por IA bajo la coordinación de ChatGPT A sobre el mismo repositorio remoto:
 
-- **Equipo A:** Desarrollador A + ChatGPT A + Kilo + Codex.
-- **Equipo B:** Desarrollador B + ChatGPT B + Kilo.
+| Identificador | Responsabilidad |
+|---|---|
+| **Escritorio Kilo 1** | Base de datos, migraciones e integración |
+| **Escritorio Codex 1** | Backend: servicios y pedidos |
+| **Portátil Kilo 2** | Frontend HTML/CSS/JavaScript |
+| **Portátil Codex 2** | Backend: QR y menú público |
 
-Cada equipo trabaja en su propio computador y en ramas independientes. No se modifica directamente `main`. La integración se realiza mediante Pull Requests con aprobación conjunta.
+Cada agente trabaja en su propio computador y en ramas independientes. No se modifica directamente `main`. La integración se realiza mediante Pull Requests con aprobación conjunta del coordinador.
 
 Antes de iniciar cualquier tarea, consultar `docs/COORDINACION_EQUIPOS_IA.md` para conocer las reglas de coordinación, separación de responsabilidades y protección de la rama `main`. Los cambios de arquitectura, contratos compartidos, dependencias y reglas de negocio requieren consulta previa entre equipos.
+
+La documentación histórica del Equipo B se conserva en `docs/INSTRUCCIONES_CHATGPT_B.md` y no ha sido modificada.
 
 ---
