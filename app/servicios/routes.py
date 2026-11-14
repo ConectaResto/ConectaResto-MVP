@@ -7,7 +7,7 @@ from app.extensions import db
 from app.models import Servicio
 from app.pedidos.routes import responder_error, serializar_pedido
 from app.pedidos.service import PedidoError, crear_pedido
-from app.servicios.service import abrir_servicio
+from app.servicios.service import abrir_servicio, calcular_total_servicio, procesar_caja
 
 
 servicios_bp = Blueprint("servicios", __name__, url_prefix="/servicios")
@@ -15,10 +15,18 @@ servicios_bp.register_error_handler(PedidoError, responder_error)
 
 
 def serializar_servicio(servicio):
+    pago = servicio.pago
     return {
         "id": servicio.id, "mesa_id": servicio.mesa_id,
         "abierto_por_id": servicio.abierto_por_id, "estado": servicio.estado,
         "pedidos": [serializar_pedido(p) for p in servicio.pedidos],
+        "total": format(calcular_total_servicio(servicio.id), ".2f"),
+        "pago": {
+            "id": pago.id, "servicio_id": pago.servicio_id,
+            "importe": format(pago.importe, ".2f"),
+            "registrado_por_id": pago.registrado_por_id,
+            "fecha_registro": pago.fecha_registro.isoformat(),
+        } if pago is not None else None,
     }
 
 
@@ -45,11 +53,23 @@ def listar_servicios():
 
 
 @servicios_bp.get("/<int:servicio_id>")
-@roles_required("WAITER")
+@roles_required("WAITER", "CASHIER")
 def consultar_servicio(servicio_id):
     if not 0 < servicio_id <= 2147483647:
         raise PedidoError("Servicio no encontrado", 404)
     return success_response(serializar_servicio(db.get_or_404(Servicio, servicio_id)))
+
+
+@servicios_bp.post("/<int:servicio_id>/pago-simulado", defaults={"accion": "pago-simulado"})
+@servicios_bp.post("/<int:servicio_id>/cerrar", defaults={"accion": "cerrar"})
+@roles_required("CASHIER")
+def operar_caja(servicio_id, accion):
+    if request.get_data() and request.get_json(silent=True) != {}:
+        raise PedidoError("Esta accion no acepta campos")
+    servicio = procesar_caja(servicio_id, accion, actor=current_user())
+    return success_response(
+        serializar_servicio(servicio), status_code=201 if accion == "pago-simulado" else 200,
+    )
 
 
 @servicios_bp.post("/<int:servicio_id>/pedidos")

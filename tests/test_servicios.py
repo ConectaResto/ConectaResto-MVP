@@ -40,7 +40,8 @@ def test_abrir_consultar_y_no_duplicar(client, mesa):
     assert response.status_code == 201
     servicio = response.json["data"]
     assert servicio == {"id": servicio["id"], "mesa_id": mesa.id,
-                        "abierto_por_id": usuario.id, "estado": "ACTIVO", "pedidos": []}
+                        "abierto_por_id": usuario.id, "estado": "ACTIVO", "pedidos": [],
+                        "total": "0.00", "pago": None}
     db.session.refresh(mesa)
     assert mesa.estado == "OCUPADA"
     assert client.get(f'/servicios/{servicio["id"]}').json["data"] == servicio
@@ -115,7 +116,8 @@ def test_permisos_servicios(client, mesa, rol):
         ("POST", "/servicios", {"mesa_id": mesa.id}),
         ("POST", "/servicios/1/pedidos", {"items": []}),
     ]:
-        assert client.open(path, method=method, json=data, headers=headers).status_code == expected
+        codigo = 404 if rol == "CASHIER" and method == "GET" and path == "/servicios/1" else expected
+        assert client.open(path, method=method, json=data, headers=headers).status_code == codigo
     assert Servicio.query.count() == 0
 
 
