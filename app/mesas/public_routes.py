@@ -1,24 +1,31 @@
-"""Read-only public table lookup using the existing catalog endpoints."""
+"""Public table lookup and order creation through the shared order service."""
 
 import re
 
-from flask import Blueprint, url_for
+from flask import Blueprint, request, url_for
 
 from app.common.responses import error_response, success_response
 from app.extensions import db
-from app.models import Mesa
+from app.models import Mesa, Servicio
+from app.pedidos.routes import responder_error
+from app.pedidos.service import PedidoError, crear_pedido
 
 
 public_mesas_bp = Blueprint("public_mesas", __name__, url_prefix="/public/mesas")
 
 
+def _find_public_table(token, *, lock=False):
+    if re.fullmatch(r"[0-9a-f]{64}", token) is None:
+        return None
+    query = db.select(Mesa).where(Mesa.public_token == token)
+    if lock:
+        query = query.with_for_update().execution_options(populate_existing=True)
+    return db.session.execute(query).scalar_one_or_none()
+
+
 @public_mesas_bp.get("/<token>")
 def get_public_table(token):
-    if re.fullmatch(r"[0-9a-f]{64}", token) is None:
-        return error_response("Mesa no encontrada", 404)
-    mesa = db.session.execute(
-        db.select(Mesa).where(Mesa.public_token == token)
-    ).scalar_one_or_none()
+    mesa = _find_public_table(token)
     if mesa is None:
         return error_response("Mesa no encontrada", 404)
     # Closing a table restricts future orders, not public menu reading.
@@ -29,3 +36,28 @@ def get_public_table(token):
             "products": url_for("products.list_all_products"),
         },
     })
+
+
+@public_mesas_bp.post("/<token>/pedidos")
+def create_public_order(token):
+    try:
+        mesa = _find_public_table(token, lock=True)
+        if mesa is None:
+            raise PedidoError("Mesa no encontrada", 404)
+        if mesa.estado == "CERRADA":
+            raise PedidoError("La mesa esta cerrada", 409)
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict) or set(data) != {"items"}:
+            raise PedidoError("Se requiere solamente items")
+        servicio_id = db.session.execute(
+            db.select(Servicio.id).where(
+                Servicio.mesa_id == mesa.id, Servicio.estado == "ACTIVO",
+            )
+        ).scalar_one_or_none()
+        if servicio_id is None:
+            raise PedidoError("La mesa no tiene servicio activo", 409)
+        pedido = crear_pedido(servicio_id, data["items"], origen="PUBLICO")
+        return success_response({"id": pedido.id, "estado": pedido.estado}, status_code=201)
+    except PedidoError as error:
+        db.session.rollback()
+        return responder_error(error)
