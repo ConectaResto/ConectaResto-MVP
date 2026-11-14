@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Iniciar sesión - ConectaResto MVP{% endblock %}
+
+{% block content %}
+<section class="login-panel">
+    <div class="login-card">
+        <h2>Iniciar sesión</h2>
+        {% if error %}
+        <p class="flash error">{{ error }}</p>
+        {% endif %}
+        <form id="login-form" novalidate>
+            <div class="field">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" required autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary" id="login-btn">Ingresar</button>
+        </form>
+        <p class="login-hint">¿No tienes cuenta? Contacta al administrador del sistema.</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    btn.disabled = true;
+    btn.textContent = 'Ingresando...';
+
+    const form = e.target;
+    const username = form.elements['username'].value;
+    const password = form.elements['password'].value;
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken,
+            },
+            body: JSON.stringify({ username, password }),
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            window.location.href = data.data.rol === 'ADMIN'
+                ? '/admin'
+                : data.data.rol === 'WAITER'
+                ? '/waiter'
+                : data.data.rol === 'KITCHEN'
+                ? '/kitchen'
+                : '/cashier';
+        } else {
+            const err = await response.json();
+            const hint = document.createElement('p');
+            hint.className = 'flash error';
+            hint.textContent = err.error || 'Error al iniciar sesión';
+            form.insertAdjacentElement('afterend', hint);
+        }
+    } catch (err) {
+        const hint = document.createElement('p');
+        hint.className = 'flash error';
+        hint.textContent = 'Error de conexión al iniciar sesión';
+        form.insertAdjacentElement('afterend', hint);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Ingresar';
+    }
+});
+</script>
+{% endblock %}
