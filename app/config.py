@@ -1,7 +1,12 @@
 import os
+from datetime import timedelta
 
 
 class Config:
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_REFRESH_EACH_REQUEST = False
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL", "mysql+pymysql://root:password@localhost:3306/conecta_resto"
@@ -25,7 +30,7 @@ class DevelopmentConfig(Config):
 
 
 class ProductionConfig(Config):
-    pass
+    SESSION_COOKIE_SECURE = True
 
 
 config_by_name = {
