@@ -49,4 +49,9 @@ def create_app(config_name=None):
     app.register_blueprint(categories_bp)
     app.register_blueprint(products_bp)
 
+    from app.servicios.routes import servicios_bp
+    from app.pedidos.routes import pedidos_bp
+    app.register_blueprint(servicios_bp)
+    app.register_blueprint(pedidos_bp)
+
     return app

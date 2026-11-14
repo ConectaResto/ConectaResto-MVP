@@ -16,11 +16,23 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column(
-        "products",
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
-    )
-    op.alter_column("products", "disponible", new_column_name="is_available")
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    existing_columns = [col["name"] for col in inspector.get_columns("products")]
+
+    if "is_active" not in existing_columns:
+        op.add_column(
+            "products",
+            sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+        )
+
+    if "disponible" in existing_columns:
+        op.alter_column(
+            "products",
+            "disponible",
+            new_column_name="is_available",
+            existing_type=sa.Boolean(),
+        )
 
 
 def downgrade():
