@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}ConectaResto MVP{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="header">
+        <div class="container header-inner">
+            <a href="{{ url_for('frontend.index') }}" class="logo">ConectaResto MVP</a>
+            <nav class="nav" id="main-nav">
+                <ul class="nav-list">
+                    <li><a href="{{ url_for('frontend.index') }}" class="nav-link nav-home">Inicio</a></li>
+                    {% if user %}
+                    <li><span class="nav-user">{{ user.username }} ({{ user.rol }})</span></li>
+                    <li><a href="{{ url_for('auth.logout') }}" class="nav-link btn-logout" method="post">Cerrar sesión</a></li>
+                    {% else %}
+                    <li><a href="{{ url_for('frontend.login') }}" class="nav-link btn-login">Iniciar sesión</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            <button class="nav-toggle" id="nav-toggle" aria-label="Menú">☰</button>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 ConectaResto MVP. Restaurante único.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
