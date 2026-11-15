@@ -104,7 +104,10 @@ def test_kitchen_can_access_pedidos(client, kitchen_user):
 
 def test_kitchen_pedidos_requires_auth(client):
     response = client.get("/kitchen/pedidos", follow_redirects=False)
-    assert response.status_code in (200, 302)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Iniciar sesión" in html
+    assert "Panel Cocina" not in html
 
 
 # ---------- Kitchen: Role isolation ----------

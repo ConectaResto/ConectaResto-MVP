@@ -67,6 +67,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return map[estado] || '';
     }
 
+    mesaSelect.addEventListener('change', function() {
+        abrirBtn.disabled = !mesaSelect.value;
+    });
+
     async function loadMesas() {
         hideFlash();
         const res = await fetchJson('/mesas');
@@ -101,10 +105,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         html += '</tbody></table>';
         mesasTable.innerHTML = html;
-
-        mesaSelect.addEventListener('change', function() {
-            abrirBtn.disabled = !mesaSelect.value;
-        });
     }
 
     async function loadServicios() {
@@ -151,14 +151,14 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({ mesa_id: mesaId }),
         });
         if (res.ok) {
-            showFlash('Servicio abierto para la mesa #' + mesaSelect.options[mesaSelect.selectedIndex].text.replace('Mesa #', ''), '');
-            flashEl.style.backgroundColor = '#e8f6f3';
-            flashEl.style.color = '#117a65';
-            flashEl.style.border = '1px solid #a9dfbf';
             mesaSelect.value = '';
             abrirBtn.disabled = true;
             loadMesas();
             loadServicios();
+            showFlash('Servicio abierto para la mesa #' + mesaSelect.options[mesaSelect.selectedIndex].text.replace('Mesa #', ''), '');
+            flashEl.style.backgroundColor = '#e8f6f3';
+            flashEl.style.color = '#117a65';
+            flashEl.style.border = '1px solid #a9dfbf';
         } else {
             showFlash(res.data.error || 'Error al abrir servicio', 'error');
         }

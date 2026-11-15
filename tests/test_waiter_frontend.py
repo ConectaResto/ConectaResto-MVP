@@ -104,7 +104,10 @@ def test_waiter_can_access_mesas(client, waiter_user):
 
 def test_waiter_mesas_requires_auth(client):
     response = client.get("/waiter/mesas", follow_redirects=False)
-    assert response.status_code in (200, 302)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Iniciar sesión" in html
+    assert "Panel Mesero" not in html
 
 
 # ---------- Waiter: Pedidos ----------
@@ -119,7 +122,10 @@ def test_waiter_can_access_pedidos(client, waiter_user):
 
 def test_waiter_pedidos_requires_auth(client):
     response = client.get("/waiter/pedidos", follow_redirects=False)
-    assert response.status_code in (200, 302)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "Iniciar sesión" in html
+    assert "Panel Mesero" not in html
 
 
 # ---------- Waiter: Role isolation ----------
