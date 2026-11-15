@@ -339,6 +339,7 @@ body {
 /* ADMIN: visibilidad de secciones por pestañas, scoped a #admin-panel */
 #admin-panel .admin-section {
     display: none;
+    margin-bottom: var(--form-space-section);
 }
 #admin-panel .admin-section.visible {
     display: block;
@@ -347,6 +348,123 @@ body {
 /* Pestaña activa */
 #admin-panel .section-nav [aria-current="page"] {
     background-color: #1a252f;
+}
+
+/* ADMIN: espaciado compartido de formularios, listados y QR. */
+#admin-panel {
+    --form-space-small: 8px;
+    --form-space-label: 12px;
+    --form-space-control: 16px;
+    --form-space-padding: 24px;
+    --form-space-section: 32px;
+}
+
+#admin-panel form {
+    margin-block: var(--form-space-padding) var(--form-space-section);
+}
+
+#admin-panel form fieldset {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    align-items: start;
+    gap: var(--form-space-control) var(--form-space-small);
+    min-width: 0;
+    margin: 0;
+    padding: var(--form-space-padding);
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+#admin-panel form legend {
+    padding-inline: var(--form-space-small);
+    margin-bottom: var(--form-space-label);
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+#admin-panel form .field {
+    grid-column: 1 / -1;
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+#admin-panel form .field label {
+    margin-bottom: var(--form-space-label);
+}
+
+#admin-panel form .btn {
+    min-height: 40px;
+}
+
+#admin-productos label:has(#producto-available) {
+    display: flex;
+    align-items: center;
+    gap: var(--form-space-small);
+    width: fit-content;
+    min-height: 40px;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+#admin-productos #producto-available {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    padding: 0;
+    accent-color: #2c3e50;
+    cursor: pointer;
+}
+
+#admin-productos #producto-available:focus-visible {
+    outline: 2px solid #2c3e50;
+    outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+    #admin-panel form fieldset {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+#admin-panel [data-list-status] {
+    margin-block: var(--form-space-control);
+}
+
+#admin-panel [data-rows] td:last-child .btn {
+    margin-block: 4px;
+    margin-inline-end: var(--form-space-small);
+}
+
+#admin-panel [data-rows] td:last-child .btn:last-child {
+    margin-inline-end: 0;
+}
+
+#admin-panel #mesa-qr {
+    margin: var(--form-space-section) 0 0;
+    padding: var(--form-space-padding);
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+#admin-panel #mesa-qr:not([hidden]) {
+    display: grid;
+    gap: var(--form-space-control);
+    justify-items: start;
+}
+
+#admin-panel #mesa-qr-image {
+    max-width: 100%;
+    height: auto;
+}
+
+#admin-panel #mesa-qr-title {
+    font-weight: 600;
+}
+
+#admin-panel #password-help {
+    display: block;
+    margin-top: var(--form-space-label);
 }
 
 /* Disabled fieldset visual state */
@@ -582,6 +700,57 @@ select:focus {
     padding: 12px;
     border-radius: 6px;
     border: 1px solid #eee;
+}
+
+/* WAITER: distribucion local del formulario Nuevo pedido. */
+#waiter-nuevo-pedido .section-nav {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) 88px auto;
+    align-items: end;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+#waiter-nuevo-pedido .field {
+    min-width: 0;
+    margin-bottom: 0;
+}
+
+#waiter-nuevo-pedido .btn {
+    min-height: 40px;
+    justify-self: start;
+    text-align: center;
+}
+
+#waiter-nuevo-pedido #items-list {
+    overflow-wrap: anywhere;
+}
+
+#waiter-nuevo-pedido #crear-pedido {
+    display: block;
+    margin-top: 16px;
+    margin-left: auto;
+}
+
+@media (max-width: 800px) {
+    #waiter-nuevo-pedido .section-nav {
+        grid-template-columns: minmax(0, 1fr) 88px;
+    }
+
+    #waiter-nuevo-pedido .field:first-child {
+        grid-column: 1 / -1;
+    }
+
+    #waiter-nuevo-pedido #add-item {
+        grid-column: 1 / -1;
+        width: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    #waiter-nuevo-pedido #crear-pedido {
+        width: 100%;
+    }
 }
 
 /* Footer */

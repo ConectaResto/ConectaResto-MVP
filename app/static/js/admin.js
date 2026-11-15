@@ -11,6 +11,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         productos: { path: '/products', listPath: '/admin/products?include_inactive=true', singular: 'producto', fields: ['name', 'description', 'price', 'categoria_id', 'is_available'], rows: [] },
         usuarios: { path: '/users', singular: 'usuario', fields: ['username', 'email', 'rol'], rows: [] },
     };
+    const roleLabels = { ADMIN: 'Administrador', WAITER: 'Mesero', KITCHEN: 'Cocina', CASHIER: 'Cajero' };
+    const navUser = document.querySelector('.nav-user');
+    if (navUser?.textContent) {
+        navUser.textContent = navUser.textContent.replace(/\((ADMIN|WAITER|KITCHEN|CASHIER)\)$/, (_, role) => '(' + roleLabels[role] + ')');
+    }
     let currentUserId = null;
     let qrUrl = null;
 
@@ -112,7 +117,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 values = [record.id, record.name, record.price, category?.name || '#' + record.categoria_id,
                     record.is_available ? 'Disponible' : 'No disponible', record.is_active ? 'Activo' : 'Inactivo'];
             }
-            if (name === 'usuarios') values = [record.id, record.username, record.email, record.rol, record.is_active ? 'Activo' : 'Inactivo'];
+            if (name === 'usuarios') values = [record.id, record.username, record.email, roleLabels[record.rol] || record.rol, record.is_active ? 'Activo' : 'Inactivo'];
             for (const value of values) {
                 const cell = document.createElement('td');
                 cell.textContent = String(value);

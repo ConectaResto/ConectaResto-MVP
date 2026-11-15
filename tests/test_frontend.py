@@ -168,18 +168,19 @@ def test_cashier_can_access_cashier_panel(client, cashier_user):
 
 
 # ---------- Tarjetas por rol ----------
-def test_admin_panel_shows_disabled_cards(client, admin_user):
+def test_admin_panel_shows_only_functional_sections(client, admin_user):
     login(client, "admin1", "admin-pass")
     response = client.get("/admin", follow_redirects=True)
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    # Todas las tarjetas ADMIN están deshabilitadas
+    # ADMIN muestra sus cuatro gestiones, sin tarjetas provisionales.
     assert "Usuarios" in html
     assert "Categorías" in html
     assert "Productos" in html
     assert "Mesas" in html
-    assert "Pedidos" in html
-    assert "Pendiente" in html
+    assert "Ver y gestionar pedidos del sistema" not in html
+    assert 'class="card card-disabled"' not in html
+    assert "Pendiente" not in html
 
 
 def test_waiter_panel_shows_enabled_cards(client, waiter_user):

@@ -6,7 +6,7 @@
 <section class="panel" id="admin-panel">
     <div class="panel-header">
         <h1>{{ panel_title }}</h1>
-        <p class="panel-subtitle">Rol: <strong>{{ user.rol }}</strong> · Usuario: {{ user.username }}</p>
+        <p class="panel-subtitle">Rol: <strong>{{ {'ADMIN': 'Administrador', 'WAITER': 'Mesero', 'KITCHEN': 'Cocina', 'CASHIER': 'Cajero'}.get(user.rol, user.rol) }}</strong> · Usuario: {{ user.username }}</p>
     </div>
     <nav class="section-nav" aria-label="Administración">
         <a class="btn btn-primary" aria-current="page" href="#admin-mesas">Mesas y QR</a>
@@ -100,7 +100,7 @@
                     <legend data-form-title>Crear usuario</legend>
                     <div class="field"><label for="usuario-username">Usuario</label><input id="usuario-username" name="username" maxlength="80" autocomplete="off" required></div>
                     <div class="field"><label for="usuario-email">Correo electrónico</label><input id="usuario-email" name="email" type="email" maxlength="120" required></div>
-                    <div class="field"><label for="usuario-rol">Rol</label><select id="usuario-rol" name="rol"><option>WAITER</option><option>KITCHEN</option><option>CASHIER</option><option>ADMIN</option></select></div>
+                    <div class="field"><label for="usuario-rol">Rol</label><select id="usuario-rol" name="rol"><option value="WAITER">Mesero</option><option value="KITCHEN">Cocina</option><option value="CASHIER">Cajero</option><option value="ADMIN">Administrador</option></select></div>
                     <div class="field"><label for="usuario-password">Contraseña</label><input id="usuario-password" name="password" type="password" autocomplete="new-password" required aria-describedby="password-help"><small id="password-help">Obligatoria al crear. Al editar, deja el campo vacío para conservar la contraseña.</small></div>
                     <button class="btn btn-primary" type="submit">Guardar usuario</button>
                     <button class="btn" type="button" data-cancel>Cancelar edición</button>
@@ -114,9 +114,7 @@
         </div>
     </section>
 
-    {% for card in cards if card.title == 'Pedidos' %}
-    <article class="card card-disabled"><h2>{{ card.title }}</h2><p>{{ card.desc }}</p><span class="badge pending">Pendiente</span></article>
-    {% endfor %}
+
 </section>
 {% endblock %}
 
