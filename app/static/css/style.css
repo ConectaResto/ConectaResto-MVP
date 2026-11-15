@@ -235,6 +235,65 @@ body {
     gap: 20px;
 }
 
+/* Admin sections */
+.admin-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.admin-section-body {
+    padding: 24px;
+}
+
+.admin-section h2 {
+    font-size: 1.25rem;
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.section-nav {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+}
+
+.section-nav .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+/* Disabled fieldset visual state */
+fieldset[disabled] {
+    opacity: 0.85;
+    background-color: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+fieldset[disabled] legend {
+    font-size: 1rem;
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding: 0;
+    width: auto;
+}
+
+/* Section title text in admin */
+.admin-intro {
+    font-size: 0.95rem;
+    color: #555;
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+}
+
 .card {
     background: #fff;
     border-radius: 8px;
@@ -305,6 +364,25 @@ table {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Table wrapper for responsive scrolling */
+.table-wrap {
+    overflow-x: auto;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+
+.table-wrap table {
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0;
+}
+
+.table-wrap table th,
+.table-wrap table td {
+    white-space: nowrap;
+}
+
 th {
     background-color: #f8f9fa;
     color: #2c3e50;
@@ -328,6 +406,15 @@ tr:last-child td {
 
 tr:hover {
     background-color: #f8f9fa;
+}
+
+/* Badge state variants */
+.badge.active {
+    background-color: #27ae60;
+}
+
+.badge.inactive {
+    background-color: #95a5a6;
 }
 
 /* Select inputs */
@@ -418,5 +505,35 @@ select:focus {
 
     .cards-grid {
         grid-template-columns: 1fr;
+    }
+
+    .admin-section {
+        margin-bottom: 16px;
+    }
+
+    .admin-section-body {
+        padding: 16px;
+    }
+
+    .section-nav {
+        flex-direction: column;
+    }
+
+    .section-nav .btn {
+        width: 100%;
+        text-align: left;
+    }
+
+    .table-wrap {
+        border: none;
+    }
+
+    .table-wrap table {
+        font-size: 0.9rem;
+    }
+
+    .table-wrap table th,
+    .table-wrap table td {
+        padding: 8px 10px;
     }
 }
