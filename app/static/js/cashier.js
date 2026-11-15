@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const token = csrfToken ? csrfToken.getAttribute('content') : '';
 
     let servicioSeleccionadoId = null;
-    let pagoRegistrado = false;
+    let operacionEnCurso = false;
 
     const serviciosGrid = document.getElementById('servicios-grid');
     const sinServicios = document.getElementById('sin-servicios');
@@ -95,8 +95,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     async function seleccionarServicio(servicioId) {
+        if (operacionEnCurso) return;
         servicioSeleccionadoId = servicioId;
-        pagoRegistrado = false;
+        detalleServicio.style.display = 'none';
+        btnPagar.disabled = true;
+        btnCerrar.disabled = true;
 
         // Marcar tarjeta seleccionada
         document.querySelectorAll('.tarjeta-servicio').forEach(function(card) {
@@ -118,11 +121,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             if (!response.ok) {
+                if (servicioId !== servicioSeleccionadoId) return;
                 mostrarError('Error al cargar los detalles del servicio.');
                 return;
             }
 
             const data = await response.json();
+            if (servicioId !== servicioSeleccionadoId) return;
             const servicio = data.data;
 
             // Mostrar detalle del servicio
@@ -135,56 +140,42 @@ document.addEventListener('DOMContentLoaded', function() {
             const tablaBody = document.getElementById('tabla-pedidos-body');
             tablaBody.innerHTML = '';
 
-            let total = 0;
             pedidos.forEach(function(pedido) {
                 pedido.items.forEach(function(item) {
-                    const subtotal = item.precio_unitario * item.cantidad;
-                    total += subtotal;
-
                     const fila = document.createElement('tr');
-
-            const tdProducto = document.createElement('td');
-            tdProducto.textContent = item.producto_id;
-            fila.appendChild(tdProducto);
-
-            const tdCantidad = document.createElement('td');
-            tdCantidad.textContent = item.cantidad;
-            fila.appendChild(tdCantidad);
-
-            const tdPrecio = document.createElement('td');
-            tdPrecio.textContent = '$' + item.precio_unitario.toFixed(2);
-            fila.appendChild(tdPrecio);
-
-            const tdSubtotal = document.createElement('td');
-            tdSubtotal.textContent = '$' + subtotal.toFixed(2);
-            fila.appendChild(tdSubtotal);
-
-            const tdEstado = document.createElement('td');
-            tdEstado.textContent = pedido.estado_preparacion;
-            fila.appendChild(tdEstado);
-
-            tablaBody.appendChild(fila);
+                    const valores = [
+                        item.producto_id, item.cantidad, '$' + item.precio_unitario,
+                        '$' + item.subtotal, pedido.estado,
+                    ];
+                    valores.forEach(function(valor) {
+                        const celda = document.createElement('td');
+                        celda.textContent = valor;
+                        fila.appendChild(celda);
+                    });
+                    tablaBody.appendChild(fila);
                 });
             });
 
-            document.getElementById('detalle-total-pagar').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('detalle-total-pagar').textContent = '$' + servicio.total;
 
-            // Mostrar detalle y actualizar botones
+            const pedidosEntregados = pedidos.every(pedido => pedido.estado === 'ENTREGADO');
+            btnPagar.disabled = Boolean(servicio.pago) || !pedidosEntregados || Number(servicio.total) <= 0;
+            btnCerrar.disabled = pedidos.length > 0 && (!pedidosEntregados || !servicio.pago);
+            btnPagar.textContent = servicio.pago ? 'Pago registrado' : 'Registrar pago simulado';
             detalleServicio.style.display = 'block';
-            btnPagar.disabled = false;
-            btnCerrar.disabled = true; // No se puede cerrar sin pago
-            pagoRegistrado = false;
 
             // Ocultar mensaje de error previo
             mensajeError.style.display = 'none';
         } catch (err) {
+            if (servicioId !== servicioSeleccionadoId) return;
             mostrarError('Error de conexión al cargar detalles del servicio.');
         }
     }
 
     async function registrarPagoSimulado() {
-        if (!servicioSeleccionadoId || pagoRegistrado) return;
+        if (!servicioSeleccionadoId || operacionEnCurso || btnPagar.disabled) return;
 
+        operacionEnCurso = true;
         btnPagar.disabled = true;
         btnPagar.textContent = 'Procesando...';
 
@@ -210,10 +201,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            const data = await response.json();
-            const servicio = data.data;
-
-            pagoRegistrado = true;
             btnPagar.disabled = true;
             btnCerrar.disabled = false;
 
@@ -229,12 +216,16 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (err) {
             mostrarError('Error de conexión al registrar el pago.');
             btnPagar.disabled = false;
+        } finally {
+            operacionEnCurso = false;
+            btnPagar.textContent = btnPagar.disabled ? 'Pago registrado' : 'Registrar pago simulado';
         }
     }
 
     async function cerrarServicio() {
-        if (!servicioSeleccionadoId || !pagoRegistrado) return;
+        if (!servicioSeleccionadoId || operacionEnCurso || btnCerrar.disabled) return;
 
+        operacionEnCurso = true;
         btnCerrar.disabled = true;
         btnCerrar.textContent = 'Cerrando...';
 
@@ -268,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const mensajeDiv = document.createElement('div');
             mensajeDiv.className = 'flash exito';
             mensajeDiv.textContent = `Servicio cerrado. Mesa ${servicio.mesa_id} disponible.`;
-            detalleServicio.insertBefore(mensajeDiv, detalleServicio.firstChild);
+            detalleServicio.before(mensajeDiv);
 
             setTimeout(function() {
                 mensajeDiv.remove();
@@ -280,7 +271,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Ocultar detalle y resetear estado
             detalleServicio.style.display = 'none';
             servicioSeleccionadoId = null;
-            pagoRegistrado = false;
             btnPagar.disabled = true;
             btnCerrar.disabled = true;
             btnPagar.textContent = 'Registrar pago simulado';
@@ -288,6 +278,8 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (err) {
             mostrarError('Error de conexión al cerrar el servicio.');
             btnCerrar.disabled = false;
+        } finally {
+            operacionEnCurso = false;
             btnCerrar.textContent = 'Cerrar servicio';
         }
     }

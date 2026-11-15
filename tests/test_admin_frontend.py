@@ -39,7 +39,45 @@ def test_admin_renderiza_gestiones_y_script_propio(app, client, path):
     assert "test-password" not in html
     assert "password_hash" not in html
     assert 'href="#admin-mesas"' in html
-    assert "Al quitar disponibilidad" in html
+    assert "Los productos no disponibles siguen en esta lista" in html
+
+
+def test_admin_puede_reactivar_un_producto_sin_publicarlo_mientras_no_esta_disponible(app, client):
+    _, headers = autenticar(client, "ADMIN")
+    publico = app.test_client()
+    category = client.post("/categories", json={"name": "Bebidas"}, headers=headers)
+    assert category.status_code == 201
+    payload = {"name": "Café", "price": "12.35", "categoria_id": category.json["data"]["id"]}
+    response = client.post("/products", json=payload, headers=headers)
+    assert response.status_code == 201
+    product_id = response.json["data"]["id"]
+    path = f"/products/{product_id}"
+
+    for available in (True, False, True):
+        response = client.patch(path, json={"is_available": available}, headers=headers)
+        assert response.status_code == 200
+        admin_products = client.get("/admin/products")
+        assert admin_products.status_code == 200
+        [product] = admin_products.json["data"]
+        assert product["id"] == product_id
+        assert product["is_available"] is available
+        public_ids = [row["id"] for row in publico.get("/products").json["data"]]
+        assert public_ids == ([product_id] if available else [])
+        assert publico.get(path).status_code == (200 if available else 404)
+
+    assert client.delete(path, headers=headers).status_code == 200
+    assert client.get("/admin/products").json["data"] == []
+
+
+@pytest.mark.parametrize("role, status", [(None, 401), ("WAITER", 403), ("KITCHEN", 403), ("CASHIER", 403)])
+def test_catalogo_administrativo_y_disponibilidad_requieren_admin(client, role, status):
+    if role:
+        _, headers = autenticar(client, role)
+    else:
+        headers = {"X-CSRF-Token": client.get("/auth/csrf").json["data"]["csrf_token"]}
+    assert client.get("/admin/products").status_code == status
+    assert client.patch("/products/1", json={"is_available": False}, headers=headers).status_code == status
+    assert client.get("/products").status_code == 200
 
 
 @pytest.mark.parametrize("path", ["/admin", "/panel/admin"])
@@ -129,13 +167,16 @@ global.URL = { createObjectURL: () => 'blob:qr-test', revokeObjectURL: () => { r
 const records = {
     '/admin/mesas': [{id: 3, numero: 12, estado: 'DISPONIBLE'}],
     '/categories': [{id: 4, name: '<img src=x onerror=alert(1)>', description: 'Descripcion'}],
-    '/products': [{id: 5, name: 'Cafe', description: '', price: '12.35', categoria_id: 4, is_available: true}],
+    '/admin/products': [{id: 5, name: 'Cafe', description: '', price: '12.35', categoria_id: 4, is_available: true}],
     '/users': [{id: 6, username: 'mesero', email: 'a@example.test', rol: 'WAITER', is_active: true}],
 };
 const calls = []; let failure = null; let meRole = 'ADMIN';
 global.fetch = async (url, options = {}) => {
     calls.push({url, ...options});
     const error = failure; failure = null;
+    if (!error && url === '/products/5' && options.method === 'PATCH') {
+        Object.assign(records['/admin/products'][0], JSON.parse(options.body));
+    }
     const svg = url.endsWith('/qr.svg');
     const data = url === '/auth/me' ? {id: 1, rol: meRole} : url === '/users' ? {users: records[url]} : records[url] || {};
     return { ok: !error, status: error?.status || 200,
@@ -147,7 +188,7 @@ const click = (section, action, id) => section.nodes['[data-rows]'].events.click
 const submit = section => section.nodes.form.events.submit({preventDefault() {}});
 (async () => {
     await ready();
-    assert.deepEqual(calls.map(call => call.url), ['/auth/me', '/admin/mesas', '/categories', '/products', '/users']);
+    assert.deepEqual(calls.map(call => call.url), ['/auth/me', '/admin/mesas', '/categories', '/admin/products', '/users']);
     assert.equal(sections[1].nodes['[data-rows]'].children[0].children[1].textContent, records['/categories'][0].name);
     for (const [index, name] of ['mesas', 'categorias', 'productos', 'usuarios'].entries()) {
         const section = sections[index]; const form = section.nodes.form;
@@ -167,6 +208,16 @@ const submit = section => section.nodes.form.events.submit({preventDefault() {}}
         const patch = calls.findLast(call => call.method === 'PATCH');
         assert.equal(patch.url, call.url + '/' + record.id);
         if (name === 'usuarios') assert.equal('password' in JSON.parse(patch.body), false);
+    }
+    const products = sections[2];
+    const availability = products.nodes.form.elements.is_available;
+    for (const [available, label] of [[false, 'No disponible'], [true, 'Disponible']]) {
+        await click(products, 'editar', 5);
+        assert.equal(availability.checked, !available);
+        availability.checked = available;
+        await submit(products);
+        assert.equal(calls.at(-1).url, '/admin/products');
+        assert.equal(products.nodes['[data-rows]'].children[0].children[4].textContent, label);
     }
     confirmed = false; const before = calls.length;
     await click(sections[1], 'desactivar', 4); assert.equal(calls.length, before);

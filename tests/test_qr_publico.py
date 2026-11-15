@@ -1,5 +1,7 @@
 """Pruebas del generador QR de mesa y del menú público (Portátil Codex 2)."""
 
+from xml.etree import ElementTree
+
 import pytest
 
 from app import create_app
@@ -104,7 +106,8 @@ def test_qr_con_public_base_url_devuelve_svg(monkeypatch):
     response = _qr_svg(monkeypatch, "https://resto.example.com", 8)
     assert response.status_code == 200
     assert response.headers["Content-Type"].startswith("image/svg+xml")
-    assert b"<svg" in response.get_data()
+    root = ElementTree.fromstring(response.get_data())
+    assert root.tag == "{http://www.w3.org/2000/svg}svg"
 
 
 def test_qr_contenido_depende_de_url_y_token(monkeypatch):

@@ -8,8 +8,9 @@ ni de coordinación.
 
 Los blueprints `categories_bp` y `products_bp` (`app/catalog/routes.py`) están
 registrados en `app/__init__.py`. Los endpoints administrativos (POST, PATCH,
-DELETE) estan protegidos con `roles_required("ADMIN")` del modulo A-02.
-Los endpoints GET son publicos y no requieren autenticacion.
+DELETE y GET /admin/products) estan protegidos con `roles_required("ADMIN")`
+del modulo A-02. Las consultas GET de `/categories` y `/products` y sus
+detalles son publicas.
 
 La proteccion CSRF global (`protect_csrf` de `app/auth/csrf.py`) se aplica a
 todas las peticiones mutantes mediante `before_request` en la factory.
@@ -50,6 +51,12 @@ esta inactiva, 409 si tiene productos activos asociados.
 Lista productos activos, disponibles y asociados a categorias activas
 (consulta publica). Filtro opcional `?categoria_id=<id>`.
 Respuesta: `{"success": true, "data": [{...}, ...]}`
+
+### GET /admin/products
+Lista productos activos de categorias activas, incluidos los temporalmente
+no disponibles. Requiere rol ADMIN.
+Respuesta: `{"success": true, "data": [{...}, ...]}`
+Errores: 401 sin autenticacion, 403 sin rol ADMIN.
 
 ### POST /products
 Crea un nuevo producto activo y disponible. Requiere rol ADMIN.
