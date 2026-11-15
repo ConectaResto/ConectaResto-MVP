@@ -177,6 +177,9 @@ global.fetch = async (url, options = {}) => {
     if (!error && url === '/products/5' && options.method === 'PATCH') {
         Object.assign(records['/admin/products?include_inactive=true'][0], JSON.parse(options.body));
     }
+    if (!error && url === '/products/5' && options.method === 'DELETE') {
+        records['/admin/products?include_inactive=true'][0].is_active = false;
+    }
     const svg = url.endsWith('/qr.svg');
     const data = url === '/auth/me' ? {id: 1, rol: meRole} : url === '/users' ? {users: records[url]} : records[url] || {};
     return { ok: !error, status: error?.status || 200,
@@ -221,6 +224,44 @@ const submit = section => section.nodes.form.events.submit({preventDefault() {}}
         assert.equal(calls.at(-1).url, '/admin/products?include_inactive=true');
         assert.equal(products.nodes['[data-rows]'].children[0].children[4].textContent, label);
     }
+    const productRecord = records['/admin/products?include_inactive=true'][0];
+    const productActions = () => products.nodes['[data-rows]'].children[0].children.at(-1).children.map(button => button.dataset.action);
+    assert(productActions().includes('desactivar'));
+    assert(!productActions().includes('reactivar'));
+    assert.match(sections[1].nodes['[data-list-status]'].textContent, /desactiva o reasigna sus productos activos/);
+    confirmed = false;
+    const beforeCancel = calls.length;
+    await click(products, 'desactivar', 5);
+    assert.equal(calls.length, beforeCancel);
+    assert.equal(productRecord.is_active, true);
+    confirmed = true;
+    failure = {status: 500, message: 'No se pudo desactivar el producto'};
+    await click(products, 'desactivar', 5);
+    assert.equal(products.nodes['[data-feedback]'].textContent, 'No se pudo desactivar el producto');
+    assert.equal(products.nodes['[data-feedback]'].role, 'alert');
+    assert.equal(products.dataset.busy, 'false');
+    assert.equal(productRecord.is_active, true);
+    // No disponible sigue activo y conserva la opcion Desactivar.
+    await click(products, 'editar', 5);
+    availability.checked = false;
+    await submit(products);
+    assert.equal(productRecord.is_active, true);
+    assert(productActions().includes('desactivar'));
+    await click(products, 'desactivar', 5);
+    const deletion = calls.findLast(call => call.method === 'DELETE');
+    assert.equal(deletion.url, '/products/5');
+    assert.equal(deletion.headers['X-CSRF-Token'], 'csrf-test');
+    assert.equal(deletion.credentials, 'same-origin');
+    assert.equal(calls.at(-1).url, '/admin/products?include_inactive=true');
+    assert.equal(productRecord.is_active, false);
+    assert.equal(productRecord.is_available, false);
+    assert(productActions().includes('reactivar'));
+    assert(!productActions().includes('desactivar'));
+    await click(products, 'reactivar', 5);
+    assert.equal(productRecord.is_active, true);
+    assert.equal(productRecord.is_available, false);
+    assert(productActions().includes('desactivar'));
+    assert(!productActions().includes('reactivar'));
     for (const [index, path, id] of [[1, '/categories', 4], [2, '/products', 5], [3, '/users', 6]]) {
         Object.values(records)[index][0].is_active = false;
         await sections[index].nodes['[data-refresh]'].events.click();

@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (name === 'mesas') choices.push('qr');
             if (['categorias', 'productos', 'usuarios'].includes(name)) {
                 if (!record.is_active) choices.push('reactivar');
-                else if (name !== 'productos') choices.push('desactivar');
+                else choices.push('desactivar');
             }
             for (const action of choices) {
                 const button = document.createElement('button');
@@ -143,7 +143,9 @@ document.addEventListener('DOMContentLoaded', async function () {
             row.appendChild(actions);
             body.appendChild(row);
         }
-        section.querySelector('[data-list-status]').textContent = resource.rows.length ? '' : 'No hay registros para mostrar.';
+        const categoryHelp = name === 'categorias'
+            ? 'Para desactivar una categoría, primero desactiva o reasigna sus productos activos. Marcar un producto como no disponible no lo desactiva. ' : '';
+        section.querySelector('[data-list-status]').textContent = categoryHelp + (resource.rows.length ? '' : 'No hay registros para mostrar.');
     }
 
     async function loadList(section, name) {
