@@ -407,3 +407,63 @@ def test_patch_catalogo_rechaza_cuerpos_no_objeto(client, payload):
     _, headers = autenticar(client, "ADMIN")
     for path in ("/categories/1", "/products/1"):
         assert client.patch(path, json=payload, headers=headers).status_code == 400
+
+
+# ---------- Pruebas de navegación por pestañas en ADMIN ----------
+
+def test_admin_muestra_una_seccion_visible_inicialmente(app, client):
+    autenticar(client, "ADMIN")
+    response = client.get("/admin", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    parsed = PanelHTML(html)
+    visible = [attrs for _, attrs in parsed.elements
+               if attrs.get("class") == "admin-section visible"]
+    assert len(visible) == 1
+    assert visible[0].get("id") == "admin-mesas"
+    hidden = [attrs for _, attrs in parsed.elements
+              if attrs.get("class") == "admin-section"]
+    assert len(hidden) == 3
+    hidden_ids = {attrs.get("id") for attrs in hidden}
+    assert hidden_ids == {"admin-categorias", "admin-productos", "admin-usuarios"}
+
+
+def test_admin_tiene_enlaces_navegacion_pestanas(app, client):
+    autenticar(client, "ADMIN")
+    response = client.get("/admin", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    parsed = PanelHTML(html)
+    nav_links = [attrs for tag, attrs in parsed.elements
+                 if tag == "a" and attrs.get("href") in ("#admin-mesas", "#admin-categorias",
+                                                         "#admin-productos", "#admin-usuarios")]
+    assert len(nav_links) == 4
+    active = [attrs for attrs in nav_links if attrs.get("aria-current") == "page"]
+    assert len(active) == 1
+    assert active[0].get("href") == "#admin-mesas"
+
+
+def test_admin_secciones_tienen_aria_labelledby(app, client):
+    autenticar(client, "ADMIN")
+    response = client.get("/admin", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    parsed = PanelHTML(html)
+    sections = [attrs for tag, attrs in parsed.elements
+                if tag == "section" and attrs.get("id") in ("admin-mesas", "admin-categorias",
+                                                            "admin-productos", "admin-usuarios")]
+    assert len(sections) == 4
+    for attrs in sections:
+        assert attrs.get("aria-labelledby") is not None
+
+
+def test_admin_hash_invalido_muestra_mesas(app, client):
+    autenticar(client, "ADMIN")
+    response = client.get("/admin#admin-inexistente", follow_redirects=True)
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    parsed = PanelHTML(html)
+    visible = [attrs for _, attrs in parsed.elements
+               if attrs.get("class") == "admin-section visible"]
+    assert len(visible) == 1
+    assert visible[0].get("id") == "admin-mesas"
