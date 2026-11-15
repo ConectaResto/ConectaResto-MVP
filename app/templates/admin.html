@@ -9,14 +9,14 @@
         <p class="panel-subtitle">Rol: <strong>{{ user.rol }}</strong> · Usuario: {{ user.username }}</p>
     </div>
     <nav class="section-nav" aria-label="Administración">
-        <a class="btn btn-primary" href="#admin-mesas">Mesas y QR</a>
+        <a class="btn btn-primary" aria-current="page" href="#admin-mesas">Mesas y QR</a>
         <a class="btn btn-primary" href="#admin-categorias">Categorías</a>
         <a class="btn btn-primary" href="#admin-productos">Productos</a>
         <a class="btn btn-primary" href="#admin-usuarios">Usuarios</a>
     </nav>
     <noscript><p class="flash error">Activa JavaScript para gestionar el restaurante.</p></noscript>
 
-    <section class="admin-section" id="admin-mesas" data-admin-section="mesas" aria-labelledby="mesas-heading">
+    <section class="admin-section visible" id="admin-mesas" data-admin-section="mesas" aria-labelledby="mesas-heading">
         <div class="admin-section-body">
             <h2 id="mesas-heading">Mesas y QR</h2>
             <p class="admin-intro">Gestiona las mesas del restaurante y genera su código QR para el menú público.</p>
@@ -122,4 +122,46 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
+<script>
+(function () {
+    const panel = document.getElementById('admin-panel');
+    if (!panel) return;
+    const nav = panel.querySelector('.section-nav');
+    if (!nav) return;
+    const links = Array.from(nav.querySelectorAll('a'));
+    const sections = {};
+    links.forEach((link) => {
+        const id = link.getAttribute('href').replace('#', '');
+        const section = document.getElementById(id);
+        if (section) sections[id] = section;
+    });
+    function show(id) {
+        Object.values(sections).forEach((section) => {
+            section.classList.remove('visible');
+        });
+        links.forEach((link) => {
+            const active = link.getAttribute('href').replace('#', '') === id;
+            link.setAttribute('aria-current', active ? 'page' : null);
+        });
+        const section = sections[id];
+        if (section) {
+            section.classList.add('visible');
+            section.focus();
+        }
+        history.replaceState(null, '', '#' + id);
+    }
+    links.forEach((link) => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            show(link.getAttribute('href').replace('#', ''));
+        });
+    });
+    const hash = location.hash.replace('#', '');
+    show(sections[hash] ? hash : 'admin-mesas');
+    window.addEventListener('hashchange', () => {
+        const h = location.hash.replace('#', '');
+        if (sections[h]) show(h);
+    });
+})();
+</script>
 {% endblock %}

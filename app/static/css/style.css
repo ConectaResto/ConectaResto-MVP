@@ -267,6 +267,19 @@ body {
     font-size: 0.9rem;
 }
 
+/* ADMIN: visibilidad de secciones por pestañas, scoped a #admin-panel */
+#admin-panel .admin-section {
+    display: none;
+}
+#admin-panel .admin-section.visible {
+    display: block;
+}
+
+/* Pestaña activa */
+#admin-panel .section-nav [aria-current="page"] {
+    background-color: #1a252f;
+}
+
 /* Disabled fieldset visual state */
 fieldset[disabled] {
     opacity: 0.85;
