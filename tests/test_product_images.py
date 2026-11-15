@@ -1,6 +1,7 @@
 import os
 
 import pytest
+from unittest.mock import patch
 from werkzeug.datastructures import FileStorage
 from app import create_app
 from app.extensions import db
@@ -104,24 +105,40 @@ def test_upload_and_delete_product_image_service(app):
     """Upload and delete image via service layer."""
     with app.app_context():
         product_id = _create_product(app)
+        upload_dir = os.path.join(app.instance_path, "uploads", "products")
 
         # Upload JPEG
         file_storage = _make_file_storage(_JPEG_DATA, "test.jpg")
-        product = upload_product_image(product_id, file_storage)
+        product, cleanup = upload_product_image(product_id, file_storage)
         assert product.image_filename is not None
         assert product.image_filename.endswith(".jpg")
         assert get_product_image_filename(product_id) == product.image_filename
 
         # File should exist on disk
-        upload_dir = os.path.join(app.instance_path, "uploads", "products")
-        file_path = os.path.join(upload_dir, product.image_filename)
-        assert os.path.exists(file_path)
+        new_path = os.path.join(upload_dir, product.image_filename)
+        assert os.path.exists(new_path)
+
+        # Old file should NOT be deleted before commit (cleanup info returned)
+        assert cleanup["old_filename"] is None
+        assert cleanup["new_path"] == new_path
+
+        db.session.commit()
 
         # Delete image
-        product = delete_product_image(product_id)
+        product, cleanup = delete_product_image(product_id)
         assert product.image_filename is None
         assert get_product_image_filename(product_id) is None
-        assert not os.path.exists(file_path)
+        # File should still exist (not deleted before commit)
+        assert os.path.exists(new_path)
+        assert cleanup["old_filename"] is not None
+
+        db.session.commit()
+        # After commit, file should be deleted (simulating route handler cleanup)
+        if cleanup["old_filename"]:
+            old_path = os.path.join(upload_dir, cleanup["old_filename"])
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        assert not os.path.exists(new_path)
 
 
 def test_upload_png_service(app):
@@ -129,9 +146,10 @@ def test_upload_png_service(app):
     with app.app_context():
         product_id = _create_product(app)
         file_storage = _make_file_storage(_PNG_DATA, "test.png", "image/png")
-        product = upload_product_image(product_id, file_storage)
+        product, cleanup = upload_product_image(product_id, file_storage)
         assert product.image_filename is not None
         assert product.image_filename.endswith(".png")
+        db.session.commit()
 
 
 def test_upload_invalid_extension_service(app):
@@ -152,24 +170,41 @@ def test_upload_nonexistent_product_service(app):
 
 
 def test_replace_image_service(app):
-    """Replace image: old file removed, new file saved."""
+    """Replace image: old file kept until commit, then removed."""
     with app.app_context():
         product_id = _create_product(app)
+        upload_dir = os.path.join(app.instance_path, "uploads", "products")
 
         # First upload
         file_storage1 = _make_file_storage(_JPEG_DATA, "test.jpg")
-        product = upload_product_image(product_id, file_storage1)
+        product, cleanup1 = upload_product_image(product_id, file_storage1)
         old_filename = product.image_filename
-        old_path = os.path.join(app.instance_path, "uploads", "products", old_filename)
+        old_path = os.path.join(upload_dir, old_filename)
         assert os.path.exists(old_path)
+        db.session.commit()
 
         # Replace with PNG
         file_storage2 = _make_file_storage(_PNG_DATA, "test.png", "image/png")
-        product = upload_product_image(product_id, file_storage2)
+        product, cleanup2 = upload_product_image(product_id, file_storage2)
         assert product.image_filename != old_filename
         assert product.image_filename.endswith(".png")
-        assert not os.path.exists(old_path)  # old file removed
-        new_path = os.path.join(app.instance_path, "uploads", "products", product.image_filename)
+        # Old file still exists (not deleted before commit)
+        assert os.path.exists(old_path)
+        # New file exists
+        new_path = os.path.join(upload_dir, product.image_filename)
+        assert os.path.exists(new_path)
+        # Cleanup info has old filename for post-commit deletion
+        assert cleanup2["old_filename"] == old_filename
+        assert cleanup2["new_path"] == new_path
+
+        db.session.commit()
+        # After commit, old file removed (simulating route handler cleanup)
+        if cleanup2["old_filename"]:
+            old_path2 = os.path.join(upload_dir, cleanup2["old_filename"])
+            if os.path.exists(old_path2):
+                os.remove(old_path2)
+        assert not os.path.exists(old_path)
+        # New file still exists
         assert os.path.exists(new_path)
 
 
@@ -177,8 +212,9 @@ def test_delete_nonexistent_image_service(app):
     """Delete image from product without image is a no-op."""
     with app.app_context():
         product_id = _create_product(app)
-        product = delete_product_image(product_id)
+        product, cleanup = delete_product_image(product_id)
         assert product.image_filename is None
+        assert cleanup["old_filename"] is None
 
 
 # ---------- Endpoint-level tests ----------
@@ -489,3 +525,98 @@ def test_get_image_png_content_type(client, app):
     resp = client.get("/products/1/image")
     assert resp.status_code == 200
     assert resp.content_type == "image/png"
+
+
+# ---------- Commit failure tests ----------
+
+def test_upload_image_commit_failure_cleans_orphan(client, app):
+    """Si falla el commit, el archivo nuevo se elimina y el anterior se conserva."""
+    _make_admin_user(app)
+    _create_product(app, "Producto Test", "10.00")
+    login(client, "admin1", "admin-pass")
+    token = csrf_token(client)
+
+    # Upload first image successfully
+    file_storage1 = _make_file_storage(_JPEG_DATA, "old.jpg")
+    resp = client.put(
+        "/products/1/image",
+        data={"image": (file_storage1, "old.jpg")},
+        headers={"X-CSRF-Token": token},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 200
+    old_filename = resp.get_json()["data"]["image_filename"]
+    old_path = os.path.join(app.instance_path, "uploads", "products", old_filename)
+    assert os.path.exists(old_path)
+
+    # Make commit fail on next operation
+    def failing_commit():
+        raise ProductImageError("Commit simulado fallido")
+
+    with patch.object(db.session, "commit", failing_commit):
+        file_storage2 = _make_file_storage(_PNG_DATA, "new.png", "image/png")
+        resp = client.put(
+            "/products/1/image",
+            data={"image": (file_storage2, "new.png")},
+            headers={"X-CSRF-Token": token},
+            content_type="multipart/form-data",
+        )
+
+    # Should return 400 (ProductImageError from commit failure)
+    assert resp.status_code == 400
+
+    # Old file should still exist (not deleted because commit failed)
+    assert os.path.exists(old_path)
+
+    # New file should have been cleaned up (orphan)
+    new_filename = resp.get_json().get("data", {}).get("image_filename")
+    if new_filename:
+        new_path = os.path.join(app.instance_path, "uploads", "products", new_filename)
+        assert not os.path.exists(new_path)
+
+    # DB should still reference the old filename
+    with app.app_context():
+        product = db.session.get(Product, 1)
+        assert product.image_filename == old_filename
+
+
+def test_delete_image_commit_failure_keeps_file(client, app):
+    """Si falla el commit al eliminar, el archivo permanece en disco."""
+    _make_admin_user(app)
+    _create_product(app, "Producto Test", "10.00")
+    login(client, "admin1", "admin-pass")
+    token = csrf_token(client)
+
+    # Upload image first
+    file_storage = _make_file_storage(_JPEG_DATA, "test.jpg")
+    resp = client.put(
+        "/products/1/image",
+        data={"image": (file_storage, "test.jpg")},
+        headers={"X-CSRF-Token": token},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 200
+    filename = resp.get_json()["data"]["image_filename"]
+    file_path = os.path.join(app.instance_path, "uploads", "products", filename)
+    assert os.path.exists(file_path)
+
+    # Make commit fail on delete
+    def failing_commit():
+        raise ProductImageError("Commit simulado fallido")
+
+    with patch.object(db.session, "commit", failing_commit):
+        resp = client.delete(
+            "/products/1/image",
+            headers={"X-CSRF-Token": token},
+        )
+
+    # Should return 404 (delete route returns 404 for ProductImageError)
+    assert resp.status_code == 404
+
+    # File should still exist (not deleted because commit failed)
+    assert os.path.exists(file_path)
+
+    # DB should still reference the filename
+    with app.app_context():
+        product = db.session.get(Product, 1)
+        assert product.image_filename == filename

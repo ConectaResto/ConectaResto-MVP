@@ -199,16 +199,38 @@ def upload_product_image_route(product_id):
     if "image" not in request.files:
         return error_response("Se requiere el campo 'image'", 400)
     file_storage = request.files["image"]
+    cleanup = None
     try:
-        product = upload_product_image(product_id, file_storage)
+        product, cleanup = upload_product_image(product_id, file_storage)
         db.session.commit()
+        # Commit exitoso: eliminar archivo previo si lo hay
+        if cleanup and cleanup["old_filename"]:
+            old_path = os.path.join(cleanup["upload_dir"], cleanup["old_filename"])
+            try:
+                if os.path.exists(old_path):
+                    os.remove(old_path)
+            except OSError:
+                pass
     except ProductImageError as exc:
         db.session.rollback()
+        # Commit fallido: eliminar archivo nuevo huérfano si se guardó
+        if cleanup and cleanup.get("new_path"):
+            try:
+                if os.path.exists(cleanup["new_path"]):
+                    os.remove(cleanup["new_path"])
+            except OSError:
+                pass
         if "no encontrado" in str(exc):
             return error_response(str(exc), 404)
         return error_response(str(exc), 400)
     except ValueError as exc:
         db.session.rollback()
+        if cleanup and cleanup.get("new_path"):
+            try:
+                if os.path.exists(cleanup["new_path"]):
+                    os.remove(cleanup["new_path"])
+            except OSError:
+                pass
         return error_response(str(exc), 404)
     return success_response(
         data={"id": product.id, "image_filename": product.image_filename},
@@ -221,9 +243,20 @@ def upload_product_image_route(product_id):
 @roles_required("ADMIN")
 def delete_product_image_route(product_id):
     """Remove a product image (ADMIN only)."""
+    cleanup = None
     try:
-        product = delete_product_image(product_id)
+        product, cleanup = delete_product_image(product_id)
         db.session.commit()
+        # Commit exitoso: eliminar archivo si lo hay
+        if cleanup and cleanup["old_filename"]:
+            upload_dir = cleanup["upload_dir"]
+            if upload_dir:
+                file_path = os.path.join(upload_dir, cleanup["old_filename"])
+                try:
+                    if os.path.exists(file_path):
+                        os.remove(file_path)
+                except OSError:
+                    pass
     except ProductImageError as exc:
         db.session.rollback()
         return error_response(str(exc), 404)

@@ -503,20 +503,20 @@ def _unique_filename(ext: str) -> str:
     return f"{uuid.uuid4().hex}.{ext}"
 
 
-def upload_product_image(product_id: int, file_storage) -> Product:
+def upload_product_image(product_id: int, file_storage) -> tuple[Product, dict]:
     """Upload or replace an image for a product.
 
     Saves the file to instance/uploads/products/ with a unique name,
-    updates product.image_filename, and returns the product.
+    updates product.image_filename, and returns the product plus cleanup info.
     The caller is responsible for committing the transaction.
+    File deletion of the previous image must happen after a successful commit.
+    If the commit fails, the new file must be removed by the caller.
     """
     ext = _validate_image_file(file_storage)
     product = db.session.get(Product, product_id)
     if product is None:
         raise ProductImageError("Producto no encontrado")
 
-    # If replacing an existing image, delete the old file only after
-    # the new file is saved successfully (atomic replacement).
     old_filename = product.image_filename
     new_filename = _unique_filename(ext)
     upload_dir = _upload_dir()
@@ -527,42 +527,40 @@ def upload_product_image(product_id: int, file_storage) -> Product:
     except OSError as exc:
         raise ProductImageError(f"No se pudo guardar la imagen: {exc}")
 
-    # Remove old file only after new file is saved
-    if old_filename:
-        old_path = os.path.join(upload_dir, old_filename)
-        try:
-            if os.path.exists(old_path):
-                os.remove(old_path)
-        except OSError:
-            # No bloquear la subida si no se puede borrar el archivo anterior
-            pass
-
     product.image_filename = new_filename
     db.session.add(product)
-    return product
+
+    cleanup = {
+        "old_filename": old_filename,
+        "new_path": new_path,
+        "upload_dir": upload_dir,
+    }
+    return product, cleanup
 
 
-def delete_product_image(product_id: int) -> Product:
+def delete_product_image(product_id: int) -> tuple[Product, dict]:
     """Remove the image from a product and delete the file.
 
-    Does not deactivate the product. Returns the product.
+    Does not deactivate the product. Returns the product plus cleanup info.
     The caller is responsible for committing the transaction.
+    File deletion must happen after a successful commit.
+    If the commit fails, the file remains on disk (no data loss).
     """
     product = db.session.get(Product, product_id)
     if product is None:
         raise ProductImageError("Producto no encontrado")
 
-    if product.image_filename:
-        upload_dir = _upload_dir()
-        file_path = os.path.join(upload_dir, product.image_filename)
-        try:
-            if os.path.exists(file_path):
-                os.remove(file_path)
-        except OSError:
-            pass
+    old_filename = product.image_filename
+    cleanup = {
+        "old_filename": old_filename,
+        "upload_dir": _upload_dir() if old_filename else None,
+    }
+
+    if old_filename:
         product.image_filename = None
         db.session.add(product)
-    return product
+
+    return product, cleanup
 
 
 def get_product_image_filename(product_id: int) -> str | None:
