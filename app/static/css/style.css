@@ -295,6 +295,43 @@ body {
     background-color: #95a5a6;
 }
 
+/* Badge estados de mesas (WAITER) */
+.badge.mesa-disponible {
+    background-color: #117a65;
+    color: #fff;
+}
+
+.badge.mesa-ocupada {
+    background-color: #c0392b;
+    color: #fff;
+}
+
+.badge.mesa-cerrada {
+    background-color: #b7950b;
+    color: #fff;
+}
+
+/* Badge estados de pedidos (WAITER) */
+.badge.pedido-pendiente {
+    background-color: #c0392b;
+    color: #fff;
+}
+
+.badge.pedido-en-preparacion {
+    background-color: #b7950b;
+    color: #fff;
+}
+
+.badge.pedido-listo {
+    background-color: #117a65;
+    color: #fff;
+}
+
+.badge.pedido-entregado {
+    background-color: #27ae60;
+    color: #fff;
+}
+
 /* Tables */
 table {
     width: 100%;
