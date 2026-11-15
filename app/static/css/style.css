@@ -1,3 +1,5 @@
+@import url("palette.css");
+
 * {
     margin: 0;
     padding: 0;
@@ -7,8 +9,8 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     line-height: 1.6;
-    color: #333;
-    background-color: #f5f5f5;
+    color: var(--color-text);
+    background-color: var(--color-background);
 }
 
 .container {
@@ -19,8 +21,8 @@ body {
 
 /* Header */
 .header {
-    background-color: #2c3e50;
-    color: #fff;
+    background-color: var(--color-header);
+    color: var(--color-surface);
     padding: 16px 0;
     position: sticky;
     top: 0;
@@ -38,7 +40,7 @@ body {
 .logo {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #fff;
+    color: var(--color-surface);
     text-decoration: none;
 }
 
@@ -58,7 +60,7 @@ body {
 }
 
 .nav-link {
-    color: #fff;
+    color: var(--color-surface);
     text-decoration: none;
     padding: 8px 16px;
     border-radius: 6px;
@@ -71,18 +73,26 @@ body {
 }
 
 .nav-user {
-    color: #fff;
+    color: var(--color-surface);
     font-size: 0.95rem;
     background-color: rgba(255, 255, 255, 0.1);
     padding: 8px 14px;
     border-radius: 6px;
 }
 
-.btn-login, .btn-logout {
+.btn-login {
+    background-color: var(--color-primary);
+}
+
+.btn-logout {
     background-color: #e74c3c;
 }
 
-.btn-login:hover, .btn-logout:hover {
+.btn-login:hover {
+    background-color: var(--color-header);
+}
+
+.btn-logout:hover {
     background-color: #c0392b;
 }
 
@@ -90,7 +100,7 @@ body {
     display: none;
     background: none;
     border: none;
-    color: #fff;
+    color: var(--color-surface);
     font-size: 1.5rem;
     cursor: pointer;
     padding: 8px;
@@ -106,20 +116,20 @@ body {
 .hero {
     text-align: center;
     padding: 60px 20px;
-    background-color: #fff;
+    background-color: var(--color-surface);
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .hero h2 {
     font-size: 2rem;
-    color: #2c3e50;
+    color: var(--color-text);
     margin-bottom: 16px;
 }
 
 .hero p {
     font-size: 1.1rem;
-    color: #666;
+    color: var(--color-text-muted);
     max-width: 600px;
     margin: 0 auto;
 }
@@ -136,7 +146,7 @@ body {
 .login-card {
     width: 100%;
     max-width: 400px;
-    background: #fff;
+    background: var(--color-surface);
     padding: 32px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -144,7 +154,7 @@ body {
 
 .login-card h2 {
     margin-bottom: 24px;
-    color: #2c3e50;
+    color: var(--color-text);
     text-align: center;
 }
 
@@ -156,13 +166,16 @@ body {
     display: block;
     margin-bottom: 6px;
     font-size: 0.95rem;
-    color: #555;
+    color: var(--color-text-muted);
 }
 
 .field input {
+    color: var(--color-text);
+    background-color: var(--color-surface);
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-input-border);
+    outline-color: var(--color-focus);
     border-radius: 6px;
     font-size: 1rem;
 }
@@ -184,7 +197,7 @@ body {
     text-align: center;
     margin-top: 16px;
     font-size: 0.9rem;
-    color: #666;
+    color: var(--color-text-muted);
 }
 
 /* Inicio de sesión: ajustes locales sobre los componentes existentes. */
@@ -196,7 +209,7 @@ body {
 #login-page .login-card {
     max-width: 440px;
     padding: clamp(24px, 6vw, 32px);
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -216,12 +229,12 @@ body {
 
 #login-page .field input:focus-visible,
 #login-page .btn:focus-visible {
-    outline: 2px solid #2c3e50;
+    outline: 2px solid var(--color-focus);
     outline-offset: 3px;
 }
 
 #login-page .field input:focus-visible {
-    border-color: #2c3e50;
+    border-color: var(--color-focus);
 }
 
 #login-page .flash.error {
@@ -235,11 +248,14 @@ body {
 #login-page .login-hint {
     margin-top: 24px;
     padding-top: 16px;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--color-border);
 }
 
 /* Buttons */
 .btn {
+    color: var(--color-text);
+    background-color: var(--color-surface);
+    outline-color: var(--color-focus);
     display: inline-block;
     padding: 10px 18px;
     border: none;
@@ -250,13 +266,17 @@ body {
     transition: background 0.2s;
 }
 
+.btn:hover {
+    background-color: var(--color-secondary-hover);
+}
+
 .btn-primary {
-    background-color: #2c3e50;
-    color: #fff;
+    background-color: var(--color-primary);
+    color: var(--color-surface);
 }
 
 .btn-primary:hover {
-    background-color: #1a252f;
+    background-color: var(--color-header);
 }
 
 .btn:disabled {
@@ -289,12 +309,12 @@ body {
 
 .panel-header h1 {
     font-size: 1.75rem;
-    color: #2c3e50;
+    color: var(--color-text);
     margin-bottom: 6px;
 }
 
 .panel-subtitle {
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 0.95rem;
 }
 
@@ -306,7 +326,7 @@ body {
 
 /* Admin sections */
 .admin-section {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     margin-bottom: 24px;
@@ -319,7 +339,7 @@ body {
 
 .admin-section h2 {
     font-size: 1.25rem;
-    color: #2c3e50;
+    color: var(--color-text);
     margin-top: 0;
     margin-bottom: 16px;
 }
@@ -347,7 +367,7 @@ body {
 
 /* Pestaña activa */
 #admin-panel .section-nav [aria-current="page"] {
-    background-color: #1a252f;
+    background-color: var(--color-header);
 }
 
 /* ADMIN: espaciado compartido de formularios, listados y QR. */
@@ -371,7 +391,7 @@ body {
     min-width: 0;
     margin: 0;
     padding: var(--form-space-padding);
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
 }
 
@@ -380,7 +400,7 @@ body {
     margin-bottom: var(--form-space-label);
     font-size: 1rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--color-text);
 }
 
 #admin-panel form .field {
@@ -412,12 +432,12 @@ body {
     height: 20px;
     margin: 0;
     padding: 0;
-    accent-color: #2c3e50;
+    accent-color: var(--color-primary);
     cursor: pointer;
 }
 
 #admin-productos #producto-available:focus-visible {
-    outline: 2px solid #2c3e50;
+    outline: 2px solid var(--color-focus);
     outline-offset: 3px;
 }
 
@@ -443,7 +463,7 @@ body {
 #admin-panel #mesa-qr {
     margin: var(--form-space-section) 0 0;
     padding: var(--form-space-padding);
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-radius: 6px;
 }
 
@@ -470,8 +490,8 @@ body {
 /* Disabled fieldset visual state */
 fieldset[disabled] {
     opacity: 0.85;
-    background-color: #f8f9fa;
-    border: 1px solid #e2e8f0;
+    background-color: var(--color-secondary-hover);
+    border: 1px solid var(--color-border);
     border-radius: 6px;
     padding: 16px;
     margin-bottom: 16px;
@@ -479,7 +499,7 @@ fieldset[disabled] {
 
 fieldset[disabled] legend {
     font-size: 1rem;
-    color: #2c3e50;
+    color: var(--color-text);
     font-weight: 600;
     margin-bottom: 12px;
     padding: 0;
@@ -489,13 +509,13 @@ fieldset[disabled] legend {
 /* Section title text in admin */
 .admin-intro {
     font-size: 0.95rem;
-    color: #555;
+    color: var(--color-text-muted);
     margin: 0 0 24px 0;
     line-height: 1.5;
 }
 
 .card {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     padding: 24px;
@@ -511,7 +531,7 @@ fieldset[disabled] legend {
 
 .card-disabled {
     opacity: 0.75;
-    border: 2px dashed #ddd;
+    border: 2px dashed var(--color-border);
 }
 
 .card-disabled:hover {
@@ -521,12 +541,12 @@ fieldset[disabled] legend {
 
 .card-title {
     font-size: 1.25rem;
-    color: #2c3e50;
+    color: var(--color-text);
     margin-bottom: 8px;
 }
 
 .card-desc {
-    color: #666;
+    color: var(--color-text-muted);
     font-size: 0.95rem;
     margin-bottom: 20px;
     flex-grow: 1;
@@ -595,7 +615,7 @@ fieldset[disabled] legend {
 table {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -606,7 +626,7 @@ table {
     overflow-x: auto;
     margin-bottom: 16px;
     border-radius: 8px;
-    border: 1px solid #eee;
+    border: 1px solid var(--color-border);
 }
 
 .table-wrap table {
@@ -621,8 +641,8 @@ table {
 }
 
 th {
-    background-color: #f8f9fa;
-    color: #2c3e50;
+    background-color: var(--color-secondary-hover);
+    color: var(--color-text);
     font-weight: 600;
     text-align: left;
     padding: 12px;
@@ -633,7 +653,7 @@ th {
 
 td {
     padding: 12px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--color-border);
     font-size: 0.95rem;
 }
 
@@ -642,7 +662,7 @@ tr:last-child td {
 }
 
 tr:hover {
-    background-color: #f8f9fa;
+    background-color: var(--color-secondary-hover);
 }
 
 /* Badge state variants */
@@ -656,22 +676,24 @@ tr:hover {
 
 /* Select inputs */
 select {
+    color: var(--color-text);
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--color-input-border);
+    outline-color: var(--color-focus);
     border-radius: 6px;
     font-size: 1rem;
-    background-color: #fff;
+    background-color: var(--color-surface);
 }
 
 select:focus {
     outline: none;
-    border-color: #2c3e50;
+    border-color: var(--color-focus);
 }
 
 /* Actions area */
 .pedidos-actions, .mesas-actions {
-    background: #fff;
+    background: var(--color-surface);
     padding: 24px;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -681,7 +703,7 @@ select:focus {
 .pedidos-actions h3, .mesas-actions h2 {
     margin-top: 0;
     font-size: 1.25rem;
-    color: #2c3e50;
+    color: var(--color-text);
 }
 
 .field {
@@ -692,14 +714,14 @@ select:focus {
     display: block;
     margin-bottom: 6px;
     font-size: 0.95rem;
-    color: #555;
+    color: var(--color-text-muted);
 }
 
 #items-list {
-    background: #f8f9fa;
+    background: var(--color-secondary-hover);
     padding: 12px;
     border-radius: 6px;
-    border: 1px solid #eee;
+    border: 1px solid var(--color-border);
 }
 
 /* WAITER: distribucion local del formulario Nuevo pedido. */
@@ -755,8 +777,8 @@ select:focus {
 
 /* Footer */
 .footer {
-    background-color: #2c3e50;
-    color: #fff;
+    background-color: var(--color-header);
+    color: var(--color-surface);
     text-align: center;
     padding: 20px 0;
     margin-top: auto;
@@ -775,7 +797,7 @@ select:focus {
         top: 100%;
         left: 0;
         right: 0;
-        background-color: #2c3e50;
+        background-color: var(--color-header);
         padding: 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
@@ -843,7 +865,7 @@ select:focus {
 #cashier-panel #detalle-total-pagar {
     font-size: 1.5rem;
     font-weight: 600;
-    color: #2c3e50;
+    color: var(--color-text);
     font-variant-numeric: tabular-nums;
 }
 
@@ -853,7 +875,7 @@ select:focus {
 }
 
 #cashier-panel .tarjeta-servicio.seleccionada {
-    outline: 2px solid #2c3e50;
+    outline: 2px solid var(--color-primary);
     outline-offset: -2px;
 }
 
@@ -865,7 +887,7 @@ select:focus {
     gap: 8px;
     padding: 16px;
     margin-bottom: 16px;
-    background: #f8f9fa;
+    background: var(--color-secondary-hover);
     border-radius: 6px;
 }
 
