@@ -11,12 +11,17 @@
 
     <div class="flash" id="flash-mesas" style="display:none;"></div>
 
-    <div class="mesas-actions" style="margin-bottom: 24px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-        <div class="field" style="margin-bottom:0;">
-            <label for="mesa-id">Número de mesa</label>
-            <input type="number" id="mesa-id" min="1" placeholder="Ej: 1" />
+    <div class="mesas-actions" style="margin-bottom: 24px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+        <div style="flex:1; min-width:260px; display:flex; flex-direction:column; gap:8px;">
+            <label for="mesa-select">Seleccionar mesa disponible</label>
+            <select id="mesa-select"></select>
         </div>
         <button class="btn btn-primary" id="abrir-servicio">Abrir servicio</button>
+    </div>
+
+    <h2 style="margin-bottom:16px; color:#2c3e50;">Todas las mesas</h2>
+    <div id="mesas-table">
+        <p style="color:#666;">Cargando mesas...</p>
     </div>
 
     <h2 style="margin-bottom:16px; color:#2c3e50;">Servicios activos</h2>
@@ -31,9 +36,10 @@
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const flashEl = document.getElementById('flash-mesas');
-    const serviciosList = document.getElementById('servicios-list');
+    const mesaSelect = document.getElementById('mesa-select');
     const abrirBtn = document.getElementById('abrir-servicio');
-    const mesaInput = document.getElementById('mesa-id');
+    const mesasTable = document.getElementById('mesas-table');
+    const serviciosList = document.getElementById('servicios-list');
 
     function showFlash(message, type) {
         flashEl.style.display = 'block';
@@ -52,6 +58,55 @@ document.addEventListener('DOMContentLoaded', function() {
         return { ok: response.ok, status: response.status, data };
     }
 
+    function estadoColor(estado) {
+        const map = {
+            'DISPONIBLE': 'background:#e8f6f3;color:#117a65;',
+            'OCUPADA': 'background:#fdecea;color:#c0392b;',
+            'CERRADA': 'background:#fdf2e9;color:#b7950b;',
+        };
+        return map[estado] || '';
+    }
+
+    mesaSelect.addEventListener('change', function() {
+        abrirBtn.disabled = !mesaSelect.value;
+    });
+
+    async function loadMesas() {
+        hideFlash();
+        const res = await fetchJson('/mesas');
+        if (!res.ok) {
+            mesasTable.innerHTML = '<p style="color:#c0392b;">No se pudo cargar el listado de mesas.</p>';
+            return;
+        }
+        const mesas = res.data.data || res.data || [];
+        if (mesas.length === 0) {
+            mesasTable.innerHTML = '<p style="color:#666;">No hay mesas registradas.</p>';
+            mesaSelect.innerHTML = '<option value="">Sin mesas disponibles</option>';
+            mesaSelect.disabled = true;
+            abrirBtn.disabled = true;
+            return;
+        }
+
+        mesaSelect.disabled = false;
+        abrirBtn.disabled = true;
+        mesaSelect.innerHTML = '<option value="">Seleccione una mesa</option>';
+
+        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Número</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Estado</th></tr></thead><tbody>';
+        for (const m of mesas) {
+            const disponible = m.estado === 'DISPONIBLE';
+            if (disponible) {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = 'Mesa #' + m.numero;
+                mesaSelect.appendChild(opt);
+            }
+            html += '<tr><td style="padding:8px;border-bottom:1px solid #eee;">#' + m.numero + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(m.estado) + '">' + m.estado + '</span></td></tr>';
+        }
+        html += '</tbody></table>';
+        mesasTable.innerHTML = html;
+    }
+
     async function loadServicios() {
         hideFlash();
         const res = await fetchJson('/servicios?estado=ACTIVO');
@@ -66,7 +121,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Mesa</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Pedidos</th></tr></thead><tbody>';
         for (const s of servicios) {
-            html += '<tr><td style="padding:8px;border-bottom:1px solid #eee;">#' + s.mesa_id + '</td><td style="padding:8px;border-bottom:1px solid #eee;"><span style="background:#e8f6f3;color:#117a65;padding:4px 8px;border-radius:4px;font-size:0.85rem;">' + s.estado + '</span></td><td style="padding:8px;border-bottom:1px solid #eee;">';
+            html += '<tr><td style="padding:8px;border-bottom:1px solid #eee;">#' + s.mesa_id + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;background:#e8f6f3;color:#117a65;">' + s.estado + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;">';
             if (s.pedidos && s.pedidos.length > 0) {
                 html += '<ul style="margin:0;padding-left:16px;">';
                 for (const p of s.pedidos) {
@@ -84,9 +141,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     abrirBtn.addEventListener('click', async function() {
         hideFlash();
-        const mesaId = parseInt(mesaInput.value, 10);
+        const mesaId = parseInt(mesaSelect.value, 10);
         if (!mesaId || mesaId <= 0) {
-            showFlash('Ingresa un número de mesa válido', 'error');
+            showFlash('Selecciona una mesa válida', 'error');
             return;
         }
         const res = await fetchJson('/servicios', {
@@ -94,17 +151,21 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({ mesa_id: mesaId }),
         });
         if (res.ok) {
-            showFlash('Servicio abierto para la mesa #' + mesaId, '');
+            const mesaNumero = mesaSelect.options[mesaSelect.selectedIndex].text.replace('Mesa #', '');
+            mesaSelect.value = '';
+            abrirBtn.disabled = true;
+            loadMesas();
+            loadServicios();
+            showFlash('Servicio abierto para la mesa #' + mesaNumero, '');
             flashEl.style.backgroundColor = '#e8f6f3';
             flashEl.style.color = '#117a65';
             flashEl.style.border = '1px solid #a9dfbf';
-            mesaInput.value = '';
-            loadServicios();
         } else {
             showFlash(res.data.error || 'Error al abrir servicio', 'error');
         }
     });
 
+    loadMesas();
     loadServicios();
 });
 </script>
