@@ -152,3 +152,87 @@ def test_stable_token_uses_new_service_after_reopening(client, order_context):
     pedido = db.session.get(Pedido, response.json["data"]["id"])
     assert pedido.servicio_id == new_service.id
     assert mesa.public_token == token
+
+
+@pytest.fixture
+def disponible_mesa_context(app, client):
+    """Mesa DISPONIBLE sin servicio activo, con un producto valido."""
+    mesa = Mesa(numero=10, estado="DISPONIBLE")
+    category = Category(name="Bebidas")
+    waiter = Usuario(username="disp-waiter", email="disp@test.invalid", rol=Rol(name="WAITER"))
+    waiter.set_password("test-password")
+    db.session.add_all([mesa, category, waiter])
+    db.session.flush()
+    product = Product(name="Te", price=Decimal("5.00"), categoria_id=category.id)
+    db.session.add(product)
+    db.session.commit()
+    csrf = client.get("/auth/csrf").json["data"]["csrf_token"]
+    return mesa, product, {"X-CSRF-Token": csrf}
+
+
+def submit_disponible(client, context, items=None):
+    mesa, product, headers = context
+    if items is None:
+        items = [{"producto_id": product.id, "cantidad": 1}]
+    return client.post(f"/public/mesas/{mesa.public_token}/pedidos",
+                       json={"items": items}, headers=headers)
+
+
+def test_public_order_invalid_product_leaves_mesa_disponible(client, disponible_mesa_context):
+    """Caso A: producto invalido no crea servicio ni pedido, mesa queda DISPONIBLE."""
+    mesa, _, headers = disponible_mesa_context
+    response = submit_disponible(client, disponible_mesa_context,
+                                 items=[{"producto_id": 99999, "cantidad": 1}])
+    assert response.status_code == 404
+    assert response.json["success"] is False
+    assert Pedido.query.count() == 0
+    assert Servicio.query.count() == 0
+    mesa_db = db.session.get(Mesa, mesa.id)
+    assert mesa_db.estado == "DISPONIBLE"
+
+
+def test_public_order_first_creates_service_and_ocupa_mesa(client, disponible_mesa_context):
+    """Caso B: primer pedido valido crea servicio ACTIVO (abierto_por_id NULL) y pedido PENDIENTE."""
+    mesa, product, headers = disponible_mesa_context
+    response = submit_disponible(client, disponible_mesa_context)
+    assert response.status_code == 201
+    data = response.json["data"]
+    assert data["estado"] == "PENDIENTE"
+
+    servicio = db.session.execute(
+        db.select(Servicio).where(Servicio.mesa_id == mesa.id, Servicio.estado == "ACTIVO")
+    ).scalar_one()
+    assert servicio.abierto_por_id is None
+
+    pedido = db.session.get(Pedido, data["id"])
+    assert pedido.estado == "PENDIENTE"
+    assert pedido.origen == "PUBLICO"
+    assert pedido.servicio_id == servicio.id
+
+    mesa_db = db.session.get(Mesa, mesa.id)
+    assert mesa_db.estado == "OCUPADA"
+
+
+def test_public_order_second_reuses_service(client, disponible_mesa_context):
+    """Caso C: segundo pedido reutiliza el servicio ACTIVO existente."""
+    mesa, product, headers = disponible_mesa_context
+
+    response1 = submit_disponible(client, disponible_mesa_context)
+    assert response1.status_code == 201
+    servicio_id = db.session.execute(
+        db.select(Servicio.id).where(Servicio.mesa_id == mesa.id, Servicio.estado == "ACTIVO")
+    ).scalar_one()
+
+    response2 = submit_disponible(client, disponible_mesa_context)
+    assert response2.status_code == 201
+
+    servicios = db.session.execute(
+        db.select(Servicio).where(Servicio.mesa_id == mesa.id)
+    ).scalars().all()
+    assert len(servicios) == 1
+    assert servicios[0].id == servicio_id
+
+    pedidos = db.session.execute(
+        db.select(Pedido).where(Pedido.servicio_id == servicio_id)
+    ).scalars().all()
+    assert len(pedidos) == 2
