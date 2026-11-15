@@ -724,6 +724,11 @@ select:focus {
     border: 1px solid var(--color-border);
 }
 
+/* WAITER/Mesas: conservar la altura natural del boton de apertura. */
+#waiter-mesas-panel #abrir-servicio {
+    align-self: center;
+}
+
 /* WAITER: distribucion local del formulario Nuevo pedido. */
 #waiter-nuevo-pedido .section-nav {
     display: grid;
