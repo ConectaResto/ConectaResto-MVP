@@ -34,6 +34,7 @@ from app.catalog.service import (
 )
 from app.common.responses import error_response, success_response
 from app.extensions import db
+from sqlalchemy.exc import SQLAlchemyError
 
 categories_bp = Blueprint("categories", __name__)
 products_bp = Blueprint("products", __name__)
@@ -232,6 +233,26 @@ def upload_product_image_route(product_id):
             except OSError:
                 pass
         return error_response(str(exc), 404)
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        # Commit fallido por error de base de datos: limpiar archivo nuevo
+        if cleanup and cleanup.get("new_path"):
+            try:
+                if os.path.exists(cleanup["new_path"]):
+                    os.remove(cleanup["new_path"])
+            except OSError:
+                pass
+        return error_response("Error de base de datos al guardar la imagen", 500)
+    except Exception as exc:
+        db.session.rollback()
+        # Error inesperado: limpiar archivo nuevo si existe
+        if cleanup and cleanup.get("new_path"):
+            try:
+                if os.path.exists(cleanup["new_path"]):
+                    os.remove(cleanup["new_path"])
+            except OSError:
+                pass
+        return error_response("Error inesperado al procesar la imagen", 500)
     return success_response(
         data={"id": product.id, "image_filename": product.image_filename},
         message="Imagen subida correctamente",
@@ -260,6 +281,14 @@ def delete_product_image_route(product_id):
     except ProductImageError as exc:
         db.session.rollback()
         return error_response(str(exc), 404)
+    except SQLAlchemyError as exc:
+        db.session.rollback()
+        # Commit fallido: el archivo permanece en disco (no hay data loss)
+        return error_response("Error de base de datos al eliminar la imagen", 500)
+    except Exception as exc:
+        db.session.rollback()
+        # Error inesperado: el archivo permanece en disco
+        return error_response("Error inesperado al eliminar la imagen", 500)
     return success_response(
         data={"id": product.id, "image_filename": None},
         message="Imagen eliminada correctamente",

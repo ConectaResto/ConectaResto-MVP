@@ -2,6 +2,7 @@ import os
 
 import pytest
 from unittest.mock import patch
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.datastructures import FileStorage
 from app import create_app
 from app.extensions import db
@@ -612,6 +613,108 @@ def test_delete_image_commit_failure_keeps_file(client, app):
 
     # Should return 404 (delete route returns 404 for ProductImageError)
     assert resp.status_code == 404
+
+    # File should still exist (not deleted because commit failed)
+    assert os.path.exists(file_path)
+
+    # DB should still reference the filename
+    with app.app_context():
+        product = db.session.get(Product, 1)
+        assert product.image_filename == filename
+
+
+# ---------- SQLAlchemy commit failure tests ----------
+
+def test_upload_image_sqlalchemy_commit_failure(client, app):
+    """Si falla el commit con SQLAlchemyError, se limpia el archivo nuevo y se conserva el anterior."""
+    _make_admin_user(app)
+    _create_product(app, "Producto Test", "10.00")
+    login(client, "admin1", "admin-pass")
+    token = csrf_token(client)
+
+    # Limpieza de archivos residuales de pruebas previas
+    upload_dir = os.path.join(app.instance_path, "uploads", "products")
+    for f in os.listdir(upload_dir):
+        try:
+            os.remove(os.path.join(upload_dir, f))
+        except OSError:
+            pass
+
+    # Upload first image successfully
+    file_storage1 = _make_file_storage(_JPEG_DATA, "old.jpg")
+    resp = client.put(
+        "/products/1/image",
+        data={"image": (file_storage1, "old.jpg")},
+        headers={"X-CSRF-Token": token},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 200
+    old_filename = resp.get_json()["data"]["image_filename"]
+    old_path = os.path.join(app.instance_path, "uploads", "products", old_filename)
+    assert os.path.exists(old_path)
+
+    # Make commit fail with SQLAlchemyError
+    def failing_commit():
+        raise SQLAlchemyError("Commit simulado fallido")
+
+    with patch.object(db.session, "commit", failing_commit):
+        file_storage2 = _make_file_storage(_PNG_DATA, "new.png", "image/png")
+        resp = client.put(
+            "/products/1/image",
+            data={"image": (file_storage2, "new.png")},
+            headers={"X-CSRF-Token": token},
+            content_type="multipart/form-data",
+        )
+
+    # Should return 500 (SQLAlchemyError)
+    assert resp.status_code == 500
+
+    # Old file should still exist (not deleted because commit failed)
+    assert os.path.exists(old_path)
+
+    # New file should have been cleaned up (orphan): no extra files besides old_filename
+    upload_dir = os.path.join(app.instance_path, "uploads", "products")
+    remaining = os.listdir(upload_dir)
+    assert remaining == [old_filename]
+
+    # DB should still reference the old filename
+    with app.app_context():
+        product = db.session.get(Product, 1)
+        assert product.image_filename == old_filename
+
+
+def test_delete_image_sqlalchemy_commit_failure(client, app):
+    """Si falla el commit con SQLAlchemyError al eliminar, el archivo permanece en disco."""
+    _make_admin_user(app)
+    _create_product(app, "Producto Test", "10.00")
+    login(client, "admin1", "admin-pass")
+    token = csrf_token(client)
+
+    # Upload image first
+    file_storage = _make_file_storage(_JPEG_DATA, "test.jpg")
+    resp = client.put(
+        "/products/1/image",
+        data={"image": (file_storage, "test.jpg")},
+        headers={"X-CSRF-Token": token},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 200
+    filename = resp.get_json()["data"]["image_filename"]
+    file_path = os.path.join(app.instance_path, "uploads", "products", filename)
+    assert os.path.exists(file_path)
+
+    # Make commit fail with SQLAlchemyError on delete
+    def failing_commit():
+        raise SQLAlchemyError("Commit simulado fallido")
+
+    with patch.object(db.session, "commit", failing_commit):
+        resp = client.delete(
+            "/products/1/image",
+            headers={"X-CSRF-Token": token},
+        )
+
+    # Should return 500 (SQLAlchemyError)
+    assert resp.status_code == 500
 
     # File should still exist (not deleted because commit failed)
     assert os.path.exists(file_path)
