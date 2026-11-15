@@ -14,6 +14,8 @@ import time
 import pytest
 from werkzeug.serving import make_server
 
+from tests.browser_helpers import CDP_SETUP
+
 from app.extensions import db
 from app.models import Category, Mesa, Pedido, Product, Rol, Servicio, Usuario
 
@@ -72,24 +74,7 @@ def test_order_contract_preserves_csrf_and_empty_cart_validation(client, menu_co
 
 # This runs the actual JavaScript in a browser against the real Flask app.
 # DOM interactions, injected failures and assertions are kept in this test file.
-BROWSER_CHECK = r"""
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const deadline = setTimeout(()=>{console.error('Browser CDP timeout');process.exit(1);},60000);
-(async () => {
- const [port, base, imagePath, mode] = process.argv.slice(1);
- const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
- const ws = new WebSocket(targets.find(t => t.type === 'page').webSocketDebuggerUrl);
- await new Promise((ok, fail) => { ws.onopen=ok; ws.onerror=fail; });
- let next=0; const calls=new Map();
- ws.onmessage = e => { const m=JSON.parse(e.data); const p=calls.get(m.id); if(p) { calls.delete(m.id); m.error ? p.reject(new Error(JSON.stringify(m.error))) : p.resolve(m.result); }};
- const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++next; calls.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}));});
- const run=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true}); if(r.exceptionDetails)throw new Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
- const until=async expression=>{for(let n=0;n<150;n++){if(await run(expression))return;await new Promise(r=>setTimeout(r,50));}throw new Error('Timeout: '+expression);};
- const click=selector=>run(`document.querySelector(${JSON.stringify(selector)}).click()`);
- const text=id=>run(`document.getElementById(${JSON.stringify(id)}).textContent`);
- const capture=async path=>{const size=(await send('Page.getLayoutMetrics')).cssContentSize;const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:{...size,scale:1}});fs.writeFileSync(path,Buffer.from(shot.data,'base64'));};
- const navigate=async token=>{const path='/public/mesas/'+token.repeat(64)+'/menu';await send('Page.navigate',{url:base+path});await until(`location.pathname === ${JSON.stringify(path)} && document.readyState === 'complete' && document.querySelectorAll('.product-card').length === 2`);};
+BROWSER_CHECK = CDP_SETUP + r""" const navigate=async token=>{const path='/public/mesas/'+token.repeat(64)+'/menu';await send('Page.navigate',{url:base+path});await until(`location.pathname === ${JSON.stringify(path)} && document.readyState === 'complete' && document.querySelectorAll('.product-card').length === 2`);};
  const review=async()=>{await click('#review-order');await until("!document.getElementById('order-review').hidden");};
  const waitDone=()=>until("document.getElementById('order-form').getAttribute('aria-busy') === 'false' && document.getElementById('order-status').textContent !== 'Preparando el envío…'");
  await send('Page.enable'); await send('Runtime.enable');

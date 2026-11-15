@@ -61,13 +61,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const pMesa = document.createElement('p');
                 pMesa.className = 'card-desc';
-                pMesa.textContent = 'Mesa ' + servicio.mesa_id;
+                pMesa.textContent = 'Mesa (ID) ' + servicio.mesa_id;
 
                 const pEstado = document.createElement('p');
-                pEstado.className = 'card-desc';
-                pEstado.style.fontSize = '0.85rem';
-                pEstado.style.color = '#666';
+                pEstado.className = 'badge pending';
                 pEstado.textContent = 'Estado: ' + servicio.estado;
+
+                const total = document.createElement('p');
+                total.className = 'cashier-card-total';
+                total.textContent = '$' + servicio.total;
+
+                const pago = document.createElement('p');
+                pago.className = 'cashier-payment-status badge ' + (servicio.pago ? 'active' : 'pending');
+                pago.textContent = servicio.pago ? 'Pago registrado' : 'Sin pago registrado';
 
                 const btn = document.createElement('button');
                 btn.className = 'btn btn-primary btn-seleccionar';
@@ -77,6 +83,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 cardBody.appendChild(h3);
                 cardBody.appendChild(pMesa);
                 cardBody.appendChild(pEstado);
+                cardBody.appendChild(total);
+                cardBody.appendChild(pago);
                 cardBody.appendChild(btn);
                 article.appendChild(cardBody);
                 serviciosGrid.appendChild(article);
@@ -134,6 +142,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('detalle-servicio-id').textContent = servicio.id;
             document.getElementById('detalle-servicio-mesa').textContent = servicio.mesa_id;
             document.getElementById('detalle-servicio-estado').textContent = servicio.estado;
+            const estadoPago = document.getElementById('detalle-pago-estado');
+            estadoPago.textContent = servicio.pago ? 'Pago registrado' : 'Sin pago registrado';
+            estadoPago.className = 'badge ' + (servicio.pago ? 'active' : 'pending');
 
             // Renderizar pedidos
             const pedidos = servicio.pedidos || [];
@@ -144,12 +155,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 pedido.items.forEach(function(item) {
                     const fila = document.createElement('tr');
                     const valores = [
-                        item.producto_id, item.cantidad, '$' + item.precio_unitario,
+                        '#' + pedido.id, item.producto_id, item.cantidad, '$' + item.precio_unitario,
                         '$' + item.subtotal, pedido.estado,
                     ];
                     valores.forEach(function(valor) {
                         const celda = document.createElement('td');
                         celda.textContent = valor;
+                        if (valor === pedido.estado) celda.className = 'cashier-order-state';
                         fila.appendChild(celda);
                     });
                     tablaBody.appendChild(fila);
@@ -203,6 +215,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             btnPagar.disabled = true;
             btnCerrar.disabled = false;
+
+            const estadoPago = document.getElementById('detalle-pago-estado');
+            estadoPago.textContent = 'Pago registrado';
+            estadoPago.className = 'badge active';
+            const pagoTarjeta = document.querySelector(`[data-servicio-id="${servicioSeleccionadoId}"] .cashier-payment-status`);
+            if (pagoTarjeta) {
+                pagoTarjeta.textContent = 'Pago registrado';
+                pagoTarjeta.className = 'cashier-payment-status badge active';
+            }
 
             // Mostrar mensaje de éxito
             const mensajeDiv = document.createElement('div');

@@ -3,67 +3,69 @@
 {% block title %}Panel Caja - ConectaResto MVP{% endblock %}
 
 {% block content %}
-{{ super() }}
+<div id="cashier-panel">
+    <section class="panel">
+        {{ self.panel_header() }}
+        <p class="admin-intro">Selecciona un servicio, revisa sus pedidos y registra el cobro simulado. Después podrás cerrar el servicio y liberar la mesa.</p>
+    </section>
 
-{% if mensaje_confirmacion %}
-<section class="confirmacion" style="margin-top: 24px;">
-    <div class="flash exito">
-        {{ mensaje_confirmacion }}
-    </div>
-</section>
-{% endif %}
+    {% if mensaje_confirmacion %}
+    <section class="confirmacion">
+        <div class="flash exito" role="status">{{ mensaje_confirmacion }}</div>
+    </section>
+    {% endif %}
 
-<section class="servicios-activos" style="margin-top: 28px;">
-    <div class="panel-header">
-        <h2>Servicios activos</h2>
-        <p class="panel-subtitle">Seleccione un servicio para registrar el pago</p>
-    </div>
+    <section class="servicios-activos admin-section" aria-labelledby="servicios-heading">
+        <div class="admin-section-body">
+            <h2 id="servicios-heading">Servicios activos</h2>
+            <p class="admin-intro">Revisa el total y el estado de pago de cada servicio. El cobro se habilita cuando todos sus pedidos están entregados y el total es mayor que cero.</p>
+            <div class="servicios-grid cards-grid" id="servicios-grid" aria-label="Servicios para revisar"></div>
+            <div id="sin-servicios" class="admin-intro" role="status" style="display: none;">
+                <p>No hay servicios activos pendientes de cobro.</p>
+            </div>
+        </div>
+    </section>
 
-    <div id="mensaje-error" class="flash error" style="display: none;"></div>
+    <div id="mensaje-error" class="flash error" role="alert" style="display: none;"></div>
 
-    <div class="servicios-grid" id="servicios-grid">
-        <!-- Los servicios se renderizan aquí dinámicamente -->
-    </div>
+    <section id="detalle-servicio" class="admin-section" aria-labelledby="detalle-heading" style="display: none;">
+        <div class="admin-section-body">
+            <h2 id="detalle-heading">Servicio #<span id="detalle-servicio-id"></span></h2>
+            <p class="admin-intro">Mesa (ID) <strong id="detalle-servicio-mesa"></strong> · Estado del servicio: <span id="detalle-servicio-estado" class="badge pending"></span></p>
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Pedidos y detalle de importes">
+                <table class="tabla-pedidos">
+                    <thead>
+                        <tr>
+                            <th scope="col">Pedido</th>
+                            <th scope="col">Producto (ID)</th>
+                            <th scope="col">Cantidad</th>
+                            <th scope="col">Precio unitario</th>
+                            <th scope="col">Subtotal</th>
+                            <th scope="col">Estado del pedido</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-pedidos-body"></tbody>
+                </table>
+            </div>
+            <div class="total-pagar">
+                <span>Total del servicio</span>
+                <strong id="detalle-total-pagar">$0.00</strong>
+            </div>
+            <p class="admin-intro">Pago: <span id="detalle-pago-estado" class="badge pending" role="status">Sin pago registrado</span></p>
+            <div class="acciones-pago section-nav" aria-label="Acciones de caja">
+                <button id="btn-pagar-simulado" class="btn btn-primary" disabled>Registrar pago simulado</button>
+                <button id="btn-cerrar-servicio" class="btn" disabled>Cerrar servicio</button>
+            </div>
+        </div>
+    </section>
 
-    <div id="sin-servicios" style="display: none; text-align: center; padding: 40px 20px;">
-        <p>No hay servicios activos pendientes de cobro.</p>
-    </div>
-</section>
-
-<section id="detalle-servicio" style="margin-top: 28px; display: none;">
-    <div class="panel-header">
-        <h2>Pedido #<span id="detalle-servicio-id"></span></h2>
-        <p class="panel-subtitle">Mesa <span id="detalle-servicio-mesa"></span> · Estado: <span id="detalle-servicio-estado"></span></p>
-    </div>
-
-    <table class="tabla-pedidos">
-        <thead>
-            <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Precio unitario</th>
-                <th>Subtotal</th>
-                <th>Estado preparación</th>
-            </tr>
-        </thead>
-        <tbody id="tabla-pedidos-body">
-            <!-- Filas de pedidos -->
-        </tbody>
-    </table>
-
-    <div class="total-pagar" style="margin-top: 16px; text-align: right;">
-        <strong>Total a pagar:</strong> <span id="detalle-total-pagar">$0.00</span>
-    </div>
-
-    <div class="acciones-pago" style="margin-top: 24px; display: flex; gap: 12px;">
-        <button id="btn-pagar-simulado" class="btn btn-primary" disabled>
-            Registrar pago simulado
-        </button>
-        <button id="btn-cerrar-servicio" class="btn btn-primary" disabled>
-            Cerrar servicio
-        </button>
-    </div>
-</section>
+    <section class="admin-section" aria-labelledby="funciones-pendientes-heading">
+        <div class="admin-section-body">
+            <h2 id="funciones-pendientes-heading">Otras funciones</h2>
+            {{ self.panel_cards() }}
+        </div>
+    </section>
+</div>
 {% endblock %}
 
 {% block scripts %}

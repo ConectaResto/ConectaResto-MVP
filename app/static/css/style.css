@@ -587,3 +587,63 @@ select:focus {
         padding: 8px 10px;
     }
 }
+
+/* Caja: solo presentación, sin afectar a otros paneles. */
+#cashier-panel .card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+#cashier-panel .card-desc,
+#cashier-panel .badge {
+    margin: 0;
+}
+
+#cashier-panel .cashier-card-total,
+#cashier-panel #detalle-total-pagar {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #2c3e50;
+    font-variant-numeric: tabular-nums;
+}
+
+#cashier-panel .btn-seleccionar {
+    width: 100%;
+    margin-top: 8px;
+}
+
+#cashier-panel .tarjeta-servicio.seleccionada {
+    outline: 2px solid #2c3e50;
+    outline-offset: -2px;
+}
+
+#cashier-panel .total-pagar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+#cashier-panel .tabla-pedidos th:nth-child(n+3):nth-child(-n+5),
+#cashier-panel .tabla-pedidos td:nth-child(n+3):nth-child(-n+5) {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+#cashier-panel .cashier-order-state {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+#cashier-panel .flash.exito {
+    background: #e8f6f3;
+    color: #117a65;
+    border: 1px solid #a9dfbf;
+}
