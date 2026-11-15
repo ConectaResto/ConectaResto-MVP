@@ -6,7 +6,10 @@ not registered in the Flask application (see app/__init__.py) so that no
 administrative endpoint is exposed unprotected.
 """
 
+import os
+import uuid
 from decimal import Decimal, InvalidOperation
+from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from app.extensions import db
 from app.models.category import Category
@@ -440,3 +443,131 @@ def deactivate_product(product_id: int):
     product.is_active = False
     db.session.commit()
     return product
+
+
+# ---------------------------------------------------------------------------
+# Product image operations
+# ---------------------------------------------------------------------------
+
+_ALLOWED_EXTENSIONS = frozenset({"jpg", "jpeg", "png"})
+_MAX_IMAGE_SIZE = 2 * 1024 * 1024  # 2 MiB
+
+
+class ProductImageError(ValueError):
+    """Raised for product image validation errors."""
+
+
+def _upload_dir() -> str:
+    """Return the absolute path to the product image upload directory."""
+    base = current_app.instance_path
+    upload_dir = os.path.join(base, "uploads", "products")
+    os.makedirs(upload_dir, exist_ok=True)
+    return upload_dir
+
+
+def _validate_image_file(file_storage) -> str:
+    """Validate uploaded image file and return its lowercase extension.
+
+    Raises ProductImageError if the file is missing, has a bad extension,
+    or exceeds the maximum size.
+    """
+    if file_storage is None or not file_storage.filename:
+        raise ProductImageError("No se proporciono archivo de imagen")
+
+    filename = file_storage.filename
+    if "." not in filename:
+        raise ProductImageError("El archivo debe tener una extension valida")
+
+    ext = filename.rsplit(".", 1)[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise ProductImageError(
+            f"Formato no permitido. Formatos validos: {', '.join(sorted(_ALLOWED_EXTENSIONS))}"
+        )
+
+    # Validate size by reading the stream (without consuming it permanently)
+    file_storage.stream.seek(0, os.SEEK_END)
+    size = file_storage.stream.tell()
+    file_storage.stream.seek(0)
+    if size > _MAX_IMAGE_SIZE:
+        raise ProductImageError(
+            f"El archivo excede el tamano maximo de 2 MiB ({size} bytes)"
+        )
+    if size == 0:
+        raise ProductImageError("El archivo esta vacio")
+
+    return ext
+
+
+def _unique_filename(ext: str) -> str:
+    """Generate a unique server-side filename."""
+    return f"{uuid.uuid4().hex}.{ext}"
+
+
+def upload_product_image(product_id: int, file_storage) -> Product:
+    """Upload or replace an image for a product.
+
+    Saves the file to instance/uploads/products/ with a unique name,
+    updates product.image_filename, and returns the product.
+    The caller is responsible for committing the transaction.
+    """
+    ext = _validate_image_file(file_storage)
+    product = db.session.get(Product, product_id)
+    if product is None:
+        raise ProductImageError("Producto no encontrado")
+
+    # If replacing an existing image, delete the old file only after
+    # the new file is saved successfully (atomic replacement).
+    old_filename = product.image_filename
+    new_filename = _unique_filename(ext)
+    upload_dir = _upload_dir()
+    new_path = os.path.join(upload_dir, new_filename)
+
+    try:
+        file_storage.save(new_path)
+    except OSError as exc:
+        raise ProductImageError(f"No se pudo guardar la imagen: {exc}")
+
+    # Remove old file only after new file is saved
+    if old_filename:
+        old_path = os.path.join(upload_dir, old_filename)
+        try:
+            if os.path.exists(old_path):
+                os.remove(old_path)
+        except OSError:
+            # No bloquear la subida si no se puede borrar el archivo anterior
+            pass
+
+    product.image_filename = new_filename
+    db.session.add(product)
+    return product
+
+
+def delete_product_image(product_id: int) -> Product:
+    """Remove the image from a product and delete the file.
+
+    Does not deactivate the product. Returns the product.
+    The caller is responsible for committing the transaction.
+    """
+    product = db.session.get(Product, product_id)
+    if product is None:
+        raise ProductImageError("Producto no encontrado")
+
+    if product.image_filename:
+        upload_dir = _upload_dir()
+        file_path = os.path.join(upload_dir, product.image_filename)
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except OSError:
+            pass
+        product.image_filename = None
+        db.session.add(product)
+    return product
+
+
+def get_product_image_filename(product_id: int) -> str | None:
+    """Return the image filename for a product, or None if no image."""
+    product = db.session.get(Product, product_id)
+    if product is None:
+        return None
+    return product.image_filename

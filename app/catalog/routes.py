@@ -5,7 +5,8 @@ roles_required("ADMIN") from the A-02 authorization module.
 Public GET endpoints remain unprotected.
 """
 
-from flask import Blueprint, request
+import os
+from flask import Blueprint, request, send_from_directory, current_app
 
 from app.auth.decorators import roles_required
 from app.auth.service import current_user
@@ -26,8 +27,13 @@ from app.catalog.service import (
     update_product,
     ProductAlreadyExists,
     ProductNotFound,
+    upload_product_image,
+    delete_product_image,
+    get_product_image_filename,
+    ProductImageError,
 )
 from app.common.responses import error_response, success_response
+from app.extensions import db
 
 categories_bp = Blueprint("categories", __name__)
 products_bp = Blueprint("products", __name__)
@@ -176,3 +182,73 @@ def deactivate_one_product(product_id):
     if product is None:
         return error_response("Producto no encontrado o ya inactivo", 404)
     return success_response(message="Producto desactivado")
+
+
+# ---------------------------------------------------------------------------
+# Product image endpoints
+# ---------------------------------------------------------------------------
+
+
+@products_bp.put("/products/<int:product_id>/image")
+@roles_required("ADMIN")
+def upload_product_image_route(product_id):
+    """Upload or replace a product image (ADMIN only).
+
+    Expects multipart/form-data with an "image" field.
+    """
+    if "image" not in request.files:
+        return error_response("Se requiere el campo 'image'", 400)
+    file_storage = request.files["image"]
+    try:
+        product = upload_product_image(product_id, file_storage)
+        db.session.commit()
+    except ProductImageError as exc:
+        db.session.rollback()
+        if "no encontrado" in str(exc):
+            return error_response(str(exc), 404)
+        return error_response(str(exc), 400)
+    except ValueError as exc:
+        db.session.rollback()
+        return error_response(str(exc), 404)
+    return success_response(
+        data={"id": product.id, "image_filename": product.image_filename},
+        message="Imagen subida correctamente",
+        status_code=200,
+    )
+
+
+@products_bp.delete("/products/<int:product_id>/image")
+@roles_required("ADMIN")
+def delete_product_image_route(product_id):
+    """Remove a product image (ADMIN only)."""
+    try:
+        product = delete_product_image(product_id)
+        db.session.commit()
+    except ProductImageError as exc:
+        db.session.rollback()
+        return error_response(str(exc), 404)
+    return success_response(
+        data={"id": product.id, "image_filename": None},
+        message="Imagen eliminada correctamente",
+    )
+
+
+@products_bp.get("/products/<int:product_id>/image")
+def get_product_image_route(product_id):
+    """Serve a product image (public).
+
+    Only returns images for active and available products.
+    Content-Type is determined from the stored file extension.
+    """
+    filename = get_product_image_filename(product_id)
+    if filename is None:
+        return error_response("Producto no encontrado o sin imagen", 404)
+
+    product = get_product(product_id, include_inactive=False)
+    if product is None:
+        return error_response("Producto no disponible", 404)
+
+    upload_dir = os.path.join(current_app.instance_path, "uploads", "products")
+    ext = filename.rsplit(".", 1)[1].lower()
+    mimetype = "image/png" if ext == "png" else "image/jpeg"
+    return send_from_directory(upload_dir, filename, mimetype=mimetype)
