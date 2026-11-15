@@ -89,6 +89,8 @@ def update_user_endpoint(user_id):
         return error_response("Cuerpo JSON inválido", 400)
 
     err = update_user(user, data)
+    if err == "is_active_invalido":
+        return error_response("is_active solo admite true; use DELETE para desactivar", 400)
     if err == "username_invalido":
         return error_response("username inválido", 400)
     if err == "username_duplicado":

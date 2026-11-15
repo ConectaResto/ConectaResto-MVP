@@ -162,3 +162,17 @@ La suite general se probó con SQLite durante la auditoría; una prueba de colla
 - [Reglas de colaboración y arquitectura](AGENTS.md)
 
 **Nota:** ConectaResto-MVP es un proyecto académico. El pago es simulado y los datos de demostración deben mantenerse separados de datos reales.
+
+## Reactivación administrativa
+
+ADMIN puede usar **Reactivar** en usuarios, categorías y productos inactivos.
+Se reutilizan `PATCH /users/<id>`, `PATCH /categories/<id>` y
+`PATCH /products/<id>` con `{"is_active": true}`. Solo se admite el booleano
+JSON `true`; para desactivar se conserva DELETE y sus protecciones.
+La reactivación de usuarios conserva contraseña y rol.
+
+Los listados `/categories?include_inactive=true` y
+`/admin/products?include_inactive=true` requieren ADMIN. Las consultas públicas
+siguen ocultando inactivos. Reactivar una categoría no reactiva sus productos;
+un producto requiere una categoría activa y conserva su disponibilidad.
+**Activo** y **Disponible** son estados independientes.

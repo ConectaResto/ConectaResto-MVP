@@ -166,8 +166,8 @@ let revoked = false;
 global.URL = { createObjectURL: () => 'blob:qr-test', revokeObjectURL: () => { revoked = true; } };
 const records = {
     '/admin/mesas': [{id: 3, numero: 12, estado: 'DISPONIBLE'}],
-    '/categories': [{id: 4, name: '<img src=x onerror=alert(1)>', description: 'Descripcion'}],
-    '/admin/products': [{id: 5, name: 'Cafe', description: '', price: '12.35', categoria_id: 4, is_available: true}],
+    '/categories?include_inactive=true': [{is_active: true, id: 4, name: '<img src=x onerror=alert(1)>', description: 'Descripcion'}, {id: 7, name: 'Inactiva', is_active: false}],
+    '/admin/products?include_inactive=true': [{is_active: true, id: 5, name: 'Cafe', description: '', price: '12.35', categoria_id: 4, is_available: true}],
     '/users': [{id: 6, username: 'mesero', email: 'a@example.test', rol: 'WAITER', is_active: true}],
 };
 const calls = []; let failure = null; let meRole = 'ADMIN';
@@ -175,7 +175,7 @@ global.fetch = async (url, options = {}) => {
     calls.push({url, ...options});
     const error = failure; failure = null;
     if (!error && url === '/products/5' && options.method === 'PATCH') {
-        Object.assign(records['/admin/products'][0], JSON.parse(options.body));
+        Object.assign(records['/admin/products?include_inactive=true'][0], JSON.parse(options.body));
     }
     const svg = url.endsWith('/qr.svg');
     const data = url === '/auth/me' ? {id: 1, rol: meRole} : url === '/users' ? {users: records[url]} : records[url] || {};
@@ -188,8 +188,10 @@ const click = (section, action, id) => section.nodes['[data-rows]'].events.click
 const submit = section => section.nodes.form.events.submit({preventDefault() {}});
 (async () => {
     await ready();
-    assert.deepEqual(calls.map(call => call.url), ['/auth/me', '/admin/mesas', '/categories', '/admin/products', '/users']);
-    assert.equal(sections[1].nodes['[data-rows]'].children[0].children[1].textContent, records['/categories'][0].name);
+    assert.deepEqual(calls.map(call => call.url), ['/auth/me', '/admin/mesas', '/categories?include_inactive=true', '/admin/products?include_inactive=true', '/users']);
+    assert.equal(sections[1].nodes['[data-rows]'].children[0].children[1].textContent, records['/categories?include_inactive=true'][0].name);
+    assert.equal(ids['producto-categoria'].children.length, 2);
+    assert(!ids['producto-categoria'].children.some(option => option.value === '7'));
     for (const [index, name] of ['mesas', 'categorias', 'productos', 'usuarios'].entries()) {
         const section = sections[index]; const form = section.nodes.form;
         const values = {numero: '12', estado: 'DISPONIBLE', name: 'Nombre', description: 'Descripcion', price: '12.35', categoria_id: '4', username: 'nuevo', email: 'nuevo@example.test', rol: 'WAITER', password: 'synthetic-password'};
@@ -216,9 +218,22 @@ const submit = section => section.nodes.form.events.submit({preventDefault() {}}
         assert.equal(availability.checked, !available);
         availability.checked = available;
         await submit(products);
-        assert.equal(calls.at(-1).url, '/admin/products');
+        assert.equal(calls.at(-1).url, '/admin/products?include_inactive=true');
         assert.equal(products.nodes['[data-rows]'].children[0].children[4].textContent, label);
     }
+    for (const [index, path, id] of [[1, '/categories', 4], [2, '/products', 5], [3, '/users', 6]]) {
+        Object.values(records)[index][0].is_active = false;
+        await sections[index].nodes['[data-refresh]'].events.click();
+        const actions = sections[index].nodes['[data-rows]'].children[0].children.at(-1).children;
+        assert(actions.some(button => button.textContent === 'Reactivar'));
+        await click(sections[index], 'reactivar', id);
+        const patch = calls.findLast(call => call.method === 'PATCH');
+        assert.equal(patch.url, path + '/' + id);
+        assert.deepEqual(JSON.parse(patch.body), {is_active: true});
+        assert.equal(patch.headers['X-CSRF-Token'], 'csrf-test');
+        Object.values(records)[index][0].is_active = true;
+    }
+    assert.equal(ids['producto-categoria'].children.length, 2);
     confirmed = false; const before = calls.length;
     await click(sections[1], 'desactivar', 4); assert.equal(calls.length, before);
     confirmed = true; failure = {status: 409, message: 'Categoria con productos activos'};
@@ -257,3 +272,97 @@ const submit = section => section.nodes.form.events.submit({preventDefault() {}}
                             text=True, encoding="utf-8", capture_output=True, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     assert "Handlers ADMIN verificados" in result.stdout
+
+
+@pytest.mark.parametrize("available", [False, True])
+def test_reactivacion_catalogo_conserva_disponibilidad(app, client, available):
+    _, headers = autenticar(client, "ADMIN")
+    public = app.test_client()
+    category = client.post("/categories", json={"name": "Bebidas"}, headers=headers).json["data"]
+    cid = category["id"]
+    product = client.post("/products", json={"name": "Cafe", "price": "5.25", "categoria_id": cid,
+                                             "is_available": available}, headers=headers).json["data"]
+    pid = product["id"]
+    assert client.delete(f"/products/{pid}", headers=headers).status_code == 200
+    assert client.delete(f"/categories/{cid}", headers=headers).status_code == 200
+    assert public.get("/categories").json["data"] == []
+    assert public.get("/products?include_inactive=true").json["data"] == []
+    assert client.get("/categories?include_inactive=true").json["data"][0]["is_active"] is False
+    assert client.get("/admin/products?include_inactive=true").json["data"][0]["is_active"] is False
+    response = client.patch(f"/products/{pid}", json={"is_active": True}, headers=headers)
+    assert response.status_code == 404
+    assert client.get("/admin/products?include_inactive=true").json["data"][0]["is_active"] is False
+    assert client.patch(f"/categories/{cid}", json={"is_active": True}, headers=headers).status_code == 200
+    assert len(public.get("/categories").json["data"]) == 1
+    assert public.get("/products").json["data"] == []
+    response = client.patch(f"/products/{pid}", json={"is_active": True}, headers=headers)
+    assert response.status_code == 200
+    assert response.json["data"]["is_available"] is available
+    assert response.json["data"]["is_active"] is True
+    assert len(public.get("/products").json["data"]) == int(available)
+    assert public.get(f"/products/{pid}").status_code == (200 if available else 404)
+    assert client.patch(f"/products/{pid}", json={"is_active": True}, headers=headers).status_code == 200
+
+
+@pytest.mark.parametrize("role,status", [(None, 401), ("WAITER", 403), ("KITCHEN", 403), ("CASHIER", 403)])
+def test_reactivacion_y_listados_inactivos_solo_admin(client, role, status):
+    if role:
+        _, headers = autenticar(client, role)
+    else:
+        headers = {"X-CSRF-Token": client.get("/auth/csrf").json["data"]["csrf_token"]}
+    for path in ("/users/1", "/categories/1", "/products/1"):
+        assert client.patch(path, json={"is_active": True}, headers=headers).status_code == status
+    for path in ("/categories?include_inactive=true", "/admin/products?include_inactive=true"):
+        assert client.get(path).status_code == status
+    assert client.get("/categories").status_code == 200
+
+
+@pytest.mark.parametrize("bad", [False, None, 0, 1, "true", "false", [], {}])
+def test_reactivacion_rechaza_datos_y_no_aplica_cambios(app, client, bad):
+    _, headers = autenticar(client, "ADMIN")
+    uid = client.post("/users", json={"username": "cocinero1", "email": "c@example.test",
+                                    "rol": "ADMIN", "password": "synthetic"}, headers=headers).json["data"]["id"]
+    cid = client.post("/categories", json={"name": "Bebidas"}, headers=headers).json["data"]["id"]
+    pid = client.post("/products", json={"name": "Cafe", "price": "5", "categoria_id": cid}, headers=headers).json["data"]["id"]
+    for path, field, value in ((f"/users/{uid}", "username", "cocinero1"),
+                               (f"/categories/{cid}", "name", "Bebidas"),
+                               (f"/products/{pid}", "name", "Cafe")):
+        assert client.patch(path, json={field: "Changed", "is_active": bad}, headers=headers).status_code == 400
+        assert client.get(path).json["data"][field] == value
+        assert client.patch(path, json={"is_active": True}).status_code == 400
+    for path in ("/categories?include_inactive=invalid", "/admin/products?include_inactive=invalid"):
+        assert client.get(path).status_code == 400
+
+
+def test_reactivacion_usuario_preserva_password_y_rol(app, client):
+    from app.extensions import db
+    from app.models import Rol, Usuario
+    _, headers = autenticar(client, "ADMIN")
+    role = Rol(name="KITCHEN")
+    user = Usuario(username="cocinero1", email="c@example.test", rol=role, is_active=False)
+    user.set_password("synthetic-password")
+    db.session.add(user)
+    db.session.commit()
+    uid, password_hash = user.id, user.password_hash
+    response = client.patch(f"/users/{uid}", json={"is_active": True, "rol": "INVALID"}, headers=headers)
+    assert response.status_code == 404
+    db.session.refresh(user)
+    assert user.is_active is False
+    response = client.patch(f"/users/{uid}", json={"is_active": True}, headers=headers)
+    assert response.status_code == 200
+    assert response.json["data"]["rol"] == "KITCHEN"
+    assert "password_hash" not in response.json["data"]
+    db.session.refresh(user)
+    assert user.password_hash == password_hash
+    assert client.patch(f"/users/{uid}", json={"is_active": True}, headers=headers).status_code == 200
+    kitchen = app.test_client()
+    csrf = kitchen.get("/auth/csrf").json["data"]["csrf_token"]
+    assert kitchen.post("/auth/login", json={"username": "cocinero1", "password": "synthetic-password"},
+                        headers={"X-CSRF-Token": csrf}).status_code == 200
+
+
+@pytest.mark.parametrize("payload", [None, [], "true", 1])
+def test_patch_catalogo_rechaza_cuerpos_no_objeto(client, payload):
+    _, headers = autenticar(client, "ADMIN")
+    for path in ("/categories/1", "/products/1"):
+        assert client.patch(path, json=payload, headers=headers).status_code == 400

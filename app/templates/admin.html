@@ -52,12 +52,12 @@
         </form>
         <button class="btn" type="button" data-refresh>Actualizar categorías</button>
         <p data-list-status aria-live="polite">Cargando categorías…</p>
-        <table aria-label="Categorías"><thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
+        <table aria-label="Categorías"><thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
     </section>
 
     <section class="mesas-actions" id="admin-productos" data-admin-section="productos" aria-labelledby="productos-heading">
         <h2 id="productos-heading">Productos</h2>
-        <p>Los productos no disponibles siguen en esta lista y se ocultan del menú público.</p>
+        <p>Los productos no disponibles siguen en esta lista y se ocultan del menú público. Los inactivos requieren reactivación y una categoría activa; reactivarlos conserva su disponibilidad.</p>
         <p data-feedback role="status" aria-live="polite" hidden></p>
         <form id="form-productos">
             <fieldset disabled>
@@ -73,7 +73,7 @@
         </form>
         <button class="btn" type="button" data-refresh>Actualizar productos</button>
         <p data-list-status aria-live="polite">Cargando productos…</p>
-        <table aria-label="Productos"><thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Categoría</th><th>Disponibilidad</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
+        <table aria-label="Productos"><thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Categoría</th><th>Disponibilidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
     </section>
 
     <section class="mesas-actions" id="admin-usuarios" data-admin-section="usuarios" aria-labelledby="usuarios-heading">

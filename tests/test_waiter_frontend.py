@@ -163,3 +163,53 @@ def test_cashier_cannot_access_waiter_pedidos(client, cashier_user):
     login(client, "caja1", "cashier-pass")
     response = client.get("/waiter/pedidos", follow_redirects=True)
     assert response.status_code == 403
+
+def test_carrito_renderiza_texto_y_conserva_agregar_quitar_totales():
+    from pathlib import Path
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node opcional para verificar JavaScript vanilla")
+    source = Path(__file__).resolve().parents[1] / "app/templates/waiter/pedidos.html"
+    harness = r"""
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+class Element {
+    constructor(tag) { this.tag = tag; this.children = []; this.style = {}; this.events = {}; }
+    replaceChildren() { this.children = []; }
+    appendChild(child) { this.children.push(child); }
+    addEventListener(name, fn) { this.events[name] = fn; }
+    set innerHTML(value) { throw Error('Insercion HTML insegura'); }
+}
+global.document = {createElement: tag => new Element(tag)};
+global.window = {};
+global.itemsList = new Element('div');
+global.addItemBtn = new Element('button');
+global.productoSelect = {value: '1', selectedIndex: 0, options: [{text: '<img src=x onerror=alert(1)> - $5.25'}]};
+global.cantidadInput = {value: '2'};
+global.flashEl = {style: {}};
+global.showFlash = () => {};
+const source = fs.readFileSync(process.argv[2], 'utf8');
+vm.runInThisContext('let items = [];\n' + source.slice(source.indexOf('    function renderItems()'), source.indexOf('    async function loadPedidos()')));
+renderItems();
+assert.equal(itemsList.children[0].textContent, 'Sin productos agregados.');
+addItemBtn.events.click();
+assert.equal(itemsList.children[0].children[0].textContent, '<img src=x onerror=alert(1)> x2');
+assert.equal(itemsList.children[0].children[0].children.length, 1);
+assert.equal(itemsList.children[1].textContent, 'Total: $10.50');
+productoSelect.options[0].text = 'Agua - $3.10'; cantidadInput.value = '1';
+addItemBtn.events.click();
+assert.equal(itemsList.children[1].textContent, 'Total: $13.60');
+itemsList.children[0].children[0].children[0].events.click();
+assert.equal(itemsList.children[0].children[0].textContent, 'Agua x1');
+assert.equal(itemsList.children[1].textContent, 'Total: $3.10');
+itemsList.children[0].children[0].children[0].events.click();
+assert.equal(itemsList.children[0].textContent, 'Sin productos agregados.');
+cantidadInput.value = '0'; addItemBtn.events.click();
+assert.equal(itemsList.children[0].textContent, 'Sin productos agregados.');
+"""
+    result = subprocess.run([node, "-", str(source)], input=harness, text=True,
+                            encoding="utf-8", capture_output=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr

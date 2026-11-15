@@ -69,19 +69,23 @@ def update_user(user, data):
     rol_name = data.get("rol")
     password = data.get("password")
 
+    if "is_active" in data and data["is_active"] is not True:
+        return "is_active_invalido"
+    changes = {}
+
     if username is not None:
         if not isinstance(username, str) or not username:
             return "username_invalido"
         if user_exists_by_username(username, exclude_id=user.id):
             return "username_duplicado"
-        user.username = username
+        changes["username"] = username
 
     if email is not None:
         if not isinstance(email, str) or not email:
             return "email_invalido"
         if user_exists_by_email(email, exclude_id=user.id):
             return "email_duplicado"
-        user.email = email
+        changes["email"] = email
 
     if rol_name is not None:
         if not isinstance(rol_name, str) or not rol_name:
@@ -95,13 +99,17 @@ def update_user(user, data):
             ).scalars().all()
             if len(active_admins) <= 1:
                 return "ultimo_admin_activo"
-        user.rol_id = rol.id
+        changes["rol_id"] = rol.id
 
     if password is not None:
         if not isinstance(password, str) or not password:
             return "password_invalido"
         user.set_password(password)
 
+    if "is_active" in data:
+        changes["is_active"] = True
+    for field, value in changes.items():
+        setattr(user, field, value)
     db.session.commit()
     return None
 

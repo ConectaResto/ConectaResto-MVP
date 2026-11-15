@@ -7,8 +7,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
     const resources = {
         mesas: { path: '/admin/mesas', singular: 'mesa', fields: ['numero', 'estado'], rows: [] },
-        categorias: { path: '/categories', singular: 'categoría', fields: ['name', 'description'], rows: [] },
-        productos: { path: '/products', listPath: '/admin/products', singular: 'producto', fields: ['name', 'description', 'price', 'categoria_id', 'is_available'], rows: [] },
+        categorias: { path: '/categories', listPath: '/categories?include_inactive=true', singular: 'categoría', fields: ['name', 'description'], rows: [] },
+        productos: { path: '/products', listPath: '/admin/products?include_inactive=true', singular: 'producto', fields: ['name', 'description', 'price', 'categoria_id', 'is_available'], rows: [] },
         usuarios: { path: '/users', singular: 'usuario', fields: ['username', 'email', 'rol'], rows: [] },
     };
     let currentUserId = null;
@@ -106,11 +106,11 @@ document.addEventListener('DOMContentLoaded', async function () {
             const row = document.createElement('tr');
             let values;
             if (name === 'mesas') values = [record.id, record.numero, record.estado];
-            if (name === 'categorias') values = [record.id, record.name, record.description || '—'];
+            if (name === 'categorias') values = [record.id, record.name, record.description || '—', record.is_active ? 'Activo' : 'Inactivo'];
             if (name === 'productos') {
                 const category = resources.categorias.rows.find(item => item.id === record.categoria_id);
                 values = [record.id, record.name, record.price, category?.name || '#' + record.categoria_id,
-                    record.is_available ? 'Disponible' : 'No disponible'];
+                    record.is_available ? 'Disponible' : 'No disponible', record.is_active ? 'Activo' : 'Inactivo'];
             }
             if (name === 'usuarios') values = [record.id, record.username, record.email, record.rol, record.is_active ? 'Activo' : 'Inactivo'];
             for (const value of values) {
@@ -121,12 +121,15 @@ document.addEventListener('DOMContentLoaded', async function () {
             const actions = document.createElement('td');
             const choices = ['editar'];
             if (name === 'mesas') choices.push('qr');
-            if (name === 'categorias' || (name === 'usuarios' && record.is_active)) choices.push('desactivar');
+            if (['categorias', 'productos', 'usuarios'].includes(name)) {
+                if (!record.is_active) choices.push('reactivar');
+                else if (name !== 'productos') choices.push('desactivar');
+            }
             for (const action of choices) {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'btn';
-                button.textContent = { editar: 'Editar', qr: 'Ver QR', desactivar: 'Desactivar' }[action];
+                button.textContent = { editar: 'Editar', qr: 'Ver QR', desactivar: 'Desactivar', reactivar: 'Reactivar' }[action];
                 button.dataset.action = action;
                 button.dataset.recordId = String(record.id);
                 button.setAttribute('aria-label', button.textContent + ' ' + resource.singular + ' #' + record.id);
@@ -153,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             const select = document.getElementById('producto-categoria');
             const selected = select.value;
             select.replaceChildren(new Option('Selecciona una categoría', ''));
-            for (const category of resource.rows) select.add(new Option(category.name, String(category.id)));
+            for (const category of resource.rows.filter(item => item.is_active)) select.add(new Option(category.name, String(category.id)));
             select.value = selected;
         }
     }
@@ -247,10 +250,13 @@ document.addEventListener('DOMContentLoaded', async function () {
             try {
                 if (button.dataset.action === 'qr') await showQr(record);
                 else {
-                    await request(resource.path + '/' + record.id, { method: 'DELETE' });
+                    const reactivating = button.dataset.action === 'reactivar';
+                    await request(resource.path + '/' + record.id, reactivating
+                        ? { method: 'PATCH', body: JSON.stringify({ is_active: true }) }
+                        : { method: 'DELETE' });
                     resetForm(section, resource);
                     await loadList(section, name);
-                    feedback(section, 'Registro desactivado.');
+                    feedback(section, reactivating ? 'Registro reactivado.' : 'Registro desactivado.');
                 }
             } catch (error) {
                 feedback(section, error.message, true);

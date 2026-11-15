@@ -8,7 +8,9 @@ Public GET endpoints remain unprotected.
 from flask import Blueprint, request
 
 from app.auth.decorators import roles_required
+from app.auth.service import current_user
 from app.catalog.service import (
+    _parse_bool,
     CategoryAlreadyExists,
     CategoryNotFound,
     CategoryHasActiveProducts,
@@ -34,7 +36,17 @@ products_bp = Blueprint("products", __name__)
 @categories_bp.get("/categories")
 def list_all():
     """List active categories (public query)."""
-    categories = list_categories(include_inactive=False)
+    try:
+        include_inactive = _parse_bool(request.args.get("include_inactive", False), "include_inactive")
+    except ValueError as exc:
+        return error_response(str(exc), 400)
+    if include_inactive:
+        user = current_user()
+        if user is None:
+            return error_response("No autorizado", 401)
+        if user.rol.name != "ADMIN":
+            return error_response("Prohibido", 403)
+    categories = list_categories(include_inactive=include_inactive)
     return success_response(data=[c.to_dict() for c in categories])
 
 
@@ -63,13 +75,17 @@ def get_one(category_id):
 @roles_required("ADMIN")
 def update_one(category_id):
     """Update a category's name and/or description."""
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Cuerpo JSON invalido", 400)
     try:
         category = update_category(category_id, data, include_inactive=False)
     except CategoryNotFound as exc:
         return error_response(str(exc), 404)
     except CategoryAlreadyExists as exc:
         return error_response(str(exc), 409)
+    except ValueError as exc:
+        return error_response(str(exc), 400)
     return success_response(data=category.to_dict())
 
 
@@ -100,7 +116,11 @@ def list_all_products():
 @roles_required("ADMIN")
 def list_admin_products():
     """List active products from active categories regardless of availability."""
-    products = list_products(include_unavailable=True)
+    try:
+        include_inactive = _parse_bool(request.args.get("include_inactive", False), "include_inactive")
+    except ValueError as exc:
+        return error_response(str(exc), 400)
+    products = list_products(include_inactive=include_inactive, include_unavailable=True)
     return success_response(data=[p.to_dict() for p in products])
 
 
@@ -131,7 +151,9 @@ def get_one_product(product_id):
 @roles_required("ADMIN")
 def update_one_product(product_id):
     """Update a product's fields."""
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return error_response("Cuerpo JSON invalido", 400)
     try:
         product = update_product(product_id, data, include_inactive=False)
     except ProductNotFound as exc:
