@@ -86,7 +86,7 @@ python -m flask --app run.py db upgrade
 python -m flask --app run.py db current
 ```
 
-La segunda instrucción debe indicar la revisión `012_add_detalle_timestamps (head)`.
+La segunda instrucción debe indicar la revisión `013_allow_null_abierto_por_id (head)`.
 
 Las tablas se crean mediante **Flask-Migrate**. No uses `db.create_all()` para sustituir este paso.
 
@@ -150,7 +150,7 @@ La suite general se probó con SQLite durante la auditoría; una prueba de colla
 | --- | --- |
 | `ModuleNotFoundError` | Activa `.venv` y reinstala `requirements.txt`. |
 | Error de conexión MySQL | Servicio MySQL activo, nombre de base, usuario, contraseña y `DATABASE_URL`. |
-| Error por tabla o columna faltante | Ejecuta `db current` y verifica que las migraciones lleguen a `012`. |
+| Error por tabla o columna faltante | Ejecuta `db current` y verifica que las migraciones lleguen a `013_allow_null_abierto_por_id`. |
 | El inicio de sesión falla | Comprueba que `seed-demo` terminó y usa la contraseña que elegiste allí. |
 | El QR no abre en un teléfono | `127.0.0.1` es el propio dispositivo; para probar con teléfono hace falta una URL accesible desde la red y una configuración adecuada del servidor. |
 | El puerto 5000 está ocupado | Detén la otra instancia de Flask antes de volver a iniciarlo. |
