@@ -160,12 +160,14 @@ BROWSER_CHECK = CDP_SETUP + r""" const navigate=async token=>{const path='/publi
  assert.match(await text('order-status'),/Pedido #\d+ recibido\. Estado: PENDIENTE/);
  assert.equal(await run("document.querySelectorAll('.cart-line').length"),0);
  assert.equal(await run("fetch('/auth/me').then(r=>r.status)"),401,'no login');
- // Live backend rejections for missing service and closed table.
- for(const [token,message] of [['b','servicio activo'],['c','mesa esta cerrada']]) {
-  await navigate(token);await click('.product-card button');await review();await click('#send-order');await waitDone();
-  assert.match(await text('order-status'),new RegExp(message,'i'));
+ // Mesa disponible sin servicio: se crea automáticamente y el pedido se acepta.
+  await navigate('b');await click('.product-card button');await review();await click('#send-order');await waitDone();
+  assert.match(await text('order-status'),/Pedido #\d+ recibido\. Estado: PENDIENTE/);
+  assert.equal(await run("document.querySelectorAll('.cart-line').length"),0);
+  // Mesa cerrada: rechaza y conserva el carrito.
+  await navigate('c');await click('.product-card button');await review();await click('#send-order');await waitDone();
+  assert.match(await text('order-status'),/mesa esta cerrada/i);
   assert.equal(await run("document.querySelectorAll('.cart-line').length"),1);
- }
  // Show a normal mobile cart for visual inspection, then check desktop overflow.
  await navigate('a');await click('.product-card button');
  await capture(imagePath);
@@ -214,7 +216,7 @@ def test_real_browser_menu_flow(app, menu_context, tmp_path, mode):
         assert result.returncode == 0, result.stdout + result.stderr
         assert 'Browser UI:' in result.stdout, result.stdout + result.stderr
         db.session.expire_all()
-        assert Pedido.query.count() == (0 if mode == 'quantity-regression' else 1), 'Solo el envío confirmado debe persistir un pedido'
+        assert Pedido.query.count() == (0 if mode == 'quantity-regression' else 2), 'Solo los envíos confirmados deben persistir pedidos'
     finally:
         process.terminate()
         try:

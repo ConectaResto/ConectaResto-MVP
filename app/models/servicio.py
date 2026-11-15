@@ -7,7 +7,7 @@ class Servicio(BaseModel):
 
     mesa_id = db.Column(db.Integer, db.ForeignKey("mesas.id"), nullable=False)
     abierto_por_id = db.Column(
-        db.Integer, db.ForeignKey("usuarios.id"), nullable=False
+        db.Integer, db.ForeignKey("usuarios.id"), nullable=True
     )
     estado = db.Column(
         db.String(20), nullable=False, default="ACTIVO"

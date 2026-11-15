@@ -9,6 +9,7 @@ from app.extensions import db
 from app.models import Mesa, Servicio
 from app.pedidos.routes import responder_error
 from app.pedidos.service import PedidoError, crear_pedido
+from app.servicios.service import _crear_servicio_para_mesa
 
 
 public_mesas_bp = Blueprint(
@@ -66,9 +67,14 @@ def create_public_order(token):
             )
         ).scalar_one_or_none()
         if servicio_id is None:
-            raise PedidoError("La mesa no tiene servicio activo", 409)
+            # Apertura automática: crear servicio si la mesa está disponible.
+            servicio = _crear_servicio_para_mesa(mesa.id, abierto_por_id=None)
+            servicio_id = servicio.id
         pedido = crear_pedido(servicio_id, data["items"], origen="PUBLICO")
         return success_response({"id": pedido.id, "estado": pedido.estado}, status_code=201)
     except PedidoError as error:
         db.session.rollback()
         return responder_error(error)
+    except Exception:
+        db.session.rollback()
+        raise
