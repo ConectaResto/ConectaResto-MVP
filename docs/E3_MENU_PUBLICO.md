@@ -131,7 +131,8 @@ envían tokens a generadores externos). Véase `docs/QR_PUBLICO.md`,
 `app/mesas/routes.py`, `app/mesas/public_routes.py` y
 `tests/test_qr_publico.py`.
 
-No se modifica ningún modelo, migración, frontend ni servicio de pedidos.
+La creación pública de pedidos no modifica modelos, migraciones ni el servicio
+compartido. La interfaz del cliente se describe al final de este documento.
 No se instalan dependencias nuevas.
 
 ## Validación
@@ -163,3 +164,43 @@ rechazos por estado, token, productos, cuerpo y CSRF, y rollback sin pedidos
 parciales. Se utilizan los blueprints reales registrados en la factory.
 Resultado de ronda B: 68 casos públicos pasan (41 E3 y 27 pedidos públicos);
 suite completa: 402 pasan y 1 se omite por collation específica de MySQL.
+
+## Interfaz de cliente por QR
+
+La página `/public/mesas/<token>/menu` muestra mesa, categorías, nombres,
+descripciones y precios del catálogo disponible. El carrito permite agregar,
+quitar y editar cantidades enteras positivas hasta el límite Integer del
+backend. Se conserva solo en memoria de la página, sin persistirlo entre
+servicios o recargas. Los importes se calculan exactamente en centavos con
+BigInt y se muestran con dos decimales, sin asignar una moneda.
+
+El total es estimado: el backend valida productos y precios al recibir el
+pedido. No se realizan pagos desde esta página. La revisión de cantidades y
+total es obligatoria antes del botón «Confirmar y enviar». Durante el envío
+se bloquean las modificaciones y los botones para evitar doble clic. Solo
+una respuesta válida 201 limpia el carrito y muestra ID y estado del pedido;
+la respuesta no contiene un total confirmado ni seguimiento público.
+
+Se obtiene CSRF mediante el GET existente y se conserva su cookie, sin login.
+No se añade ningún endpoint. Los errores HTTP conservan el carrito y muestran
+el rechazo del dominio, incluidos falta de servicio activo y mesa cerrada.
+Si falla la red tras iniciar el POST o el servidor responde 5xx, el resultado
+puede ser incierto: se indica consultar al mesero antes de volver a enviar.
+Nunca se reintenta automáticamente un POST ni se promete idempotencia del
+backend. Un error de carga del catálogo ofrece un reintento manual solo de GET.
+
+Nombre, descripción, categorías y mensajes se insertan con `textContent`;
+no se interpreta HTML del catálogo. El diseño independiente se adapta a
+celular y escritorio sin cargar los controles de autenticación de paneles.
+Las pruebas del QR conservan los permisos, el 404 de token y la ausencia de
+sesión inicial; las expectativas de enlaces JSON se actualizan a atributos
+de configuración del menú interactivo. `tests/test_public_menu_ui.py` añade
+pruebas HTTP y un recorrido en navegador real, sin dependencias instaladas.
+
+Validación de la interfaz: 91 pruebas específicas públicas/QR pasan; suite
+completa: 541 pasan y 1 se omite por collation MySQL. Después del ajuste de
+nombres largos, las 6 pruebas de interfaz se verifican nuevamente. El
+recorrido en Edge sin ventana usa 390 px y 1280 px, sin desbordamiento,
+confirma un único POST ante doble clic, persistencia del pedido anónimo,
+carrito conservado ante 400/404/409/500 y errores de red, y texto de catálogo
+tratado como texto. No sustituye la prueba física del QR en un celular real.

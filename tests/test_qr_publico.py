@@ -141,8 +141,10 @@ def test_menu_publico_html(client, estado):
     body = response.get_data(as_text=True)
     assert "Mesa" in body and "3" in body
     assert token not in body
-    assert 'href="/categories"' in body
-    assert 'href="/products"' in body
+    assert 'data-categories-url="/categories"' in body
+    assert 'data-products-url="/products"' in body
+    assert 'action="pedidos"' in body
+    assert 'public_menu.js' in body
     assert "Set-Cookie" not in response.headers
 
 
