@@ -383,7 +383,7 @@ def test_cashier_visual_y_flujo_en_navegador(app, client, tmp_path, scenario):
   ws.close();clearTimeout(deadline);return;
  }
  await load();
- assert.equal(await run("document.querySelectorAll('#cashier-panel .admin-section').length"),3);
+ assert.equal(await run("document.querySelectorAll('#cashier-panel .admin-section').length"),2);
  const select=async id=>{await click('.btn-seleccionar[data-servicio-id="'+id+'"]');await until("document.getElementById('detalle-servicio').style.display === 'block' && document.getElementById('detalle-servicio-id').textContent === '"+id+"'");};
  const ids=await run("Array.from(document.querySelectorAll('.btn-seleccionar'),b=>b.dataset.servicioId)");
  if (scenario === 'paid') {

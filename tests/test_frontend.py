@@ -206,15 +206,19 @@ def test_kitchen_panel_shows_enabled_cards(client, kitchen_user):
     assert "Pendiente" not in html
 
 
-def test_cashier_panel_shows_disabled_cards(client, cashier_user):
+def test_cashier_panel_no_disabled_cards(client, cashier_user):
     login(client, "caja1", "cashier-pass")
     response = client.get("/cashier", follow_redirects=True)
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    # Todas las tarjetas CASHIER están deshabilitadas
-    assert "Pedidos para cobrar" in html
-    assert "Cierre de caja" in html
-    assert "Pendiente" in html
+    # No aparecen tarjetas deshabilitadas de "Próximamente"
+    assert "Pedidos para cobrar" not in html
+    assert "Cierre de caja" not in html
+    assert "Pendiente" not in html
+    # Las funciones reales de caja siguen presentes
+    assert "Servicios activos" in html
+    assert "Registrar pago simulado" in html
+    assert "Cerrar servicio" in html
 
 
 # ---------- Navegación por rol ----------
