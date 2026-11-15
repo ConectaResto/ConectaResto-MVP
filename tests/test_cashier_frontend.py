@@ -294,3 +294,31 @@ class TestCashierFrontend:
         assert response.status_code == 200
         data = response.get_json()
         assert "csrf_token" in data["data"]
+
+    def test_cashier_template_tiene_elementos_para_interacciones_js(self, app, client):
+        """El template de caja contiene los elementos DOM que el JavaScript requiere."""
+        _crear_usuario(app, "cajero1", "cajero1@test.com", "CASHIER")
+        _autenticar_en_sesion(client, app, "cajero1", "CASHIER")
+
+        response = client.get("/cashier", follow_redirects=True)
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+
+        # Elementos que el JS consulta por id
+        assert 'id="servicios-grid"' in html
+        assert 'id="sin-servicios"' in html
+        assert 'id="detalle-servicio"' in html
+        assert 'id="mensaje-error"' in html
+        assert 'id="tabla-pedidos-body"' in html
+        assert 'id="btn-pagar-simulado"' in html
+        assert 'id="btn-cerrar-servicio"' in html
+        assert 'id="detalle-servicio-id"' in html
+        assert 'id="detalle-servicio-mesa"' in html
+        assert 'id="detalle-servicio-estado"' in html
+        assert 'id="detalle-total-pagar"' in html
+
+        # Meta tag CSRF que el JS lee para el token
+        assert 'name="csrf-token"' in html
+
+        # Script del frontend de caja
+        assert 'js/cashier.js' in html

@@ -45,20 +45,42 @@ document.addEventListener('DOMContentLoaded', function() {
             sinServicios.style.display = 'none';
             serviciosGrid.style.display = 'grid';
 
-            serviciosGrid.innerHTML = servicios.map(function(servicio) {
-                return `
-                    <article class="card tarjeta-servicio" data-servicio-id="${servicio.id}">
-                        <div class="card-body">
-                            <h3 class="card-title">Servicio #${servicio.id}</h3>
-                            <p class="card-desc">Mesa ${servicio.mesa_id}</p>
-                            <p class="card-desc" style="font-size: 0.85rem; color: #666;">Estado: ${servicio.estado}</p>
-                            <button class="btn btn-primary btn-seleccionar" data-servicio-id="${servicio.id}">
-                                Seleccionar
-                            </button>
-                        </div>
-                    </article>
-                `;
-            }).join('');
+            serviciosGrid.innerHTML = '';
+
+            servicios.forEach(function(servicio) {
+                const article = document.createElement('article');
+                article.className = 'card tarjeta-servicio';
+                article.setAttribute('data-servicio-id', servicio.id);
+
+                const cardBody = document.createElement('div');
+                cardBody.className = 'card-body';
+
+                const h3 = document.createElement('h3');
+                h3.className = 'card-title';
+                h3.textContent = 'Servicio #' + servicio.id;
+
+                const pMesa = document.createElement('p');
+                pMesa.className = 'card-desc';
+                pMesa.textContent = 'Mesa ' + servicio.mesa_id;
+
+                const pEstado = document.createElement('p');
+                pEstado.className = 'card-desc';
+                pEstado.style.fontSize = '0.85rem';
+                pEstado.style.color = '#666';
+                pEstado.textContent = 'Estado: ' + servicio.estado;
+
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-primary btn-seleccionar';
+                btn.setAttribute('data-servicio-id', servicio.id);
+                btn.textContent = 'Seleccionar';
+
+                cardBody.appendChild(h3);
+                cardBody.appendChild(pMesa);
+                cardBody.appendChild(pEstado);
+                cardBody.appendChild(btn);
+                article.appendChild(cardBody);
+                serviciosGrid.appendChild(article);
+            });
 
             // Agregar event listeners a los botones de seleccionar
             document.querySelectorAll('.btn-seleccionar').forEach(function(btn) {
@@ -120,14 +142,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     total += subtotal;
 
                     const fila = document.createElement('tr');
-                    fila.innerHTML = `
-                        <td>${item.producto_id}</td>
-                        <td>${item.cantidad}</td>
-                        <td>$${item.precio_unitario.toFixed(2)}</td>
-                        <td>$${subtotal.toFixed(2)}</td>
-                        <td>${pedido.estado_preparacion}</td>
-                    `;
-                    tablaBody.appendChild(fila);
+
+            const tdProducto = document.createElement('td');
+            tdProducto.textContent = item.producto_id;
+            fila.appendChild(tdProducto);
+
+            const tdCantidad = document.createElement('td');
+            tdCantidad.textContent = item.cantidad;
+            fila.appendChild(tdCantidad);
+
+            const tdPrecio = document.createElement('td');
+            tdPrecio.textContent = '$' + item.precio_unitario.toFixed(2);
+            fila.appendChild(tdPrecio);
+
+            const tdSubtotal = document.createElement('td');
+            tdSubtotal.textContent = '$' + subtotal.toFixed(2);
+            fila.appendChild(tdSubtotal);
+
+            const tdEstado = document.createElement('td');
+            tdEstado.textContent = pedido.estado_preparacion;
+            fila.appendChild(tdEstado);
+
+            tablaBody.appendChild(fila);
                 });
             });
 
