@@ -142,10 +142,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (name === 'usuarios') values = [record.id, record.username, record.email, roleLabels[record.rol] || record.rol, record.is_active ? 'Activo' : 'Inactivo'];
             for (const [index, value] of values.entries()) {
                 const cell = document.createElement('td');
-                if (name === 'productos' && index === 0 && record.image_url) {
+                if (name === 'productos' && index === 0) {
                     const thumbCell = document.createElement('td');
                     const img = document.createElement('img');
-                    img.src = record.image_url;
+                    img.src = record.image_url || '/static/img/default-product.svg';
                     img.alt = '';
                     img.style.cssText = 'width:40px;height:40px;object-fit:cover;border-radius:4px';
                     thumbCell.appendChild(img);
@@ -250,18 +250,18 @@ document.addEventListener('DOMContentLoaded', async function () {
             const removeBtn = document.getElementById('producto-image-remove');
             if (removeBtn) {
                 removeBtn.querySelector('button').addEventListener('click', async () => {
-                    const imageInput = form.elements.namedItem('image');
-                    if (imageInput) imageInput.value = '';
-                    const preview = document.getElementById('producto-image-preview');
-                    const remove = document.getElementById('producto-image-remove');
-                    if (preview) preview.hidden = true;
-                    if (remove) remove.hidden = true;
-                    delete form.dataset.removeImage;
                     const recordId = form.dataset.recordId;
                     if (!recordId) return;
                     setBusy(section, true);
                     try {
                         await request('/products/' + recordId + '/image', { method: 'DELETE' });
+                        const imageInput = form.elements.namedItem('image');
+                        if (imageInput) imageInput.value = '';
+                        const preview = document.getElementById('producto-image-preview');
+                        const remove = document.getElementById('producto-image-remove');
+                        if (preview) preview.hidden = true;
+                        if (remove) remove.hidden = true;
+                        delete form.dataset.removeImage;
                         feedback(section, 'Fotografía eliminada.');
                     } catch (error) {
                         feedback(section, error.message, true);
@@ -293,10 +293,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             const data = payloadFor(form, name);
             setBusy(section, true);
             try {
-                await request(resource.path + (recordId ? '/' + recordId : ''), {
+                const payload = await request(resource.path + (recordId ? '/' + recordId : ''), {
                     method: recordId ? 'PATCH' : 'POST', body: JSON.stringify(data),
                 });
-                const productId = recordId ? Number(recordId) : null;
+                const productId = payload?.data?.id ?? payload?.id ?? (recordId ? Number(recordId) : null);
                 if (name === 'productos' && productId) {
                     const imageFile = form.elements.namedItem('image')?.files?.[0];
                     if (imageFile) {

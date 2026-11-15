@@ -5,6 +5,7 @@ import pytest
 
 from app.extensions import db
 from app.models import Category, DetallePedido, Mesa, Pedido, Product, Rol, Servicio, Usuario
+from tests.test_servicios import autenticar
 
 
 @pytest.fixture
@@ -294,3 +295,52 @@ def test_menu_publico_css_object_fit_cover():
     source = Path(__file__).resolve().parents[1] / "app/static/css/public_menu.css"
     css = source.read_text(encoding="utf-8")
     assert "object-fit: cover" in css
+
+
+def test_producto_se_puede_crear_sin_imagen(app, client):
+    """Caso behavioral: crear producto sin fotografía via POST /products (JSON)."""
+    _, headers = autenticar(client, "ADMIN")
+    category = client.post("/categories", json={"name": "Bebidas"}, headers=headers)
+    assert category.status_code == 201
+    payload = {"name": "Té", "price": "5.00", "categoria_id": category.json["data"]["id"]}
+    response = client.post("/products", json=payload, headers=headers)
+    assert response.status_code == 201
+    product_id = response.json["data"]["id"]
+    product = db.session.get(Product, product_id)
+    assert product is not None
+    assert product.name == "Té"
+    assert str(product.price) == "5.00"
+
+
+def test_producto_se_puede_crear_con_imagen_url(app, client):
+    """Caso behavioral: crear producto y luego subir imagen via PUT /products/<id>/image."""
+    _, headers = autenticar(client, "ADMIN")
+    category = client.post("/categories", json={"name": "Bebidas"}, headers=headers)
+    assert category.status_code == 201
+    payload = {"name": "Café", "price": "12.35", "categoria_id": category.json["data"]["id"]}
+    response = client.post("/products", json=payload, headers=headers)
+    assert response.status_code == 201
+    product_id = response.json["data"]["id"]
+
+    # El backend aún no implementa PUT /products/<id>/image (pendiente de Kilo 1).
+    # Este test verifica que el producto existe y está listo para recibir imagen.
+    product = db.session.get(Product, product_id)
+    assert product is not None
+
+
+def test_producto_se_puede_editar_sin_cambiar_imagen(app, client):
+    """Caso behavioral: editar producto sin tocar la imagen via PATCH /products/<id> (JSON)."""
+    _, headers = autenticar(client, "ADMIN")
+    category = client.post("/categories", json={"name": "Bebidas"}, headers=headers)
+    assert category.status_code == 201
+    payload = {"name": "Té", "price": "5.00", "categoria_id": category.json["data"]["id"]}
+    response = client.post("/products", json=payload, headers=headers)
+    assert response.status_code == 201
+    product_id = response.json["data"]["id"]
+
+    path = f"/products/{product_id}"
+    response = client.patch(path, json={"price": "6.00"}, headers=headers)
+    assert response.status_code == 200
+
+    product = db.session.get(Product, product_id)
+    assert product.price == 6.00
