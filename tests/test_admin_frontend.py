@@ -40,6 +40,11 @@ def test_admin_renderiza_gestiones_y_script_propio(app, client, path):
     assert "password_hash" not in html
     assert 'href="#admin-mesas"' in html
     assert "Los productos no disponibles siguen en esta lista" in html
+    role_labels = {"WAITER": "Mesero", "KITCHEN": "Cocina", "CASHIER": "Cajero", "ADMIN": "Administrador"}
+    for value, label in role_labels.items():
+        assert f'<option value="{value}">{label}</option>' in html
+    assert {attrs.get("value") for tag, attrs in parsed.elements
+            if tag == "option" and attrs.get("value") in role_labels} == set(role_labels)
 
 
 def test_admin_puede_reactivar_un_producto_sin_publicarlo_mientras_no_esta_disponible(app, client):
@@ -193,6 +198,7 @@ const submit = section => section.nodes.form.events.submit({preventDefault() {}}
     await ready();
     assert.deepEqual(calls.map(call => call.url), ['/auth/me', '/admin/mesas', '/categories?include_inactive=true', '/admin/products?include_inactive=true', '/users']);
     assert.equal(sections[1].nodes['[data-rows]'].children[0].children[1].textContent, records['/categories?include_inactive=true'][0].name);
+    assert.equal(sections[3].nodes['[data-rows]'].children[0].children[3].textContent, 'Mesero');
     assert.equal(ids['producto-categoria'].children.length, 2);
     assert(!ids['producto-categoria'].children.some(option => option.value === '7'));
     for (const [index, name] of ['mesas', 'categorias', 'productos', 'usuarios'].entries()) {
@@ -205,6 +211,7 @@ const submit = section => section.nodes.form.events.submit({preventDefault() {}}
         assert.equal(call.headers['X-CSRF-Token'], 'csrf-test');
         assert.equal(call.credentials, 'same-origin');
         if (name === 'productos') assert.equal(JSON.parse(call.body).price, '12.35');
+        if (name === 'usuarios') assert.equal(JSON.parse(call.body).rol, 'WAITER');
         if (name === 'usuarios') assert.equal(form.elements.password.value, '');
         const record = Object.values(records)[index][0];
         await click(section, 'editar', record.id);
