@@ -4,12 +4,12 @@
 
 {% block content %}
 <section class="panel">
-    <div class="panel-header">
+    {% block panel_header %}<div class="panel-header">
         <h1>{{ panel_title }}</h1>
         <p class="panel-subtitle">Rol: <strong>{{ user.rol }}</strong> · Usuario: {{ user.username }}</p>
-    </div>
+    </div>{% endblock %}
 
-    <div class="cards-grid">
+    {% block panel_cards %}<div class="cards-grid">
         {% for card in cards %}
         <article class="card {{ 'card-disabled' if not card.enabled else '' }}">
             <div class="card-body">
@@ -24,6 +24,6 @@
             </div>
         </article>
         {% endfor %}
-    </div>
+    </div>{% endblock %}
 </section>
 {% endblock %}

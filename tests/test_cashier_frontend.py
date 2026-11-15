@@ -322,3 +322,168 @@ class TestCashierFrontend:
 
         # Script del frontend de caja
         assert 'js/cashier.js' in html
+
+
+@pytest.mark.parametrize("scenario", ["flow", "paid", "empty"])
+def test_cashier_visual_y_flujo_en_navegador(app, client, tmp_path, scenario):
+    """Comprueba la presentación y el flujo real, solo con datos de prueba."""
+    import os
+    from pathlib import Path
+    import shutil
+    import subprocess
+    import threading
+    from werkzeug.serving import make_server
+    from tests.browser_helpers import CDP_SETUP
+
+    node = shutil.which("node")
+    browser = next((path for path in (
+        os.environ.get("PUBLIC_MENU_TEST_BROWSER", ""),
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    ) if path and Path(path).is_file()), None)
+    if not node or not browser:
+        pytest.skip("Requiere Node y un navegador Chromium ya instalado")
+    _crear_usuario(app, "cajero1", "cajero1@test.com", "CASHIER")
+    _autenticar_en_sesion(client, app)
+    servicio_id = pedido_id = None
+    if scenario != "empty":
+        servicio_id = _crear_servicio_activo(app, mesa_numero=7)
+        pedido_id = _crear_pedido_en_servicio(app, servicio_id)
+    if scenario == "flow":
+        with app.app_context():
+            db.session.add(Mesa(numero=8))
+            db.session.commit()
+        pendiente_id = _crear_servicio_activo(app, mesa_numero=8)
+        _crear_pedido_en_servicio(app, pendiente_id, estado="PENDIENTE")
+    elif scenario == "paid":
+        csrf = client.get("/auth/csrf").json["data"]["csrf_token"]
+        assert client.post(f"/servicios/{servicio_id}/pago-simulado", json={},
+                           headers={"X-CSRF-Token": csrf}).status_code == 201
+    assert client.get("/panel/cashier").status_code == 200
+    cookie = client.get_cookie("session").value
+    # Reutiliza el transporte CDP y las utilidades del navegador existentes.
+    harness = CDP_SETUP + r"""
+ await send('Page.enable'); await send('Runtime.enable');
+ const preview=async path=>{await run("document.getElementById('detalle-servicio').scrollIntoView({block:'center'})");await run("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))");await capture(path);};
+ await send('Network.enable');
+ await send('Network.setCookie', {name:'session', value:mode, url:base});
+ const scenario=process.argv[6];
+ const load=async()=>{await send('Page.navigate',{url:base+'/panel/cashier'});await until("document.readyState === 'complete' && document.querySelectorAll('.btn-seleccionar').length === "+(scenario === 'paid' ? 1 : 2));};
+ await send('Emulation.setDeviceMetricsOverride',{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+ if (scenario === 'empty') {
+  await send('Page.navigate',{url:base+'/panel/cashier'});
+  await until("document.readyState === 'complete' && document.getElementById('sin-servicios').style.display === 'block'");
+  assert.equal(await run("document.querySelectorAll('.btn-seleccionar').length"),0);
+  assert.equal(await run("document.getElementById('servicios-grid').style.display"),'none');
+  assert.equal(await run("document.getElementById('detalle-servicio').style.display"),'none');
+  assert.equal(await run("document.getElementById('btn-pagar-simulado').disabled"),true);
+  assert.equal(await run("document.getElementById('btn-cerrar-servicio').disabled"),true);
+  assert.match(await text('sin-servicios'),/No hay servicios activos/);
+  await capture(imagePath.replace('desktop','empty'));
+  ws.close();clearTimeout(deadline);return;
+ }
+ await load();
+ assert.equal(await run("document.querySelectorAll('#cashier-panel .admin-section').length"),3);
+ const select=async id=>{await click('.btn-seleccionar[data-servicio-id="'+id+'"]');await until("document.getElementById('detalle-servicio').style.display === 'block' && document.getElementById('detalle-servicio-id').textContent === '"+id+"'");};
+ const ids=await run("Array.from(document.querySelectorAll('.btn-seleccionar'),b=>b.dataset.servicioId)");
+ if (scenario === 'paid') {
+  assert.equal(await run("document.querySelector('.cashier-payment-status').textContent"),'Pago registrado');
+  await select(ids[0]);
+  assert.equal(await text('detalle-pago-estado'),'Pago registrado');
+  assert.equal(await text('detalle-total-pagar'),'$5000.00');
+  assert.equal(await run("document.getElementById('btn-pagar-simulado').disabled"),true);
+  assert.equal(await run("document.getElementById('btn-cerrar-servicio').disabled"),false);
+  await run("window.cashierPosts=0;window.paidFetch=window.fetch.bind(window);window.fetch=(url,opts)=>{if(opts?.method==='POST')window.cashierPosts++;return window.paidFetch(url,opts);};");
+  await click('#btn-pagar-simulado');
+  assert.equal(await run('window.cashierPosts'),0,'No se permite cobrar de nuevo');
+  await preview(imagePath.replace('desktop','initial-paid'));
+  await click('#btn-cerrar-servicio');
+  await until("document.getElementById('sin-servicios').style.display === 'block' && document.getElementById('detalle-servicio').style.display === 'none'");
+  assert.equal(await run('window.cashierPosts'),1,'Solo se envia el cierre');
+  ws.close();clearTimeout(deadline);return;
+ }
+ await select(ids[1]);
+ assert.equal(await run("document.getElementById('btn-pagar-simulado').disabled"),true);
+ assert.equal(await run("document.getElementById('btn-cerrar-servicio').disabled"),true);
+ assert.equal(await run("document.querySelector('#tabla-pedidos-body tr').lastChild.textContent"),'PENDIENTE');
+ await select(ids[0]);
+ assert.equal(await text('detalle-total-pagar'),'$5000.00');
+ assert.equal(await text('detalle-pago-estado'),'Sin pago registrado');
+ assert.equal(await run("document.querySelector('#tabla-pedidos-body tr').children.length"),6);
+ assert.equal(await run("document.querySelector('#tabla-pedidos-body tr').firstChild.textContent"),'#'+process.argv[5]);
+ assert.equal(await run("document.getElementById('btn-pagar-simulado').disabled"),false);
+ assert.equal(await run("document.getElementById('btn-cerrar-servicio').disabled"),true);
+ assert.equal(await run("document.documentElement.scrollWidth <= window.innerWidth"),true);
+ await preview(imagePath);
+ await send('Emulation.setDeviceMetricsOverride',{width:375,height:812,deviceScaleFactor:1,mobile:true});
+ assert.equal(await run("document.documentElement.scrollWidth <= window.innerWidth"),true,'sin desbordamiento en movil');
+ assert.equal(await run("getComputedStyle(document.querySelector('.table-wrap')).overflowX"),'auto');
+ await preview(imagePath.replace('desktop','mobile'));
+ await run("window.cashierFetch=window.fetch.bind(window);window.failCashier=true;window.fetch=(url,opts)=>{if(window.failCashier && String(url).endsWith('/pago-simulado')){window.failCashier=false;return Promise.resolve(new Response(JSON.stringify({error:'Error simulado de cobro'}),{status:409,headers:{'Content-Type':'application/json'}}));}return window.cashierFetch(url,opts);};");
+ await click('#btn-pagar-simulado');
+ await until("document.getElementById('mensaje-error').style.display === 'block'");
+ assert.equal(await text('mensaje-error'),'Error simulado de cobro');
+ assert.equal(await run("document.getElementById('btn-pagar-simulado').disabled"),false);
+ assert.equal(await text('detalle-pago-estado'),'Sin pago registrado');
+ await preview(imagePath.replace('desktop','error'));
+ await until("document.getElementById('mensaje-error').style.display === 'none'");
+ await click('#btn-pagar-simulado');
+ await until("document.getElementById('detalle-pago-estado').textContent === 'Pago registrado'");
+ assert.equal(await run("document.getElementById('btn-pagar-simulado').disabled"),true);
+ assert.equal(await run("document.getElementById('btn-cerrar-servicio').disabled"),false);
+ assert.equal(await run("document.querySelector('.cashier-payment-status').textContent"),'Pago registrado');
+ assert.match(await run("document.querySelector('#detalle-servicio .flash.exito').textContent"),/Pago registrado correctamente/);
+ await preview(imagePath.replace('desktop','paid'));
+ await click('#btn-cerrar-servicio');
+ await until("document.getElementById('detalle-servicio').style.display === 'none' && document.querySelectorAll('.btn-seleccionar').length === 1");
+ assert.match(await run("document.querySelector('#cashier-panel > .flash.exito').textContent"),/Servicio cerrado.*disponible/);
+ // Recarga real para verificar que el servicio pagado ya no aparece como activo.
+ await send('Page.navigate',{url:base+'/panel/cashier'});
+ await until("document.readyState === 'complete' && document.querySelectorAll('.btn-seleccionar').length === 1");
+ ws.close();clearTimeout(deadline);console.log('CASHIER: desktop 1280, mobile 375, pedidos, importes, estados, error, pago y cierre OK');
+})().catch(e=>{console.error(e);process.exit(1);});
+"""
+    server = make_server("127.0.0.1", 0, app)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    profile = tmp_path / "browser-profile"
+    process = subprocess.Popen([
+        browser, "--headless=new", "--disable-gpu", "--no-first-run",
+        "--no-default-browser-check", "--disable-background-networking",
+        "--remote-debugging-port=0", f"--user-data-dir={profile}", "about:blank",
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    try:
+        port_file = profile / "DevToolsActivePort"
+        for _ in range(200):
+            if port_file.is_file() or process.poll() is not None:
+                break
+            time.sleep(.05)
+        assert port_file.is_file(), "El navegador no habilitó CDP"
+        result = subprocess.run([
+            node, "-e", harness, port_file.read_text().splitlines()[0],
+            f"http://127.0.0.1:{server.server_port}", str(tmp_path / "cashier-desktop.png"),
+            cookie, str(pedido_id), scenario,
+        ], text=True, encoding="utf-8", capture_output=True, timeout=90)
+        assert result.returncode == 0, result.stdout + result.stderr
+        with app.app_context():
+            db.session.expire_all()
+            if scenario == "empty":
+                assert Pago.query.count() == 0
+                assert Servicio.query.count() == 0
+            else:
+                pago = db.session.execute(db.select(Pago).filter_by(servicio_id=servicio_id)).scalar_one()
+                assert pago.importe == Decimal("5000.00")
+                servicio = db.session.get(Servicio, servicio_id)
+                assert servicio.estado == "CERRADO"
+                assert db.session.get(Mesa, servicio.mesa_id).estado == "DISPONIBLE"
+        print("CASHIER_PREVIEW=" + str(tmp_path))
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
+        server.shutdown()
+        thread.join(timeout=5)
