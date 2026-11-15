@@ -151,11 +151,12 @@ document.addEventListener('DOMContentLoaded', function() {
             body: JSON.stringify({ mesa_id: mesaId }),
         });
         if (res.ok) {
+            const mesaNumero = mesaSelect.options[mesaSelect.selectedIndex].text.replace('Mesa #', '');
             mesaSelect.value = '';
             abrirBtn.disabled = true;
             loadMesas();
             loadServicios();
-            showFlash('Servicio abierto para la mesa #' + mesaSelect.options[mesaSelect.selectedIndex].text.replace('Mesa #', ''), '');
+            showFlash('Servicio abierto para la mesa #' + mesaNumero, '');
             flashEl.style.backgroundColor = '#e8f6f3';
             flashEl.style.color = '#117a65';
             flashEl.style.border = '1px solid #a9dfbf';
