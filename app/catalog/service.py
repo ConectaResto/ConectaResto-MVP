@@ -142,7 +142,9 @@ def update_category(category_id: int, data: dict, include_inactive: bool = False
     Validates name uniqueness ignoring case, excluding the current
     category from the check.
     """
-    category = get_category(category_id, include_inactive=include_inactive)
+    if "is_active" in data and data["is_active"] is not True:
+        raise ValueError("is_active solo admite true; use DELETE para desactivar")
+    category = get_category(category_id, include_inactive=include_inactive or data.get("is_active") is True)
     if category is None:
         raise CategoryNotFound("Categoria no encontrada")
 
@@ -159,6 +161,8 @@ def update_category(category_id: int, data: dict, include_inactive: bool = False
 
     if "description" in data:
         category.description = data["description"]
+    if "is_active" in data:
+        category.is_active = True
 
     try:
         db.session.commit()
@@ -174,8 +178,7 @@ def deactivate_category(category_id: int):
     """Soft-delete a category by setting is_active = False.
 
     Returns None if the category does not exist or is already inactive.
-    Blocks deactivation if the category has products that are active
-    and available (is_active=True and is_available=True).
+    Blocks deactivation if the category has active products, regardless of availability.
     """
     category = Category.query.filter(Category.id == category_id).first()
     if category is None:
@@ -338,25 +341,18 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
     availability on a product that is temporarily unavailable. Public
     queries still filter by is_available=True via get_product().
 
-    is_active no puede modificarse mediante PATCH.
+    is_active=true permite reactivar sin cambiar is_available; DELETE desactiva.
     """
-    # Buscar producto sin filtrar por is_available, para permitir
-    # reactivar disponibilidad en productos no disponibles.
+    if "is_active" in data and data["is_active"] is not True:
+        raise ValueError("is_active solo admite true; use DELETE para desactivar")
+    reactivating = data.get("is_active") is True
     query = Product.query.join(Category, Product.categoria_id == Category.id)
     query = query.filter(Product.id == product_id)
-    if not include_inactive:
-        query = query.filter(
-            Product.is_active.is_(True),
-            Category.is_active.is_(True),
-        )
+    if not include_inactive and not reactivating:
+        query = query.filter(Product.is_active.is_(True), Category.is_active.is_(True))
     product = query.first()
     if product is None:
         raise ProductNotFound("Producto no encontrado")
-
-    # is_active no puede modificarse mediante PATCH; solo se cambia
-    # mediante DELETE (desactivacion logica).
-    if "is_active" in data:
-        raise ValueError("No se puede modificar is_active mediante PATCH")
 
     # Fase 1: validar todos los campos antes de aplicar cualquier cambio.
     # Esto evita cambios parciales en la sesion si alguna validacion falla.
@@ -374,6 +370,11 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
         if not nueva_categoria.is_active:
             raise ProductNotFound("La categoria especificada no esta activa")
         target_categoria_id = nueva_categoria.id
+
+    if reactivating:
+        category = db.session.get(Category, target_categoria_id)
+        if category is None or not category.is_active:
+            raise ProductNotFound("La categoria especificada no esta activa")
 
     if "name" in data and data["name"] is not None:
         name = str(data["name"]).strip()
@@ -406,11 +407,8 @@ def update_product(product_id: int, data: dict, include_inactive: bool = False):
     if "categoria_id" in data and data["categoria_id"] is not None:
         changes["categoria_id"] = target_categoria_id
 
-    if "is_active" in data:
-        try:
-            changes["is_active"] = _parse_bool(data["is_active"], "is_active")
-        except ValueError as exc:
-            raise ProductAlreadyExists(str(exc))
+    if reactivating:
+        changes["is_active"] = True
 
     if "is_available" in data:
         try:

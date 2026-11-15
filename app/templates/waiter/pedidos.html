@@ -103,18 +103,33 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function renderItems() {
+        itemsList.replaceChildren();
         if (items.length === 0) {
-            itemsList.innerHTML = '<p style="color:#999;">Sin productos agregados.</p>';
+            const empty = document.createElement('p');
+            empty.style.color = '#999';
+            empty.textContent = 'Sin productos agregados.';
+            itemsList.appendChild(empty);
             return;
         }
-        let html = '<ul style="margin:0;padding-left:16px;">';
+        const list = document.createElement('ul');
+        list.style.cssText = 'margin:0;padding-left:16px;';
         let total = 0;
         for (const [idx, it] of items.entries()) {
-            html += '<li>' + it.productoName + ' x' + it.cantidad + ' <button type="button" onclick="removeItem(' + idx + ')" style="background:none;border:none;color:#c0392b;cursor:pointer;margin-left:8px;">×</button></li>';
+            const row = document.createElement('li');
+            row.textContent = it.productoName + ' x' + it.cantidad;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = '×';
+            remove.style.cssText = 'background:none;border:none;color:#c0392b;cursor:pointer;margin-left:8px;';
+            remove.addEventListener('click', () => window.removeItem(idx));
+            row.appendChild(remove);
+            list.appendChild(row);
             total += parseFloat(it.precio) * it.cantidad;
         }
-        html += '</ul><strong>Total: $' + total.toFixed(2) + '</strong>';
-        itemsList.innerHTML = html;
+        const summary = document.createElement('strong');
+        summary.textContent = 'Total: $' + total.toFixed(2);
+        itemsList.appendChild(list);
+        itemsList.appendChild(summary);
     }
 
     window.removeItem = function(idx) {

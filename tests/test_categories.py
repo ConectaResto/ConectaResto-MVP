@@ -132,16 +132,13 @@ def test_patch_does_not_change_is_active(app):
         assert updated.description == "Nueva desc"
 
 
-def test_update_category_with_is_active_ignored(app):
+def test_update_category_is_active_false_rejected(app):
     with app.app_context():
         created = create_category({"name": "Test2", "description": "Desc"})
+        with pytest.raises(ValueError):
+            update_category(created.id, {"name": "Nombre", "is_active": False})
         assert created.is_active is True
-        updated = update_category(
-            created.id,
-            {"name": "Nombre", "description": "Desc", "is_active": False},
-            include_inactive=False,
-        )
-        assert updated.is_active is True
+        assert created.name == "Test2"
 
 
 def test_create_category_duplicate_name_case_insensitive(app):

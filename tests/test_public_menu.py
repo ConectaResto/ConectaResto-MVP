@@ -66,6 +66,9 @@ def test_public_queries_cannot_include_hidden_resources(client, public_catalog):
     response = client.get("/products?include_inactive=true&is_available=false")
     assert [p["id"] for p in response.json["data"]] == [public_catalog[3][0].id]
     response = client.get("/categories?include_inactive=true")
+    assert response.status_code == 401
+    assert "data" not in response.json
+    response = client.get("/categories")
     assert public_catalog[1].id not in {c["id"] for c in response.json["data"]}
 
 

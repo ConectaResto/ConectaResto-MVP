@@ -19,6 +19,8 @@ todas las peticiones mutantes mediante `before_request` en la factory.
 
 ### GET /categories
 Lista categorias activas (consulta publica).
+`?include_inactive=true` incluye inactivas y requiere ADMIN (401 sin sesion,
+403 para otros roles). Un valor de filtro invalido devuelve 400.
 Respuesta: `{"success": true, "data": [{...}, ...]}`
 
 ### POST /categories
@@ -35,10 +37,14 @@ Errores: 404 si no existe o esta inactiva.
 
 ### PATCH /categories/<int:id>
 Actualiza nombre y/o descripcion de una categoria activa. Requiere rol ADMIN.
+Tambien acepta `{"is_active": true}` para reactivar una categoria inactiva.
+Solo se admite el booleano JSON true; false, null y otros tipos devuelven 400.
+La desactivacion sigue usando DELETE. Reactivar no modifica sus productos.
 Entrada: `{"name": "string|null", "description": "string|null"}`
 Respuesta: `{"success": true, "data": {...}}`
 Errores: 401 sin autenticacion, 403 sin rol ADMIN, 404 si no existe o esta
-inactiva, 409 si el nombre ya existe.
+inactiva sin solicitar reactivacion, 400 para JSON no objeto o is_active invalido,
+409 si el nombre ya existe.
 
 ### DELETE /categories/<int:id>
 Desactivacion logica: establece `is_active = false`. Requiere rol ADMIN.
@@ -55,6 +61,8 @@ Respuesta: `{"success": true, "data": [{...}, ...]}`
 ### GET /admin/products
 Lista productos activos de categorias activas, incluidos los temporalmente
 no disponibles. Requiere rol ADMIN.
+`?include_inactive=true` incluye tambien productos inactivos y de categorias
+inactivas, sin cambiar el filtrado publico. Filtro invalido: 400.
 Respuesta: `{"success": true, "data": [{...}, ...]}`
 Errores: 401 sin autenticacion, 403 sin rol ADMIN.
 
@@ -75,16 +83,16 @@ Errores: 404 si no existe, no esta disponible o su categoria esta inactiva.
 ### PATCH /products/<int:id>
 Actualiza campos de un producto. Requiere rol ADMIN.
 Campos actualizables: name, description, price, categoria_id, is_available.
-El campo is_active no puede modificarse mediante PATCH; solo cambia
-mediante DELETE (desactivacion logica). Un producto inactivo
-(is_active=False) puede actualizarse mediante PATCH para cambiar
-is_available de False a True.
-Entrada: `{"name": "string|null", "description": "string|null", "price":
-"string|null", "categoria_id": "int|null", "is_available": "boolean|null"}`
+Tambien acepta `{"is_active": true}` para reactivar un producto, siempre que
+la categoria de destino este activa. Conserva is_available salvo que se envie
+explicitamente un nuevo valor. Solo admite el booleano JSON true; la
+desactivacion sigue usando DELETE. Un producto inactivo sin solicitar
+reactivacion no puede editarse por esta ruta.
+Entrada: objeto JSON con los campos actualizables y/o `is_active: true`.
 Respuesta: `{"success": true, "data": {...}}`
-Errores: 401 sin autenticacion, 403 sin rol ADMIN, 400 si se intenta
-modificar is_active, 404 si no existe, 409 si el nombre ya existe en la
-categoria o el precio es invalido.
+Errores: 401 sin autenticacion, 403 sin rol ADMIN, 400 para cuerpo no objeto o
+is_active invalido, 404 si no existe o la categoria no esta activa al reactivar,
+409 si el nombre ya existe en la categoria o el precio es invalido.
 
 ### DELETE /products/<int:id>
 Desactivacion logica: establece `is_active = false`. Requiere rol ADMIN.
@@ -123,8 +131,8 @@ FK a categories.id), `is_active` (boolean, default true),
 - No se puede desactivar una categoria que tenga al menos un producto con
   `is_active=True`.
 - `is_active` representa el estado logico del producto; la desactivacion
-  logica se realiza mediante DELETE. Un producto desactivado
-  (`is_active=False`) no puede reactivarse en B-01.
+  logica se realiza mediante DELETE. ADMIN puede reactivar con PATCH
+  `is_active: true` si la categoria esta activa, sin cambiar disponibilidad.
 - `is_available` representa disponibilidad temporal y puede cambiarse
   mediante PATCH, incluida la reactivacion de `False` a `True` para un
   ADMIN. Reactivar disponibilidad no reactiva `is_active`; son estados
