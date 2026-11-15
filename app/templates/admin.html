@@ -3,5 +3,104 @@
 {% block title %}Panel ADMIN - ConectaResto MVP{% endblock %}
 
 {% block content %}
-{{ super() }}
+<section class="panel" id="admin-panel">
+    <div class="panel-header">
+        <h1>{{ panel_title }}</h1>
+        <p class="panel-subtitle">Rol: <strong>{{ user.rol }}</strong> · Usuario: {{ user.username }}</p>
+    </div>
+    <nav aria-label="Administración">
+        <a class="btn btn-primary" href="#admin-mesas">Mesas y QR</a>
+        <a class="btn btn-primary" href="#admin-categorias">Categorías</a>
+        <a class="btn btn-primary" href="#admin-productos">Productos</a>
+        <a class="btn btn-primary" href="#admin-usuarios">Usuarios</a>
+    </nav>
+    <noscript><p class="flash error">Activa JavaScript para gestionar el restaurante.</p></noscript>
+
+    <section class="mesas-actions" id="admin-mesas" data-admin-section="mesas" aria-labelledby="mesas-heading">
+        <h2 id="mesas-heading">Mesas y QR</h2>
+        <p data-feedback role="status" aria-live="polite" hidden></p>
+        <form id="form-mesas">
+            <fieldset disabled>
+                <legend data-form-title>Crear mesa</legend>
+                <div class="field"><label for="mesa-numero">Número visible</label><input id="mesa-numero" name="numero" type="number" min="1" max="2147483647" step="1" required></div>
+                <div class="field"><label for="mesa-estado">Estado</label><select id="mesa-estado" name="estado"><option>DISPONIBLE</option><option>OCUPADA</option><option>CERRADA</option></select></div>
+                <button class="btn btn-primary" type="submit">Guardar mesa</button>
+                <button class="btn" type="button" data-cancel>Cancelar edición</button>
+            </fieldset>
+        </form>
+        <button class="btn" type="button" data-refresh>Actualizar mesas</button>
+        <p data-list-status aria-live="polite">Cargando mesas…</p>
+        <table aria-label="Mesas"><thead><tr><th>ID</th><th>Número</th><th>Estado</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
+        <figure id="mesa-qr" hidden>
+            <figcaption id="mesa-qr-title"></figcaption>
+            <img id="mesa-qr-image" width="256" height="256" alt="Código QR de la mesa">
+            <button class="btn" type="button" id="cerrar-qr">Cerrar QR</button>
+        </figure>
+    </section>
+
+    <section class="mesas-actions" id="admin-categorias" data-admin-section="categorias" aria-labelledby="categorias-heading">
+        <h2 id="categorias-heading">Categorías</h2>
+        <p data-feedback role="status" aria-live="polite" hidden></p>
+        <form id="form-categorias">
+            <fieldset disabled>
+                <legend data-form-title>Crear categoría</legend>
+                <div class="field"><label for="categoria-name">Nombre</label><input id="categoria-name" name="name" maxlength="100" required></div>
+                <div class="field"><label for="categoria-description">Descripción</label><input id="categoria-description" name="description" maxlength="500"></div>
+                <button class="btn btn-primary" type="submit">Guardar categoría</button>
+                <button class="btn" type="button" data-cancel>Cancelar edición</button>
+            </fieldset>
+        </form>
+        <button class="btn" type="button" data-refresh>Actualizar categorías</button>
+        <p data-list-status aria-live="polite">Cargando categorías…</p>
+        <table aria-label="Categorías"><thead><tr><th>ID</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
+    </section>
+
+    <section class="mesas-actions" id="admin-productos" data-admin-section="productos" aria-labelledby="productos-heading">
+        <h2 id="productos-heading">Productos</h2>
+        <p>Se muestran los productos activos y disponibles de categorías activas. Al quitar disponibilidad, el producto dejará de aparecer en esta lista.</p>
+        <p data-feedback role="status" aria-live="polite" hidden></p>
+        <form id="form-productos">
+            <fieldset disabled>
+                <legend data-form-title>Crear producto</legend>
+                <div class="field"><label for="producto-name">Nombre</label><input id="producto-name" name="name" maxlength="100" required></div>
+                <div class="field"><label for="producto-description">Descripción</label><input id="producto-description" name="description" maxlength="500"></div>
+                <div class="field"><label for="producto-price">Precio</label><input id="producto-price" name="price" type="number" min="0" max="99999999.99" step="0.01" required></div>
+                <div class="field"><label for="producto-categoria">Categoría</label><select id="producto-categoria" name="categoria_id" required><option value="">Selecciona una categoría</option></select></div>
+                <div class="field"><label for="producto-available"><input id="producto-available" name="is_available" type="checkbox" checked> Disponible</label></div>
+                <button class="btn btn-primary" type="submit">Guardar producto</button>
+                <button class="btn" type="button" data-cancel>Cancelar edición</button>
+            </fieldset>
+        </form>
+        <button class="btn" type="button" data-refresh>Actualizar productos</button>
+        <p data-list-status aria-live="polite">Cargando productos…</p>
+        <table aria-label="Productos"><thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Categoría</th><th>Disponibilidad</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
+    </section>
+
+    <section class="mesas-actions" id="admin-usuarios" data-admin-section="usuarios" aria-labelledby="usuarios-heading">
+        <h2 id="usuarios-heading">Usuarios</h2>
+        <p data-feedback role="status" aria-live="polite" hidden></p>
+        <form id="form-usuarios" autocomplete="off">
+            <fieldset disabled>
+                <legend data-form-title>Crear usuario</legend>
+                <div class="field"><label for="usuario-username">Usuario</label><input id="usuario-username" name="username" maxlength="80" autocomplete="off" required></div>
+                <div class="field"><label for="usuario-email">Correo electrónico</label><input id="usuario-email" name="email" type="email" maxlength="120" required></div>
+                <div class="field"><label for="usuario-rol">Rol</label><select id="usuario-rol" name="rol"><option>WAITER</option><option>KITCHEN</option><option>CASHIER</option><option>ADMIN</option></select></div>
+                <div class="field"><label for="usuario-password">Contraseña</label><input id="usuario-password" name="password" type="password" autocomplete="new-password" required aria-describedby="password-help"><small id="password-help">Obligatoria al crear. Al editar, deja el campo vacío para conservar la contraseña.</small></div>
+                <button class="btn btn-primary" type="submit">Guardar usuario</button>
+                <button class="btn" type="button" data-cancel>Cancelar edición</button>
+            </fieldset>
+        </form>
+        <button class="btn" type="button" data-refresh>Actualizar usuarios</button>
+        <p data-list-status aria-live="polite">Cargando usuarios…</p>
+        <table aria-label="Usuarios"><thead><tr><th>ID</th><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
+    </section>
+
+    {% for card in cards if card.title == 'Pedidos' %}
+    <article class="card card-disabled"><h2>{{ card.title }}</h2><p>{{ card.desc }}</p><span class="badge pending">Pendiente</span></article>
+    {% endfor %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}" defer></script>
 {% endblock %}
