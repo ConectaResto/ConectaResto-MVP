@@ -4,14 +4,51 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Menú público - Mesa {{ mesa.numero }}</title>
+<meta name="referrer" content="no-referrer">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public_menu.css') }}">
+<script src="{{ url_for('static', filename='js/public_menu.js') }}" defer></script>
 </head>
 <body>
-<h1>Menú público</h1>
-<p>Mesa <strong>{{ mesa.numero }}</strong></p>
-<nav>
-  <p><a href="{{ url_for('categories.list_all') }}">Categorías</a></p>
-  <p><a href="{{ url_for('products.list_all_products') }}">Productos disponibles</a></p>
-</nav>
-<p><small>ConectaResto - menú público sin autenticación.</small></p>
+<header class="menu-header">
+  <div class="menu-container"><p class="eyebrow">ConectaResto</p>
+  <h1>Menú de la mesa {{ mesa.numero }}</h1>
+  <p>Elige tus productos y revisa tu pedido antes de enviarlo.</p>
+  <a href="#carrito">Ver mi carrito</a></div>
+</header>
+<main class="menu-container menu-layout" id="public-menu"
+      data-categories-url="{{ url_for('categories.list_all') }}"
+      data-products-url="{{ url_for('products.list_all_products') }}"
+      data-csrf-url="{{ url_for('auth.csrf') }}">
+  <section aria-labelledby="catalog-title">
+    <h2 id="catalog-title">Nuestra carta</h2>
+    <p id="catalog-status" role="status">Cargando el menú…</p>
+    <button id="retry-catalog" type="button" hidden>Volver a cargar el menú</button>
+    <nav id="category-nav" class="categories" aria-label="Categorías"></nav>
+    <div id="catalog"></div>
+  </section>
+  <aside id="carrito" aria-labelledby="cart-title">
+    <form id="order-form" action="pedidos" method="post">
+      <h2 id="cart-title">Tu carrito</h2>
+      <p id="cart-empty">Tu carrito está vacío. Agrega un producto de la carta.</p>
+      <ul id="cart-items" class="cart-items"></ul>
+      <p class="cart-total">Total estimado <strong id="cart-total">0,00</strong></p>
+      <p class="hint">Los precios se validan al enviar. No se realiza ningún pago aquí.</p>
+      <p id="order-status" role="status" aria-live="polite" tabindex="-1"></p>
+      <button id="review-order" type="submit" disabled>Revisar pedido</button>
+      <section id="order-review" aria-labelledby="review-title" hidden>
+        <h3 id="review-title" tabindex="-1">Confirma tu pedido</h3>
+        <ul id="review-items"></ul>
+        <p>Total estimado: <strong id="review-total"></strong></p>
+        <p>El pedido quedará pendiente de atención del mesero.</p>
+        <div class="review-actions">
+          <button id="cancel-review" type="button">Seguir editando</button>
+          <button id="send-order" type="button">Confirmar y enviar</button>
+        </div>
+      </section>
+    </form>
+  </aside>
+  <noscript>Activa JavaScript para consultar la carta y enviar tu pedido. Si necesitas ayuda, llama al mesero.</noscript>
+</main>
+<footer class="menu-container">Menú público · Sin necesidad de iniciar sesión</footer>
 </body>
 </html>
