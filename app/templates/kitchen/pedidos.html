@@ -3,7 +3,7 @@
 {% block title %}Pedidos - Panel Cocina - ConectaResto MVP{% endblock %}
 
 {% block content %}
-<section class="panel">
+<section class="panel" id="kitchen-panel">
     <div class="panel-header">
         <h1>{{ panel_title }}</h1>
         <p class="panel-subtitle">Rol: <strong>{{ user.rol }}</strong> · Usuario: {{ user.username }}</p>
@@ -11,9 +11,13 @@
 
     <div class="flash" id="flash-kitchen" style="display:none;"></div>
 
-    <h2 style="margin-bottom:16px; color:#2c3e50;">Pedidos en preparación</h2>
-    <div id="pedidos-list">
-        <p style="color:#666;">Cargando pedidos...</p>
+    <div class="admin-section">
+        <div class="admin-section-body">
+            <h2>Pedidos en preparación</h2>
+            <div class="table-wrap" id="pedidos-list">
+                <p style="color:#666;">Cargando pedidos...</p>
+            </div>
+        </div>
     </div>
 </section>
 {% endblock %}
@@ -72,8 +76,8 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '<tr><td style="padding:8px;border-bottom:1px solid #eee;">#' + p.id + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid #eee;">#' + p.servicio_id + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid #eee;"><ul data-pedido-items></ul></td>';
-            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;background:#fef9e7;color:#b7950b;">' + p.estado + '</span></td>';
-            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoPrepColor(p.estado_preparacion) + '">' + p.estado_preparacion + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span class="badge" style="background:#fef9e7;color:#b7950b;">' + p.estado + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span class="badge" style="' + estadoPrepColor(p.estado_preparacion) + '">' + p.estado_preparacion + '</span></td>';
             html += '<td style="padding:8px;border-bottom:1px solid #eee;text-align:right;">$' + p.total + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid #eee;">';
             if (p.estado_preparacion === 'RECIBIDO') {
