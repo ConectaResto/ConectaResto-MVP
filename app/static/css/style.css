@@ -264,6 +264,24 @@ body {
     cursor: not-allowed;
 }
 
+.btn-desactivar {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.btn-desactivar:hover {
+    background-color: #c0392b;
+}
+
+.btn-activar {
+    background-color: #f39c12;
+    color: #2c3e50;
+}
+
+.btn-activar:hover {
+    background-color: #e67e22;
+}
+
 /* Panels */
 .panel-header {
     margin-bottom: 28px;
@@ -436,8 +454,8 @@ fieldset[disabled] legend {
 
 /* Badge estados de pedidos (WAITER) */
 .badge.pedido-pendiente {
-    background-color: #c0392b;
-    color: #fff;
+    background-color: #f39c12;
+    color: #2c3e50;
 }
 
 .badge.pedido-en-preparacion {
@@ -451,7 +469,7 @@ fieldset[disabled] legend {
 }
 
 .badge.pedido-entregado {
-    background-color: #27ae60;
+    background-color: #2980b9;
     color: #fff;
 }
 
@@ -515,7 +533,7 @@ tr:hover {
 }
 
 .badge.inactive {
-    background-color: #95a5a6;
+    background-color: #c0392b;
 }
 
 /* Select inputs */

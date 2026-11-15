@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async function () {
             for (const action of choices) {
                 const button = document.createElement('button');
                 button.type = 'button';
-                button.className = 'btn';
+                button.className = 'btn' + (action === 'desactivar' ? ' btn-desactivar' : action === 'reactivar' ? ' btn-activar' : '');
                 button.textContent = { editar: 'Editar', qr: 'Ver QR', desactivar: 'Desactivar', reactivar: 'Reactivar' }[action];
                 button.dataset.action = action;
                 button.dataset.recordId = String(record.id);
