@@ -141,12 +141,15 @@
         });
         links.forEach((link) => {
             const active = link.getAttribute('href').replace('#', '') === id;
-            link.setAttribute('aria-current', active ? 'page' : null);
+            if (active) {
+                link.setAttribute('aria-current', 'page');
+            } else {
+                link.removeAttribute('aria-current');
+            }
         });
         const section = sections[id];
         if (section) {
             section.classList.add('visible');
-            section.focus();
         }
         history.replaceState(null, '', '#' + id);
     }
