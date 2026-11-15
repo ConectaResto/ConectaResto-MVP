@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     const img = document.createElement('img');
                     img.src = record.image_url || '/static/img/default-product.svg';
                     img.alt = '';
-                    img.style.cssText = 'width:40px;height:40px;object-fit:cover;border-radius:4px';
+                    img.setAttribute('style', 'width:40px;height:40px;object-fit:cover;border-radius:4px');
                     thumbCell.appendChild(img);
                     row.appendChild(thumbCell);
                 }
@@ -297,6 +297,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     method: recordId ? 'PATCH' : 'POST', body: JSON.stringify(data),
                 });
                 const productId = payload?.data?.id ?? payload?.id ?? (recordId ? Number(recordId) : null);
+                let imageUploadFailed = false;
                 if (name === 'productos' && productId) {
                     const imageFile = form.elements.namedItem('image')?.files?.[0];
                     if (imageFile) {
@@ -307,6 +308,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                                 method: 'PUT', body: fd,
                             });
                         } catch (imageError) {
+                            imageUploadFailed = true;
                             feedback(section, 'El producto se guardó correctamente, pero no fue posible subir su fotografía.', true);
                         }
                     }
@@ -319,7 +321,11 @@ document.addEventListener('DOMContentLoaded', async function () {
                     }
                 }
                 resetForm(section, resource);
-                feedback(section, 'Cambios guardados.');
+                if (imageUploadFailed) {
+                    feedback(section, 'El producto se guardó correctamente, pero no fue posible subir su fotografía.', true);
+                } else {
+                    feedback(section, 'Cambios guardados.');
+                }
                 try {
                     await loadList(section, name);
                 } catch (error) {

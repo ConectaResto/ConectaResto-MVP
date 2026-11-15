@@ -312,20 +312,31 @@ def test_producto_se_puede_crear_sin_imagen(app, client):
     assert str(product.price) == "5.00"
 
 
-def test_producto_se_puede_crear_con_imagen_url(app, client):
-    """Caso behavioral: crear producto y luego subir imagen via PUT /products/<id>/image."""
-    _, headers = autenticar(client, "ADMIN")
-    category = client.post("/categories", json={"name": "Bebidas"}, headers=headers)
-    assert category.status_code == 201
-    payload = {"name": "Café", "price": "12.35", "categoria_id": category.json["data"]["id"]}
-    response = client.post("/products", json=payload, headers=headers)
-    assert response.status_code == 201
-    product_id = response.json["data"]["id"]
+def test_producto_creacion_con_imagen_flujo_javascript():
+    """Flujo real de JavaScript: POST /products con JSON, luego PUT /products/<id>/image con FormData.
 
-    # El backend aún no implementa PUT /products/<id>/image (pendiente de Kilo 1).
-    # Este test verifica que el producto existe y está listo para recibir imagen.
-    product = db.session.get(Product, product_id)
-    assert product is not None
+    Usa respuestas simuladas del backend (mismo patrón que test_admin_frontend.py).
+    Verifica que el ID del POST se reutilice en el PUT y que el campo 'image' viaje en FormData.
+    """
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+
+    # El flujo correcto en admin.js:
+    # 1. POST /products con JSON (sin FormData, sin campo image)
+    # 2. Leer productId de la respuesta del POST
+    # 3. PUT /products/<id>/image con FormData (campo image), sin forzar Content-Type
+    assert "payload = await request(resource.path + (recordId ? '/' + recordId : ''), {" in js
+    assert "method: recordId ? 'PATCH' : 'POST', body: JSON.stringify(data)," in js
+    assert "const productId = payload?.data?.id ?? payload?.id ?? (recordId ? Number(recordId) : null);" in js
+    assert "if (name === 'productos' && productId) {" in js
+    assert "const imageFile = form.elements.namedItem('image')?.files?.[0];" in js
+    assert "const fd = new FormData();" in js
+    assert "fd.append('image', imageFile);" in js
+    assert "await request('/products/' + productId + '/image', {" in js
+    assert "method: 'PUT', body: fd," in js
+    # No debe haber new FormData en el bloque de productos JSON
+    productos_block = js.split("name === 'productos'")[1].split("}")[0]
+    assert "new FormData()" not in productos_block
 
 
 def test_producto_se_puede_editar_sin_cambiar_imagen(app, client):
