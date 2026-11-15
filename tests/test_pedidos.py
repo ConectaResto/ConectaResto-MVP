@@ -33,7 +33,8 @@ def pedir(client, contexto):
     return response.json["data"]
 
 
-def test_precio_historico_y_agrupacion(client, contexto):
+@pytest.mark.parametrize("desactivar_catalogo", [False, True])
+def test_precio_historico_y_agrupacion(client, contexto, desactivar_catalogo):
     usuario, headers, producto, servicio_id = contexto
     pedido = pedir(client, contexto)
     assert pedido["estado"] == "PENDIENTE"
@@ -45,6 +46,15 @@ def test_precio_historico_y_agrupacion(client, contexto):
     producto.price = Decimal("99.00")
     producto.is_available = False
     db.session.commit()
+    if desactivar_catalogo:
+        admin = client.application.test_client()
+        _, admin_headers = autenticar(admin, "ADMIN", "administrador")
+        assert admin.delete(f"/categories/{producto.categoria_id}", headers=admin_headers).status_code == 409
+        assert admin.delete(f"/products/{producto.id}", headers=admin_headers).status_code == 200
+        assert admin.delete(f"/categories/{producto.categoria_id}", headers=admin_headers).status_code == 200
+        assert db.session.get(Product, producto.id) is not None
+        assert db.session.get(Category, producto.categoria_id) is not None
+        assert DetallePedido.query.filter_by(pedido_id=pedido["id"]).count() == 1
     assert client.get(f'/pedidos/{pedido["id"]}').json["data"] == pedido
     assert client.get(f"/servicios/{servicio_id}").json["data"]["pedidos"] == [pedido]
     assert client.post(f'/pedidos/{pedido["id"]}/autorizar', headers=headers).status_code == 200
