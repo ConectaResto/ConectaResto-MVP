@@ -1,6 +1,6 @@
 """Category administration blueprint.
 
-Administrative endpoints (POST, PATCH, DELETE) are protected with
+Administrative endpoints are protected with
 roles_required("ADMIN") from the A-02 authorization module.
 Public GET endpoints remain unprotected.
 """
@@ -93,6 +93,14 @@ def list_all_products():
     """List available products (public query). Optional filter ?categoria_id=."""
     categoria_id = request.args.get("categoria_id", type=int)
     products = list_products(include_inactive=False, categoria_id=categoria_id)
+    return success_response(data=[p.to_dict() for p in products])
+
+
+@products_bp.get("/admin/products")
+@roles_required("ADMIN")
+def list_admin_products():
+    """List active products from active categories regardless of availability."""
+    products = list_products(include_unavailable=True)
     return success_response(data=[p.to_dict() for p in products])
 
 

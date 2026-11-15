@@ -216,23 +216,31 @@ class ProductNotFound(ValueError):
     """Raised when a product does not exist."""
 
 
-def list_products(include_inactive: bool = False, categoria_id: int | None = None):
+def list_products(
+    include_inactive: bool = False,
+    categoria_id: int | None = None,
+    *,
+    include_unavailable: bool = False,
+):
     """Return products, optionally including inactive ones.
 
-    Public queries (include_inactive=False) return only products that are:
+    By default, return only products that are:
     - is_active = True (not logically deleted)
     - is_available = True (temporarily available)
     - associated with an active category (Category.is_active = True)
 
+    include_unavailable lets ADMIN list temporarily unavailable products
+    while keeping the active product and category filters.
     If categoria_id is provided, only products of that category are returned.
     """
     query = Product.query.join(Category, Product.categoria_id == Category.id)
     if not include_inactive:
         query = query.filter(
             Product.is_active.is_(True),
-            Product.is_available.is_(True),
             Category.is_active.is_(True),
         )
+        if not include_unavailable:
+            query = query.filter(Product.is_available.is_(True))
     if categoria_id is not None:
         query = query.filter(Product.categoria_id == categoria_id)
     return query.order_by(Product.created_at.asc()).all()

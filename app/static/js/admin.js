@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const resources = {
         mesas: { path: '/admin/mesas', singular: 'mesa', fields: ['numero', 'estado'], rows: [] },
         categorias: { path: '/categories', singular: 'categoría', fields: ['name', 'description'], rows: [] },
-        productos: { path: '/products', singular: 'producto', fields: ['name', 'description', 'price', 'categoria_id', 'is_available'], rows: [] },
+        productos: { path: '/products', listPath: '/admin/products', singular: 'producto', fields: ['name', 'description', 'price', 'categoria_id', 'is_available'], rows: [] },
         usuarios: { path: '/users', singular: 'usuario', fields: ['username', 'email', 'rol'], rows: [] },
     };
     let currentUserId = null;
@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     async function loadList(section, name) {
         const resource = resources[name];
         section.querySelector('[data-list-status]').textContent = 'Cargando…';
-        const payload = await request(resource.path);
+        const payload = await request(resource.listPath || resource.path);
         resource.rows = name === 'usuarios' ? payload.data.users : payload.data;
         render(section, name);
         if (name === 'categorias') {
