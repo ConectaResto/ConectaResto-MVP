@@ -1,3 +1,71 @@
 {% extends "panel-base.html" %}
 
 {% block title %}Panel Caja - ConectaResto MVP{% endblock %}
+
+{% block content %}
+{{ super() }}
+
+{% if mensaje_confirmacion %}
+<section class="confirmacion" style="margin-top: 24px;">
+    <div class="flash exito">
+        {{ mensaje_confirmacion }}
+    </div>
+</section>
+{% endif %}
+
+<section class="servicios-activos" style="margin-top: 28px;">
+    <div class="panel-header">
+        <h2>Servicios activos</h2>
+        <p class="panel-subtitle">Seleccione un servicio para registrar el pago</p>
+    </div>
+
+    <div id="mensaje-error" class="flash error" style="display: none;"></div>
+
+    <div class="servicios-grid" id="servicios-grid">
+        <!-- Los servicios se renderizan aquí dinámicamente -->
+    </div>
+
+    <div id="sin-servicios" style="display: none; text-align: center; padding: 40px 20px;">
+        <p>No hay servicios activos pendientes de cobro.</p>
+    </div>
+</section>
+
+<section id="detalle-servicio" style="margin-top: 28px; display: none;">
+    <div class="panel-header">
+        <h2>Pedido #<span id="detalle-servicio-id"></span></h2>
+        <p class="panel-subtitle">Mesa <span id="detalle-servicio-mesa"></span> · Estado: <span id="detalle-servicio-estado"></span></p>
+    </div>
+
+    <table class="tabla-pedidos">
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Subtotal</th>
+                <th>Estado preparación</th>
+            </tr>
+        </thead>
+        <tbody id="tabla-pedidos-body">
+            <!-- Filas de pedidos -->
+        </tbody>
+    </table>
+
+    <div class="total-pagar" style="margin-top: 16px; text-align: right;">
+        <strong>Total a pagar:</strong> <span id="detalle-total-pagar">$0.00</span>
+    </div>
+
+    <div class="acciones-pago" style="margin-top: 24px; display: flex; gap: 12px;">
+        <button id="btn-pagar-simulado" class="btn btn-primary" disabled>
+            Registrar pago simulado
+        </button>
+        <button id="btn-cerrar-servicio" class="btn btn-primary" disabled>
+            Cerrar servicio
+        </button>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/cashier.js') }}"></script>
+{% endblock %}
