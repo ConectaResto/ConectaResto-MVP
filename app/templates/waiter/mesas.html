@@ -23,7 +23,7 @@
         <div class="admin-section-body">
             <h2>Todas las mesas</h2>
             <div class="table-wrap" id="mesas-table">
-                <p style="color:#666;">Cargando mesas...</p>
+                <p style="color:var(--color-text-muted);">Cargando mesas...</p>
             </div>
         </div>
     </div>
@@ -32,7 +32,7 @@
         <div class="admin-section-body">
             <h2>Servicios activos</h2>
             <div class="table-wrap" id="servicios-list">
-                <p style="color:#666;">Cargando servicios...</p>
+                <p style="color:var(--color-text-muted);">Cargando servicios...</p>
             </div>
         </div>
     </div>
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const mesas = res.data.data || res.data || [];
         if (mesas.length === 0) {
-            mesasTable.innerHTML = '<p style="color:#666;">No hay mesas registradas.</p>';
+            mesasTable.innerHTML = '<p style="color:var(--color-text-muted);">No hay mesas registradas.</p>';
             mesaSelect.innerHTML = '<option value="">Sin mesas disponibles</option>';
             mesaSelect.disabled = true;
             abrirBtn.disabled = true;
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function() {
         abrirBtn.disabled = true;
         mesaSelect.innerHTML = '<option value="">Seleccione una mesa</option>';
 
-        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Número</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Estado</th></tr></thead><tbody>';
+        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Número</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Estado</th></tr></thead><tbody>';
         for (const m of mesas) {
             const disponible = m.estado === 'DISPONIBLE';
             if (disponible) {
@@ -108,8 +108,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 opt.textContent = 'Mesa #' + m.numero;
                 mesaSelect.appendChild(opt);
             }
-            html += '<tr><td style="padding:8px;border-bottom:1px solid #eee;">#' + m.numero + '</td>';
-            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(m.estado) + '">' + m.estado + '</span></td></tr>';
+            html += '<tr><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + m.numero + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(m.estado) + '">' + m.estado + '</span></td></tr>';
         }
         html += '</tbody></table>';
         mesasTable.innerHTML = html;
@@ -124,14 +124,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         const servicios = res.data.data || res.data || [];
         if (servicios.length === 0) {
-            serviciosList.innerHTML = '<p style="color:#666;">No hay servicios activos.</p>';
+            serviciosList.innerHTML = '<p style="color:var(--color-text-muted);">No hay servicios activos.</p>';
             return;
         }
-        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Mesa</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid #ddd;">Pedidos</th></tr></thead><tbody>';
+        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Mesa</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Pedidos</th></tr></thead><tbody>';
         for (const s of servicios) {
-            html += '<tr><td style="padding:8px;border-bottom:1px solid #eee;">#' + s.mesa_id + '</td>';
-            html += '<td style="padding:8px;border-bottom:1px solid #eee;"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;background:#e8f6f3;color:#117a65;">' + s.estado + '</span></td>';
-            html += '<td style="padding:8px;border-bottom:1px solid #eee;">';
+            html += '<tr><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + s.mesa_id + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;background:#e8f6f3;color:#117a65;">' + s.estado + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">';
             if (s.pedidos && s.pedidos.length > 0) {
                 html += '<ul style="margin:0;padding-left:16px;">';
                 for (const p of s.pedidos) {
@@ -139,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 html += '</ul>';
             } else {
-                html += '<span style="color:#999;">Sin pedidos</span>';
+                html += '<span style="color:var(--color-text-muted);">Sin pedidos</span>';
             }
             html += '</td></tr>';
         }

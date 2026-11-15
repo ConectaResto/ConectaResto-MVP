@@ -195,6 +195,10 @@ def test_waiter_panel_shows_enabled_cards(client, waiter_user):
     assert "Gestionar pedidos" in html
     assert "Pendiente" not in html
 
+    assert html.count('href="/waiter/mesas"') == 1
+    assert html.count('href="/waiter/pedidos"') == 1
+    assert 'aria-label="Mesero"' not in html
+
 
 def test_kitchen_panel_shows_enabled_cards(client, kitchen_user):
     login(client, "cocina1", "kitchen-pass")
