@@ -45,9 +45,10 @@ def create_app(config_name=None):
     from app.users.routes import users_bp
     app.register_blueprint(users_bp)
 
-    from app.users.cli import init_roles, create_admin
+    from app.users.cli import init_roles, create_admin, seed_demo_cmd
     app.cli.add_command(init_roles)
     app.cli.add_command(create_admin)
+    app.cli.add_command(seed_demo_cmd)
 
     from app.catalog.routes import categories_bp, products_bp
     app.register_blueprint(categories_bp)
