@@ -415,3 +415,111 @@ def test_cashier_cannot_access_panel_kitchen(client, cashier_user):
     login(client, "caja1", "cashier-pass")
     response = client.get("/panel/kitchen", follow_redirects=True)
     assert response.status_code == 403
+
+
+@pytest.mark.parametrize("fixture_name,username,password,role,target", [
+    ("admin_user", "admin1", "admin-pass", "ADMIN", "/panel/admin"),
+    ("waiter_user", "mesero1", "waiter-pass", "WAITER", "/panel/waiter"),
+    ("cashier_user", "caja1", "cashier-pass", "CASHIER", "/panel/cashier"),
+    ("kitchen_user", "cocina1", "kitchen-pass", "KITCHEN", "/panel/kitchen"),
+])
+def test_login_browser(app, request, tmp_path, fixture_name, username, password, role, target):
+    """Verifica la presentación del login y su autenticación real en SQLite."""
+    import json
+    import os
+    from pathlib import Path
+    import shutil
+    import subprocess
+    import threading
+    import time
+    from werkzeug.serving import make_server
+    from tests.browser_helpers import CDP_SETUP
+
+    node = shutil.which("node")
+    browser = next((path for path in (
+        os.environ.get("PUBLIC_MENU_TEST_BROWSER", ""),
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+    ) if path and Path(path).is_file()), None)
+    if not node or not browser:
+        pytest.skip("Requiere Node y un navegador Chromium ya instalado")
+    request.getfixturevalue(fixture_name)
+    harness = CDP_SETUP + r"""
+ const account=JSON.parse(mode);
+ await send('Page.enable'); await send('Runtime.enable');
+ await send('Page.navigate',{url:base+'/login'});
+ await until("document.getElementById('login-form') && document.readyState === 'complete'");
+ assert.match(await run("document.querySelector('.logo').textContent"),/ConectaResto/);
+ assert.equal(await run("document.querySelector('h1').textContent"),'Iniciar sesión');
+ assert.equal(await run("document.getElementById('username').name"),'username');
+ assert.equal(await run("document.getElementById('password').name"),'password');
+ assert.equal(await run("document.getElementById('password').type"),'password');
+ assert.equal(await run("document.getElementById('login-form').noValidate"),true);
+ assert.equal(await run("document.getElementById('login-form').getAttribute('method')"),null);
+ for (const [width,height,mobile,name] of [[1280,900,false,'desktop'],[375,812,true,'mobile']]) {
+  await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile});
+  await run('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
+  assert.equal(await run("document.documentElement.scrollWidth <= window.innerWidth"),true);
+  assert.equal(await run("{const r=document.querySelector('.login-card').getBoundingClientRect();Math.abs(r.left+r.width/2-document.documentElement.clientWidth/2)<2}"),true,'formulario centrado');
+  assert.equal(await run("{const r=document.querySelector('.login-card').getBoundingClientRect(),m=document.querySelector('.main').getBoundingClientRect();Math.abs(r.top+r.height/2-m.top-m.height/2)<2}"),true,'centrado vertical');
+  assert.equal(await run("getComputedStyle(document.getElementById('login-btn')).width === getComputedStyle(document.getElementById('username')).width"),true);
+  await capture(imagePath.replace('desktop',name));
+ }
+ await run("document.getElementById('username').focus()");
+ await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+ await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});
+ assert.equal(await run('document.activeElement.id'),'password');
+ assert.equal(await run("parseFloat(getComputedStyle(document.activeElement).outlineWidth)>=2"),true,'foco visible de teclado');
+ await capture(imagePath.replace('desktop','focus'));
+ await run("window.loginRequests=[];window.loginFetch=window.fetch.bind(window);window.fetch=async(url,opts)=>{const response=await window.loginFetch(url,opts);if(String(url)==='/auth/login')window.loginRequests.push({status:response.status,csrf:opts.headers['X-CSRF-Token']||null});return response;};");
+ const denied=await run("fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify("+JSON.stringify({username:account.username,password:account.password})+")}).then(r=>r.status)");
+ assert.equal(denied,400,'CSRF sigue siendo obligatorio');
+ await run("document.getElementById('username').value="+JSON.stringify(account.username)+";document.getElementById('password').value='incorrecta';");
+ await click('#login-btn');
+ await until("document.querySelector('#login-page .flash.error') && !document.getElementById('login-btn').disabled");
+ assert.match(await run("document.querySelector('#login-page .flash.error').textContent"),/Credenciales|incorrect/i);
+ assert.equal(await run("document.querySelector('#login-page .flash.error').getBoundingClientRect().top-document.getElementById('login-btn').getBoundingClientRect().bottom>=16"),true,'error separado del boton');
+ assert.equal(await run('location.pathname'),'/login');
+ assert.equal(await run('window.loginRequests[1].status'),401);
+ assert.equal(await run("window.loginRequests[1].csrf === document.querySelector('meta[name=csrf-token]').content"),true);
+ await capture(imagePath.replace('desktop','error'));
+ await run("document.getElementById('password').value="+JSON.stringify(account.password)+";document.getElementById('password').focus();");
+ await click('#login-btn');
+ await until("location.pathname === "+JSON.stringify(account.target)+" && document.readyState === 'complete'");
+ assert.equal(await run("fetch('/auth/me').then(r=>r.json()).then(data=>data.data.rol)"),account.role);
+ ws.close();clearTimeout(deadline);console.log('LOGIN: desktop, mobile, foco, errores, CSRF y acceso por rol OK');
+})().catch(error=>{console.error(error);process.exit(1);});
+"""
+    server = make_server("127.0.0.1", 0, app)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    profile = tmp_path / "browser-profile"
+    process = subprocess.Popen([
+        browser, "--headless=new", "--disable-gpu", "--no-first-run",
+        "--no-default-browser-check", "--disable-background-networking",
+        "--remote-debugging-port=0", f"--user-data-dir={profile}", "about:blank",
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    try:
+        port_file = profile / "DevToolsActivePort"
+        for _ in range(200):
+            if port_file.is_file() or process.poll() is not None:
+                break
+            time.sleep(.05)
+        assert port_file.is_file(), "El navegador no habilitó CDP"
+        result = subprocess.run([
+            node, "-e", harness, port_file.read_text().splitlines()[0],
+            f"http://127.0.0.1:{server.server_port}", str(tmp_path / "login-desktop.png"),
+            json.dumps(dict(username=username,password=password,role=role,target=target)),
+        ], text=True, encoding="utf-8", capture_output=True, timeout=90)
+        assert result.returncode == 0, result.stdout + result.stderr
+        print("LOGIN_PREVIEW=" + str(tmp_path))
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
+        server.shutdown()
+        thread.join(timeout=5)
