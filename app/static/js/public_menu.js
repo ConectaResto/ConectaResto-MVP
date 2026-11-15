@@ -142,7 +142,11 @@
                 const matching = priced.filter((product) => product.categoria_id === category.id);
                 for (const product of matching) {
                     const card = element('article', undefined, 'product-card');
-                    card.append(element('h3', product.name), element('p', product.description || '', 'description'), element('p', money(product.cents), 'price'));
+                    const img = element('img');
+                    img.src = product.image_url || '/static/img/default-product.svg';
+                    img.alt = product.name;
+                    img.loading = 'lazy';
+                    card.append(img, element('h3', product.name), element('p', product.description || '', 'description'), element('p', money(product.cents), 'price'));
                     const add = element('button', 'Agregar al carrito'); add.type = 'button'; add.dataset.cartControl = '';
                     add.setAttribute('aria-label', `Agregar ${product.name} al carrito`);
                     add.addEventListener('click', () => addProduct(product)); card.append(add); group.append(card);

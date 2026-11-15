@@ -117,7 +117,10 @@ BROWSER_CHECK = CDP_SETUP + r""" const navigate=async token=>{const path='/publi
  await run("document.querySelector('[data-category=\"1\"]').textContent='C'.repeat(100);document.querySelector('#catalog > section > h3').textContent='C'.repeat(100);");
  assert.equal(await run("document.documentElement.scrollWidth <= window.innerWidth"),true,'long category overflow');
  await run("document.querySelector('[data-category=\"1\"]').textContent='Bebidas';document.querySelector('#catalog > section > h3').textContent='Bebidas';");
- assert.equal(await run("document.querySelectorAll('.product-card img').length"),0,'unsafe HTML');
+ assert.equal(await run("document.querySelectorAll('.product-card img').length"),2,'una imagen por producto');
+ assert.equal(await run("document.querySelectorAll('.product-card img:not([src])').length"),0,'todas las imagenes tienen src');
+ assert.equal(await run("document.querySelectorAll('.product-card img[src*=\"onerror\"]').length"),0,'sin onerror en src de imagen');
+ assert.equal(await run("document.querySelectorAll('.product-card img[src*=\"javascript:\"]').length"),0,'sin javascript: en src de imagen');
  assert.match(await run("document.querySelectorAll('.product-card')[1].textContent"),/img src=x/);
  await click('[data-category="1"]');
  assert.equal(await run("[...document.querySelectorAll('#catalog > section')].filter(s=>!s.hidden).length"),1);

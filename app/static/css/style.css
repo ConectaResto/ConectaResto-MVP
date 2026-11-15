@@ -912,3 +912,41 @@ select:focus {
     color: #117a65;
     border: 1px solid #a9dfbf;
 }
+
+/* ADMIN: selector de imagen de producto y vista previa. */
+#admin-productos #producto-image {
+    width: auto;
+    max-width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--color-input-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    cursor: pointer;
+}
+
+#admin-productos #producto-image-preview {
+    margin-top: 8px;
+    text-align: center;
+}
+
+#admin-productos #producto-image-preview img {
+    max-width: 200px;
+    max-height: 150px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    object-fit: cover;
+    background-color: var(--color-secondary-hover);
+}
+
+/* ADMIN: columna de miniatura en el listado de productos. */
+#admin-panel [data-rows] td img {
+    display: block;
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    background-color: var(--color-secondary-hover);
+}

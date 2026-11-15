@@ -1,4 +1,5 @@
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -236,3 +237,60 @@ def test_public_order_second_reuses_service(client, disponible_mesa_context):
         db.select(Pedido).where(Pedido.servicio_id == servicio_id)
     ).scalars().all()
     assert len(pedidos) == 2
+
+
+def test_admin_form_tiene_input_imagen(app, client):
+    """El formulario ADMIN de productos tiene selector de imagen JPG/PNG."""
+    source = Path(__file__).resolve().parents[1] / "app/templates/admin.html"
+    html = source.read_text(encoding="utf-8")
+    assert 'id="producto-image"' in html
+    assert 'name="image"' in html
+    assert 'accept="image/jpeg,image/png"' in html
+
+
+def test_admin_js_envia_json_no_formdata_en_productos():
+    """admin.js envía JSON (no FormData) en POST/PATCH de productos."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    # payloadFor para productos retorna objeto JSON, no FormData
+    assert "name === 'productos') return {" in js
+    assert "new FormData()" not in js.split("name === 'productos'")[1].split("}")[0]
+
+
+def test_admin_js_usa_put_delete_para_imagen():
+    """admin.js usa PUT /products/<id>/image y DELETE /products/<id>/image."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    assert "/products/' + productId + '/image'" in js
+    assert "method: 'PUT', body: fd" in js
+    assert "/products/' + recordId + '/image', { method: 'DELETE' }" in js
+
+
+def test_admin_js_no_establece_content_type_manual_para_formdata():
+    """admin.js no fuerza Content-Type cuando el body es FormData."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    assert "if (!(options.body instanceof FormData))" in js
+    assert "headers['Content-Type'] = 'application/json'" in js
+
+
+def test_admin_js_mensaje_fallo_parcial_imagen():
+    """admin.js muestra mensaje diferenciado cuando falla solo la subida de imagen."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    assert "El producto se guardó correctamente, pero no fue posible subir su fotografía." in js
+
+
+def test_menu_publico_renderiza_imagen_con_fallback():
+    """public_menu.js usa image_url con fallback a imagen predeterminada."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/public_menu.js"
+    js = source.read_text(encoding="utf-8")
+    assert "img.src = product.image_url || '/static/img/default-product.svg'" in js
+    assert "img.loading = 'lazy'" in js
+
+
+def test_menu_publico_css_object_fit_cover():
+    """public_menu.css usa object-fit: cover para evitar deformaciones."""
+    source = Path(__file__).resolve().parents[1] / "app/static/css/public_menu.css"
+    css = source.read_text(encoding="utf-8")
+    assert "object-fit: cover" in css
