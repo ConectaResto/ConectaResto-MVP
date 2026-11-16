@@ -102,9 +102,12 @@
 
 - Vista de mesas con estado y pedidos asociados.
 - Tomar pedido para una mesa desde el panel.
-- Enviar pedido a cocina (cambiar estado a "en preparación").
-- Marcar pedido como entregado al cliente.
-- Cerrar mesa cuando el cliente se retira.
+- Autorizar el pedido pendiente antes de enviarlo a cocina.
+- Enviar a cocina: pedido `EN_PREPARACION` y preparación `RECIBIDO`.
+- Cocina prepara (`EN_COCINA` → `LISTO_PARA_SERVIR`); el pedido pasa a `LISTO`.
+- Marcar pedido como `ENTREGADO` desde el panel del mesero.
+- Caja registra pago simulado y cierra el servicio; la mesa vuelve a `DISPONIBLE`. El mesero no realiza el cierre de caja.
+- Flujo real: Crear pedido → Autorizar → Enviar a cocina → Preparar → Entregar.
 - Pruebas del panel del mesero.
 
 ### Fase 8 — Panel de cocina (KITCHEN)
@@ -134,6 +137,8 @@
 
 ### Fase 11 — Pruebas integrales y correcciones
 
+**Estado: PARCIAL.** Hay pruebas automatizadas y un recorrido histórico MySQL/Chrome en `docs/ESTADO_CIERRE_MVP.md`; falta validar manualmente el flujo completo posterior a F. Pytest no acredita por sí solo toda la fase ni pruebas de carga.
+
 - Pruebas de extremo a extremo (E2E) por flujo completo: ordenar → preparar → cobrar.
 - Pruebas de integración entre módulos (usuarios, pedidos, cocina, caja).
 - Pruebas de validación de reglas de negocio y estados.
@@ -142,6 +147,8 @@
 - Pruebas de regresión antes de la entrega.
 
 ### Fase 12 — Documentación y entrega
+
+**Estado: PARCIAL.** Existen README, contratos de módulos y auditorías. Quedan manuales por rol, documentación consolidada de endpoints y aceptación final; esta actualización no completa la fase.
 
 - Documentar endpoints de la API (método, ruta, parámetros, respuestas, códigos HTTP).
 - Documentar modelos de base de datos y relaciones.
@@ -152,7 +159,29 @@
 
 ---
 
+## Estado observado en main tras Entrega F
+
+Referencia: `91f416c3fde08204abd2b747f1d2bb8536da32c7` (PR #47). Las listas anteriores conservan el alcance planificado; no equivalen a una declaración de finalización.
+
+| Fases | Evidencia y límites |
+|---|---|
+| 0–2 | Factory, configuración, SQLAlchemy, Flask-Migrate, health check y pruebas; revisión Alembic HEAD `014_add_image_filename_to_products`. |
+| 3 | Usuarios, roles, sesiones firmadas con expiración absoluta de 8 horas, CSRF y permisos explícitos. ADMIN no hereda acceso a cocina/caja. |
+| 4 | Administración de usuarios, mesas, categorías y productos; no se acredita aquí el dashboard de ventas planificado. |
+| 5–6 | QR, menú público, pedidos, precios capturados, totales y servicios. El POST público reutiliza servicio activo o lo abre para una mesa Disponible; GET no abre servicios. Cancelación/reembolso pendiente. |
+| 7–8 | Autorización, envío a cocina, preparación y entrega implementados y cubiertos por pruebas. |
+| 9 | Pago simulado y cierre de servicio implementados; no equivalen a cierre diario por medios de pago, comprobante ni pasarela real. |
+| 10 | Vistas integradas y mejoras D/E/F; revisión visual manual de estas mejoras pendiente. |
+| 11–12 | PARCIAL, según los límites y pendientes descritos en cada fase. |
+
+- **D, PR #45:** etiquetas de estados en español sin cambiar valores internos.
+- **E, PR #46:** pendientes, en curso e historial; orden por ID descendente, Detalles en todos e historial sin acciones operativas.
+- **F, PR #47:** MESA basada en `Mesa.numero`, resaltado solo en pendientes/en curso y fallback «Mesa desconocida».
+- Última validación previa a publicar F: **692 aprobadas, 0 fallidas y 1 omitida** (collation MySQL), con SQLite de pruebas. No se repitió en esta tarea documental.
+
 ## 3. Roles y permisos
+
+La tabla conserva la planificación inicial. En el código vigente los permisos son explícitos por endpoint: ADMIN no tiene acceso automático a KITCHEN/CASHIER; el cierre de servicio corresponde a CASHIER. WAITER autoriza, envía y entrega pedidos.
 
 | Rol | Puede | No puede |
 |---|---|---|
@@ -241,4 +270,4 @@ Los siguientes puntos requieren confirmación explícita del usuario antes de im
 ---
 
 **Archivo:** `PLAN_DE_TRABAJO_MVP.md`  
-**Ruta exacta:** `C:\Users\1234\Desktop\softwareDeveloper\python\conectaRestoAppMVP\PLAN_DE_TRABAJO_MVP.md`
+**Ubicación:** `PLAN_DE_TRABAJO_MVP.md`, en la raíz del repositorio, independiente de la carpeta del clon.

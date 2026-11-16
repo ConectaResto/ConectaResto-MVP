@@ -86,7 +86,7 @@ python -m flask --app run.py db upgrade
 python -m flask --app run.py db current
 ```
 
-La segunda instrucción debe indicar la revisión `013_allow_null_abierto_por_id (head)`.
+La segunda instrucción debe indicar la revisión `014_add_image_filename_to_products (head)`.
 
 Las tablas se crean mediante **Flask-Migrate**. No uses `db.create_all()` para sustituir este paso.
 
@@ -129,13 +129,21 @@ Mantén abierta la terminal de Flask mientras pruebas la aplicación. Para deten
    Puedes guardar una imagen del QR y cargarla en el [lector QR online](https://www.codigos-qr.com/lector-qr-online/#result) para consultar el enlace que contiene. El lector es un servicio externo a ConectaResto.
 
 2. **CLIENTE:** abre el enlace del QR en una ventana privada, sin iniciar sesión; agrega productos y confirma un pedido.
-3. **WAITER:** entra con `mesero1`, abre el servicio de la mesa, autoriza el pedido y lo envía a cocina.
-4. **KITCHEN:** entra con `cocinero1`, pasa el pedido a **EN_COCINA** y luego a **LISTO_PARA_SERVIR**.
-5. **WAITER:** marca el pedido como **ENTREGADO**.
+3. **WAITER:** entra con `mesero1`, localiza el pedido en Pendientes de autorización, pulsa **Autorizar** y luego **Enviar a cocina** en Pedidos en curso.
+4. **KITCHEN:** entra con `cocinero1`, pulsa **En cocina** y luego **Listo para servir**.
+5. **WAITER:** pulsa **Entregar** cuando esté Listo; el pedido pasa al Historial de pedidos entregados.
 6. **CASHIER:** entra con `cajero1`, registra el **pago simulado** y cierra el servicio.
-7. **WAITER:** comprueba que la mesa vuelve a **DISPONIBLE**.
+7. **WAITER:** comprueba que la mesa vuelve a **Disponible**.
+
+Al confirmar un pedido público, el backend reutiliza el servicio activo de la mesa. Si no existe y la mesa está Disponible, lo abre automáticamente y la pasa a Ocupada; el mesero no tiene que abrirlo previamente. También puede abrirlo manualmente desde su panel para tomar un pedido interno. Una mesa Cerrada rechaza pedidos; un fallo en la creación revierte la transacción.
 
 Para usar sesiones de roles distintos, cierra sesión o utiliza perfiles de navegador separados. Las pestañas del mismo perfil suelen compartir sesión.
+
+### Mejoras integradas de las vistas (D, E y F)
+
+- **D:** estados legibles en español en administración, mesero, cocina y caja; sin cambiar valores internos ni transiciones.
+- **E:** pendientes de autorización, pedidos en curso e historial de entregados, ordenados por ID descendente. Detalles muestra nombres y cantidades en las tres secciones; el historial no tiene acciones operativas.
+- **F:** columna MESA con el número visible, resaltada en pendientes/en curso y sin resaltado en historial. Si falta la relación muestra «Mesa desconocida», sin sustituir el número por un ID interno.
 
 ## 9. Ejecutar las pruebas automatizadas
 
@@ -145,7 +153,7 @@ Con las dependencias instaladas:
 python -m pytest -q
 ```
 
-La suite general se probó con SQLite durante la auditoría; una prueba de collation requiere MySQL y puede omitirse con SQLite. **No apuntes los tests a una base con datos que quieras conservar**: algunos fixtures crean y eliminan tablas.
+Para aislar la suite de MySQL, establece `$env:TEST_DATABASE_URL = 'sqlite:///:memory:'` en la terminal de pruebas antes de ejecutarla. La suite general se probó con SQLite durante la auditoría; una prueba de collation requiere MySQL y puede omitirse con SQLite. **No apuntes los tests a una base con datos que quieras conservar**: algunos fixtures crean y eliminan tablas.
 
 ## Solución de problemas
 
@@ -153,7 +161,7 @@ La suite general se probó con SQLite durante la auditoría; una prueba de colla
 | --- | --- |
 | `ModuleNotFoundError` | Activa `.venv` y reinstala `requirements.txt`. |
 | Error de conexión MySQL | Servicio MySQL activo, nombre de base, usuario, contraseña y `DATABASE_URL`. |
-| Error por tabla o columna faltante | Ejecuta `db current` y verifica que las migraciones lleguen a `013_allow_null_abierto_por_id`. |
+| Error por tabla o columna faltante | Ejecuta `db current` y verifica que las migraciones lleguen a `014_add_image_filename_to_products`. |
 | El inicio de sesión falla | Comprueba que `seed-demo` terminó y usa la contraseña que elegiste allí. |
 | El QR no abre en un teléfono | `127.0.0.1` es el propio dispositivo; para probar con teléfono hace falta una URL accesible desde la red y una configuración adecuada del servidor. |
 | El puerto 5000 está ocupado | Detén la otra instancia de Flask antes de volver a iniciarlo. |

@@ -1,5 +1,22 @@
 # Estado del cierre del MVP
 
+## Estado actual de main posterior a Entrega F
+
+Referencia de esta revisión documental: `91f416c3fde08204abd2b747f1d2bb8536da32c7`, merge del PR #47. Los bloques 1–3 siguientes son **auditorías históricas** sobre `audit/mvp-entrega`/`d7035a7` y esquema 012: se conservan sus comandos, commits y resultados, pero sus listas de cambios pendientes no describen el árbol actual.
+
+- La revisión Alembic actual es `014_add_image_filename_to_products` (valor de `revision`, no solo nombre del archivo), posterior a `013_allow_null_abierto_por_id`.
+- El pedido público reutiliza un servicio ACTIVO; si no existe y la mesa está DISPONIBLE, lo abre automáticamente. GET no abre servicios. El mesero autoriza y envía a cocina; cocina prepara, mesero entrega y CASHIER registra pago simulado/cierra el servicio.
+- **D / PR #45:** estados legibles en administración, mesero, cocina y caja; corrección de aislamiento de PUBLIC_BASE_URL en una prueba QR.
+- **E / PR #46:** pendientes, en curso e historial de entregados, orden descendente por ID; Detalles en todos e historial sin acciones operativas.
+- **F / PR #47:** MESA muestra Mesa.numero mediante pedido/servicio/mesa, con resaltado solo en pendientes/en curso y «Mesa desconocida» si falta la relación o falla una consulta auxiliar. Sin N+1.
+- Última validación de Codex previa a publicar F: **692 aprobadas, 0 fallidas y 1 omitida**, en 166,73 s; 21 pruebas del mesero aprobadas. La omitida requiere collation MySQL. Se ejecutó con SQLite de pruebas; no se repitió Pytest en esta actualización Markdown.
+- La lectura de código y las pruebas específicas acreditan las funcionalidades descritas, no una nueva demostración manual integral posterior a F. Falta revisión visual manual de D/E/F y escaneo con teléfono físico. El recorrido MySQL/Chrome del bloque 3 conserva validez como evidencia de aquella versión histórica.
+- Fases **11 y 12: PARCIAL**. Pendientes: validar el recorrido integral actualizado, manuales por rol, documentación consolidada de endpoints y aceptación final. Los contratos por módulo y README existentes no sustituyen esos entregables.
+
+Para preparar la versión actual usa el [README](../README.md): base MySQL de prueba, migraciones hasta 014, seed-demo autorizado y Flask sin debugger/reload. La apertura manual es opcional para el pedido QR; sigue disponible para pedidos internos. Ningún comando de preparación de base de datos se ejecutó en esta revisión documental.
+
+## Auditorías históricas conservadas
+
 ## Bloque 1 — Esquema MySQL 8
 
 Rama local `audit/mvp-entrega`, basada en `origin/main` en `d7035a7`. El árbol de trabajo contiene cambios sin commit. Las correcciones previas de QR, CASHIER y KITCHEN siguen en los mismos archivos y se conservaron íntegramente.

@@ -2,6 +2,12 @@
 
 Responsable: **Portátil Codex 2** (backend QR y menú público).
 
+## Lectura del documento y estado actual
+
+Referencia actual: main `91f416c`, posterior al PR #47. Las rondas, commits y cifras de pruebas siguientes son registros históricos, no una nueva ejecución ni el total actual. Se conserva su trazabilidad.
+
+Actualmente el POST público reutiliza el servicio ACTIVO o lo abre para una mesa DISPONIBLE; no exige apertura previa del mesero. El código está en `app/mesas/public_routes.py` y `_crear_servicio_para_mesa()` de `app/servicios/service.py`. Las pruebas `test_public_order_first_creates_service_and_ocupa_mesa`, `test_public_order_second_reuses_service` y `test_public_order_invalid_product_leaves_mesa_disponible` de `tests/test_public_orders.py` cubren apertura, reutilización y rollback. La última suite previa a publicar F dio 692 aprobadas y 1 omitida; no acredita un nuevo recorrido manual integral.
+
 ## Parte independiente verificada
 
 Se reutilizan los endpoints de `app/catalog/routes.py`, sin duplicarlos:
@@ -33,14 +39,14 @@ autenticación y CSRF; la creación pública requiere CSRF sin login.
 servicios, para identificar la mesa y consultar el menú sin iniciar sesión.
 Se verifica que cerrar y reabrir la mesa no altera el token almacenado.
 
-Una mesa CERRADA o sin servicio activo no acepta pedidos. No se infiere de
+En la ronda 2 original, una mesa CERRADA o sin servicio activo no aceptaba pedidos. En main actual se conserva el rechazo de CERRADA y se admite apertura automática para DISPONIBLE. No se infiere de
 esa restricción una prohibición de lectura del menú. No se expone información
 interna ni pedidos ajenos. La creación pública reutiliza el contrato
 compartido de Escritorio Codex 1, sin modificar su implementación.
 
 ## Ruta implementada y registrada
 
-`app/mesas/public_routes.py` define `public_mesas_bp` y una única ruta:
+`app/mesas/public_routes.py` definió inicialmente `public_mesas_bp` con la ruta JSON:
 `GET /public/mesas/<token>`, sin login. Resuelve el `Mesa.public_token`
 existente (64 caracteres hexadecimales minúsculos). Respuesta 200:
 
@@ -115,10 +121,9 @@ Respuesta 201 mínima, exclusivamente del pedido recién creado:
 |---|---|
 | 400 | CSRF ausente/inválido, JSON o items inválidos |
 | 404 | Token mal formado/inexistente o producto no público válido |
-| 409 | Mesa CERRADA o sin servicio ACTIVO (inexistente o cerrado) |
+| 409 | Mesa CERRADA; sin servicio activo y no disponible para abrirlo; servicio con pago u otro conflicto de dominio |
 
-No se crean servicios automáticamente. El token permanece estable y se
-resuelve el servicio activo actual en cada petición. No se habilita consulta
+En la ronda B original no se creaban servicios automáticamente. En main actual, si no hay servicio ACTIVO, el POST llama a `_crear_servicio_para_mesa()` y exige una mesa DISPONIBLE. Se abre con `abierto_por_id=None`, pasa la mesa a OCUPADA y se confirma junto al pedido; un error revierte ambos. Si hay servicio ACTIVO se reutiliza, aunque existan servicios cerrados anteriores. El token permanece estable. No se habilita consulta
 pública de pedidos o servicios ni se revelan identificadores de usuarios.
 Los GET internos conservan sus permisos. La semántica CSRF y los bloqueos
 de base de datos existentes se mantienen; concurrencia MySQL no se acredita
@@ -131,11 +136,10 @@ envían tokens a generadores externos). Véase `docs/QR_PUBLICO.md`,
 `app/mesas/routes.py`, `app/mesas/public_routes.py` y
 `tests/test_qr_publico.py`.
 
-La creación pública de pedidos no modifica modelos, migraciones ni el servicio
-compartido. La interfaz del cliente se describe al final de este documento.
+La ronda B original no modificó modelos, migraciones ni el servicio compartido; la apertura automática posterior usa el helper de servicios y la revisión `013_allow_null_abierto_por_id` permite el abridor nulo. La interfaz del cliente se describe al final de este documento.
 No se instalan dependencias nuevas.
 
-## Validación
+## Validación histórica y comandos de repetición
 
 Desde este clon, con su propio entorno y SQLite aislado:
 
@@ -165,6 +169,8 @@ parciales. Se utilizan los blueprints reales registrados en la factory.
 Resultado de ronda B: 68 casos públicos pasan (41 E3 y 27 pedidos públicos);
 suite completa: 402 pasan y 1 se omite por collation específica de MySQL.
 
+Las rutas actuales del blueprint son GET `/public/mesas/<token>`, GET `/public/mesas/<token>/menu` y POST `/public/mesas/<token>/pedidos`. Solo el POST puede abrir un servicio y crear un pedido; exige CSRF. Los permisos internos no cambian.
+
 ## Interfaz de cliente por QR
 
 La página `/public/mesas/<token>/menu` muestra mesa, categorías, nombres,
@@ -183,7 +189,7 @@ la respuesta no contiene un total confirmado ni seguimiento público.
 
 Se obtiene CSRF mediante el GET existente y se conserva su cookie, sin login.
 No se añade ningún endpoint. Los errores HTTP conservan el carrito y muestran
-el rechazo del dominio, incluidos falta de servicio activo y mesa cerrada.
+el rechazo del dominio, incluida mesa cerrada o no disponible para abrir un servicio.
 Si falla la red tras iniciar el POST o el servidor responde 5xx, el resultado
 puede ser incierto: se indica consultar al mesero antes de volver a enviar.
 Nunca se reintenta automáticamente un POST ni se promete idempotencia del
