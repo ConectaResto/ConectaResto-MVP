@@ -289,3 +289,27 @@ def test_transicion_revierte_fallo_de_commit(client, contexto, monkeypatch):
     assert almacenado.autorizado_por_id is None
     assert almacenado.autorizado_at is None
     assert almacenado.estado == "PENDIENTE"
+
+
+def test_cocina_conserva_historial_despues_de_entrega_pago_y_cierre(app, client, contexto):
+    pedido = pedir(client, contexto)
+    _, headers, _, servicio_id = contexto
+    path = f"/pedidos/{pedido['id']}"
+    assert client.post(path + "/autorizar", headers=headers).status_code == 200
+    assert client.post(path + "/enviar-cocina", headers=headers).status_code == 200
+    cocina = app.test_client()
+    _, cocina_headers = autenticar(cocina, "KITCHEN", "cocinero_historial")
+    for estado in ("EN_COCINA", "LISTO_PARA_SERVIR"):
+        assert cocina.patch(path + "/preparacion", json={"estado": estado},
+                            headers=cocina_headers).status_code == 200
+    assert client.post(path + "/entregar", headers=headers).status_code == 200
+    caja = app.test_client()
+    _, caja_headers = autenticar(caja, "CASHIER", "cajero_historial")
+    for accion, expected in (("pago-simulado", 201), ("cerrar", 200)):
+        assert caja.post(f"/servicios/{servicio_id}/{accion}", headers=caja_headers).status_code == expected
+        response = cocina.get("/pedidos")
+        assert response.status_code == 200
+        assert [(p["id"], p["estado"], p["estado_preparacion"]) for p in response.json["data"]] == [
+            (pedido["id"], "ENTREGADO", "LISTO_PARA_SERVIR")
+        ]
+        assert cocina.get(path).json["data"]["items"] == pedido["items"]
