@@ -125,6 +125,9 @@ Mantén abierta la terminal de Flask mientras pruebas la aplicación. Para deten
 ## 8. Recorrido rápido de demostración
 
 1. **ADMIN:** entra con `admin1`, comprueba o crea una mesa, categoría y producto; muestra **Ver QR** de la mesa.
+
+   Puedes guardar una imagen del QR y cargarla en el [lector QR online](https://www.codigos-qr.com/lector-qr-online/#result) para consultar el enlace que contiene. El lector es un servicio externo a ConectaResto.
+
 2. **CLIENTE:** abre el enlace del QR en una ventana privada, sin iniciar sesión; agrega productos y confirma un pedido.
 3. **WAITER:** entra con `mesero1`, abre el servicio de la mesa, autoriza el pedido y lo envía a cocina.
 4. **KITCHEN:** entra con `cocinero1`, pasa el pedido a **EN_COCINA** y luego a **LISTO_PARA_SERVIR**.
