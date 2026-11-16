@@ -15,6 +15,7 @@ class Product(BaseModel):
     )
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_available = db.Column(db.Boolean, default=True, nullable=False)
+    image_filename = db.Column(db.String(255), nullable=True)
 
     def to_dict(self):
         return {
@@ -25,6 +26,7 @@ class Product(BaseModel):
             "categoria_id": self.categoria_id,
             "is_active": self.is_active,
             "is_available": self.is_available,
+            "image_url": f"/products/{self.id}/image" if self.image_filename else None,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

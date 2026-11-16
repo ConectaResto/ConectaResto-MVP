@@ -6,7 +6,10 @@ not registered in the Flask application (see app/__init__.py) so that no
 administrative endpoint is exposed unprotected.
 """
 
+import os
+import uuid
 from decimal import Decimal, InvalidOperation
+from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from app.extensions import db
 from app.models.category import Category
@@ -440,3 +443,144 @@ def deactivate_product(product_id: int):
     product.is_active = False
     db.session.commit()
     return product
+
+
+# ---------------------------------------------------------------------------
+# Product image operations
+# ---------------------------------------------------------------------------
+
+_ALLOWED_EXTENSIONS = frozenset({"jpg", "jpeg", "png"})
+_MAX_IMAGE_SIZE = 2 * 1024 * 1024  # 2 MiB
+
+
+class ProductImageError(ValueError):
+    """Raised for product image validation errors."""
+
+
+def _upload_dir() -> str:
+    """Return the absolute path to the product image upload directory."""
+    base = current_app.instance_path
+    upload_dir = os.path.join(base, "uploads", "products")
+    os.makedirs(upload_dir, exist_ok=True)
+    return upload_dir
+
+
+def _validate_image_file(file_storage) -> str:
+    """Validate uploaded image file and return its lowercase extension.
+
+    Raises ProductImageError if the file is missing, has a bad extension,
+    or exceeds the maximum size.
+    """
+    if file_storage is None or not file_storage.filename:
+        raise ProductImageError("No se proporciono archivo de imagen")
+
+    filename = file_storage.filename
+    if "." not in filename:
+        raise ProductImageError("El archivo debe tener una extension valida")
+
+    ext = filename.rsplit(".", 1)[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise ProductImageError(
+            f"Formato no permitido. Formatos validos: {', '.join(sorted(_ALLOWED_EXTENSIONS))}"
+        )
+
+    # Validate size by reading the stream (without consuming it permanently)
+    file_storage.stream.seek(0, os.SEEK_END)
+    size = file_storage.stream.tell()
+    file_storage.stream.seek(0)
+    if size > _MAX_IMAGE_SIZE:
+        raise ProductImageError(
+            f"El archivo excede el tamano maximo de 2 MiB ({size} bytes)"
+        )
+    if size == 0:
+        raise ProductImageError("El archivo esta vacio")
+
+    # Validate that the file content matches the declared extension
+    # using magic bytes (file signatures), without Pillow.
+    header = file_storage.stream.read(8)
+    file_storage.stream.seek(0)
+    if ext in ("jpg", "jpeg"):
+        if not header.startswith(b"\xff\xd8\xff"):
+            raise ProductImageError(
+                "El contenido del archivo no coincide con una imagen JPEG valida"
+            )
+    elif ext == "png":
+        if not header.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise ProductImageError(
+                "El contenido del archivo no coincide con una imagen PNG valida"
+            )
+
+    return ext
+
+
+def _unique_filename(ext: str) -> str:
+    """Generate a unique server-side filename."""
+    return f"{uuid.uuid4().hex}.{ext}"
+
+
+def upload_product_image(product_id: int, file_storage) -> tuple[Product, dict]:
+    """Upload or replace an image for a product.
+
+    Saves the file to instance/uploads/products/ with a unique name,
+    updates product.image_filename, and returns the product plus cleanup info.
+    The caller is responsible for committing the transaction.
+    File deletion of the previous image must happen after a successful commit.
+    If the commit fails, the new file must be removed by the caller.
+    """
+    ext = _validate_image_file(file_storage)
+    product = db.session.get(Product, product_id)
+    if product is None:
+        raise ProductImageError("Producto no encontrado")
+
+    old_filename = product.image_filename
+    new_filename = _unique_filename(ext)
+    upload_dir = _upload_dir()
+    new_path = os.path.join(upload_dir, new_filename)
+
+    try:
+        file_storage.save(new_path)
+    except OSError as exc:
+        raise ProductImageError(f"No se pudo guardar la imagen: {exc}")
+
+    product.image_filename = new_filename
+    db.session.add(product)
+
+    cleanup = {
+        "old_filename": old_filename,
+        "new_path": new_path,
+        "upload_dir": upload_dir,
+    }
+    return product, cleanup
+
+
+def delete_product_image(product_id: int) -> tuple[Product, dict]:
+    """Remove the image from a product and delete the file.
+
+    Does not deactivate the product. Returns the product plus cleanup info.
+    The caller is responsible for committing the transaction.
+    File deletion must happen after a successful commit.
+    If the commit fails, the file remains on disk (no data loss).
+    """
+    product = db.session.get(Product, product_id)
+    if product is None:
+        raise ProductImageError("Producto no encontrado")
+
+    old_filename = product.image_filename
+    cleanup = {
+        "old_filename": old_filename,
+        "upload_dir": _upload_dir() if old_filename else None,
+    }
+
+    if old_filename:
+        product.image_filename = None
+        db.session.add(product)
+
+    return product, cleanup
+
+
+def get_product_image_filename(product_id: int) -> str | None:
+    """Return the image filename for a product, or None if no image."""
+    product = db.session.get(Product, product_id)
+    if product is None:
+        return None
+    return product.image_filename
