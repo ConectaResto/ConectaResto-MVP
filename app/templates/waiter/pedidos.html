@@ -189,7 +189,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     async function loadPedidos() {
         hideFlash();
-        const res = await fetchJson('/pedidos');
+        const [res, serviciosRes, mesasRes] = await Promise.all([
+            fetchJson('/pedidos'),
+            fetchJson('/servicios').catch(() => null),
+            fetchJson('/mesas').catch(() => null),
+        ]);
         if (!res.ok) {
             for (const contenedor of [pedidosList, pedidosCursoList, historialList]) {
                 contenedor.innerHTML = '<p style="color:#c0392b;">Error al cargar pedidos.</p>';
@@ -197,6 +201,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         const pedidos = res.data.data || res.data || [];
+        const servicios = serviciosRes?.ok && Array.isArray(serviciosRes.data.data) ? serviciosRes.data.data : [];
+        const mesas = mesasRes?.ok && Array.isArray(mesasRes.data.data) ? mesasRes.data.data : [];
+        const mesaPorServicio = new Map(servicios.map(servicio => [servicio.id, servicio.mesa_id]));
+        const numeroPorMesa = new Map(mesas.map(mesa => [mesa.id, mesa.numero]));
+        const numeroPorPedido = new Map(pedidos.map(pedido => [
+            pedido.id, numeroPorMesa.get(mesaPorServicio.get(pedido.servicio_id)),
+        ]));
         const pendientes = [];
         const enCurso = [];
         const historial = [];
@@ -208,9 +219,9 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const grupo of [pendientes, enCurso, historial]) {
             grupo.sort((a, b) => b.id - a.id);
         }
-        renderPedidos(pedidosList, pendientes, 'No hay pedidos pendientes de autorización.');
-        renderPedidos(pedidosCursoList, enCurso, 'No hay pedidos en curso.');
-        renderPedidos(historialList, historial, 'No hay pedidos entregados en el historial.');
+        renderPedidos(pedidosList, pendientes, 'No hay pedidos pendientes de autorización.', numeroPorPedido);
+        renderPedidos(pedidosCursoList, enCurso, 'No hay pedidos en curso.', numeroPorPedido);
+        renderPedidos(historialList, historial, 'No hay pedidos entregados en el historial.', numeroPorPedido);
     }
 
     function pendienteAutorizacion(pedido) {
@@ -219,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
             && pedido.autorizado_por_id === null;
     }
 
-    function renderPedidos(contenedor, pedidos, mensajeVacio) {
+    function renderPedidos(contenedor, pedidos, mensajeVacio, numeroPorPedido) {
         if (pedidos.length === 0) {
             const mensaje = document.createElement('p');
             mensaje.style.color = 'var(--color-text-muted)';
@@ -227,10 +238,16 @@ document.addEventListener('DOMContentLoaded', function() {
             contenedor.replaceChildren(mensaje);
             return;
         }
-        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">ID</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Servicio</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Preparación</th><th style="text-align:right;padding:8px;border-bottom:2px solid var(--color-border);">Total</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Acciones</th></tr></thead><tbody>';
+        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">ID</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Servicio</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">MESA</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Preparación</th><th style="text-align:right;padding:8px;border-bottom:2px solid var(--color-border);">Total</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Acciones</th></tr></thead><tbody>';
         for (const p of pedidos) {
             html += '<tr><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.id + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.servicio_id + '</td>';
+            const numeroMesa = numeroPorPedido.get(p.id);
+            const mesaTexto = Number.isInteger(numeroMesa) && numeroMesa > 0 ? 'Mesa ' + numeroMesa : 'Mesa desconocida';
+            const resaltado = contenedor !== historialList;
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">'
+                + (resaltado ? '<span class="badge" style="background:#e8f6f3;color:#117a65;font-weight:600;">' + mesaTexto + '</span>' : mesaTexto)
+                + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(p.estado) + '">' + estadoLegible(p.estado) + '</span></td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">' + estadoLegible(p.estado_preparacion) + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);text-align:right;">$' + p.total + '</td>';
@@ -246,7 +263,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             html += '<button type="button" class="btn" data-detalles="' + p.id + '" aria-expanded="false" aria-controls="pedido-detalles-' + p.id + '">Detalles</button>';
             html += '</td></tr>';
-            html += '<tr id="pedido-detalles-' + p.id + '" hidden><td colspan="6"><ul data-pedido-items></ul></td></tr>';
+            html += '<tr id="pedido-detalles-' + p.id + '" hidden><td colspan="7"><ul data-pedido-items></ul></td></tr>';
         }
         html += '</tbody></table>';
         contenedor.innerHTML = html;

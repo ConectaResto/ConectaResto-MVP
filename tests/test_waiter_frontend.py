@@ -255,7 +255,8 @@ for (const state of [null,undefined,'__proto__','<img src=x onerror=alert(1)>','
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_pedidos_tres_secciones_y_acciones():
+@pytest.mark.parametrize("relation_error", ["none", "services_http", "tables_http", "services_network", "tables_network"])
+def test_pedidos_tres_secciones_y_acciones(relation_error):
     from pathlib import Path
     import shutil
     import subprocess
@@ -289,8 +290,18 @@ class Element {
 const pending=new Element(), active=new Element(), history=new Element(), calls=[];
 const make=(id,state,prep,auth)=>({id,servicio_id:1,estado:state,estado_preparacion:prep,autorizado_por_id:auth,total:'10.00',items:[{producto_id:1,cantidad:id},{producto_id:99,cantidad:2}]});
 const orders=[make(2,'PENDIENTE','NO_ENVIADO',null),make(9,'ENTREGADO','LISTO_PARA_SERVIR',3),make(3,'PENDIENTE','NO_ENVIADO',3),make(8,'LISTO','LISTO_PARA_SERVIR',3),make(6,'PENDIENTE','NO_ENVIADO',null),make(4,'ENTREGADO','LISTO_PARA_SERVIR',3),make(7,'EN_PREPARACION','EN_COCINA',3)];
+const services=[{id:1,mesa_id:101,estado:'CERRADO'},{id:2,mesa_id:202,estado:'ACTIVO'}];
+const tables=[{id:101,numero:12,estado:'CERRADA'},{id:202,numero:5,estado:'OCUPADA'}];
+orders.find(p=>p.id===7).servicio_id=2;
+orders.find(p=>p.id===3).servicio_id=999;
+const relationError=process.argv[3];
 const context={window:{},document:{createElement:()=>new Element(),getElementById:id=>ids.get(id)},pedidosList:pending,pedidosCursoList:active,historialList:history,nombresProductos:new Map([[1,'Agua <img src=x>']]),flashEl:new Element(),hideFlash(){},showFlash(){},fetchJson:async(url,options)=>{
  calls.push([url,options]);
+ if(url==='/servicios' || url==='/mesas') {
+  const prefix=url==='/servicios'?'services':'tables';
+  if(relationError===prefix+'_network') throw Error('offline');
+  return {ok:relationError!==prefix+'_http',data:{data:url==='/servicios'?services:tables}};
+ }
  if(options?.method==='POST'){
   const id=Number(url.split('/')[2]),order=orders.find(p=>p.id===id);
   if(url.endsWith('/autorizar')) order.autorizado_por_id=3;
@@ -307,6 +318,20 @@ const rowIds=el=>Array.from(el.innerHTML.matchAll(/data-detalles="(\d+)"/g),m=>N
 const partition=()=>{const all=[...rowIds(pending),...rowIds(active),...rowIds(history)];assert.equal(new Set(all).size,orders.length);assert.deepEqual(all.sort((a,b)=>a-b),orders.map(p=>p.id).sort((a,b)=>a-b));};
 (async()=>{
  await context.loadPedidos();
+ assert.deepEqual(calls.map(([url])=>url),['/pedidos','/servicios','/mesas']);
+ for(const section of [pending,active,history]) assert(section.innerHTML.includes('colspan="7"'));
+ if(relationError==='none') {
+  assert.equal((pending.innerHTML.match(/Mesa 12/g)||[]).length,2);
+  assert(history.innerHTML.includes('Mesa 12'));assert(active.innerHTML.includes('Mesa 5'));
+  assert(active.innerHTML.includes('Mesa desconocida'));
+ } else {
+  for(const section of [pending,active,history]) {
+   assert(section.innerHTML.includes('Mesa desconocida'));
+   assert(!/Mesa (12|5|101|202)/.test(section.innerHTML));
+  }
+ }
+ assert(pending.innerHTML.includes('font-weight:600'));assert(active.innerHTML.includes('font-weight:600'));
+ assert(!history.innerHTML.includes('font-weight:600'));
  assert.deepEqual(rowIds(pending),[6,2]);assert.deepEqual(rowIds(active),[8,7,3]);assert.deepEqual(rowIds(history),[9,4]);partition();
  assert(pending.innerHTML.includes('autorizarPedido('));assert(!active.innerHTML.includes('autorizarPedido('));
  assert(active.innerHTML.includes('enviarCocina(3)'));assert(active.innerHTML.includes('entregarPedido(8)'));
@@ -325,12 +350,15 @@ const partition=()=>{const all=[...rowIds(pending),...rowIds(active),...rowIds(h
  await context.loadPedidos();partition();assert.equal(history.lists.length,3);
  assert.deepEqual(calls.filter(([,o])=>o).map(([u,o])=>[u,o.method,o.body]),[['/pedidos/6/autorizar','POST','{}'],['/pedidos/6/enviar-cocina','POST','{}'],['/pedidos/8/entregar','POST','{}']]);
  assert(!calls.some(([u])=>u==='/products'));
+ const loads=calls.filter(([u])=>u==='/pedidos').length;
+ assert.equal(calls.filter(([u])=>u==='/servicios').length,loads);
+ assert.equal(calls.filter(([u])=>u==='/mesas').length,loads);
  orders.length=0;await context.loadPedidos();
  assert.equal(pending.children[0].textContent,'No hay pedidos pendientes de autorizaci\u00f3n.');
  assert.equal(active.children[0].textContent,'No hay pedidos en curso.');
  assert.equal(history.children[0].textContent,'No hay pedidos entregados en el historial.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 """
-    result = subprocess.run([node, "-", str(source)], input=harness, text=True,
+    result = subprocess.run([node, "-", str(source), relation_error], input=harness, text=True,
                             encoding="utf-8", capture_output=True, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
