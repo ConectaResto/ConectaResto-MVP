@@ -495,6 +495,21 @@ def _validate_image_file(file_storage) -> str:
     if size == 0:
         raise ProductImageError("El archivo esta vacio")
 
+    # Validate that the file content matches the declared extension
+    # using magic bytes (file signatures), without Pillow.
+    header = file_storage.stream.read(8)
+    file_storage.stream.seek(0)
+    if ext in ("jpg", "jpeg"):
+        if not header.startswith(b"\xff\xd8\xff"):
+            raise ProductImageError(
+                "El contenido del archivo no coincide con una imagen JPEG valida"
+            )
+    elif ext == "png":
+        if not header.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise ProductImageError(
+                "El contenido del archivo no coincide con una imagen PNG valida"
+            )
+
     return ext
 
 

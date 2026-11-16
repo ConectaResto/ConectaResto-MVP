@@ -98,6 +98,7 @@ _PNG_DATA = (
 )
 _LARGE_DATA = b"\x00" * (3 * 1024 * 1024)  # 3 MiB
 _BAD_DATA = b"not an image"
+_HTML_DATA = b"<html><body>fake image</body></html>"
 
 
 # ---------- Service layer tests ----------
@@ -723,3 +724,112 @@ def test_delete_image_sqlalchemy_commit_failure(client, app):
     with app.app_context():
         product = db.session.get(Product, 1)
         assert product.image_filename == filename
+
+
+# ---------- Content validation tests ----------
+
+def test_upload_html_renamed_to_jpg_service(app):
+    """Rechazar archivo HTML con extension .jpg."""
+    with app.app_context():
+        product_id = _create_product(app)
+        file_storage = _make_file_storage(_HTML_DATA, "falso.jpg", "image/jpeg")
+        with pytest.raises(ProductImageError) as exc:
+            upload_product_image(product_id, file_storage)
+        assert "no coincide con una imagen JPEG" in str(exc.value)
+
+
+def test_upload_html_renamed_to_png_service(app):
+    """Rechazar archivo HTML con extension .png."""
+    with app.app_context():
+        product_id = _create_product(app)
+        file_storage = _make_file_storage(_HTML_DATA, "falso.png", "image/png")
+        with pytest.raises(ProductImageError) as exc:
+            upload_product_image(product_id, file_storage)
+        assert "no coincide con una imagen PNG" in str(exc.value)
+
+
+def test_upload_incompatible_header_jpg_extension_service(app):
+    """Rechazar cabecera PNG con extension .jpg."""
+    with app.app_context():
+        product_id = _create_product(app)
+        file_storage = _make_file_storage(_PNG_DATA, "falso.jpg", "image/jpeg")
+        with pytest.raises(ProductImageError) as exc:
+            upload_product_image(product_id, file_storage)
+        assert "no coincide con una imagen JPEG" in str(exc.value)
+
+
+def test_upload_incompatible_header_png_extension_service(app):
+    """Rechazar cabecera JPEG con extension .png."""
+    with app.app_context():
+        product_id = _create_product(app)
+        file_storage = _make_file_storage(_JPEG_DATA, "falso.png", "image/png")
+        with pytest.raises(ProductImageError) as exc:
+            upload_product_image(product_id, file_storage)
+        assert "no coincide con una imagen PNG" in str(exc.value)
+
+
+def test_upload_html_renamed_to_jpg_endpoint(client, app):
+    """Endpoint rechaza HTML renombrado a .jpg."""
+    _make_admin_user(app)
+    _create_product(app, "Producto Test", "10.00")
+    login(client, "admin1", "admin-pass")
+    token = csrf_token(client)
+
+    # Limpieza de archivos residuales de pruebas previas
+    upload_dir = os.path.join(app.instance_path, "uploads", "products")
+    for f in os.listdir(upload_dir):
+        try:
+            os.remove(os.path.join(upload_dir, f))
+        except OSError:
+            pass
+
+    file_storage = _make_file_storage(_HTML_DATA, "falso.jpg", "image/jpeg")
+    resp = client.put(
+        "/products/1/image",
+        data={"image": (file_storage, "falso.jpg")},
+        headers={"X-CSRF-Token": token},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["success"] is False
+
+    # No archivo guardado ni imagen_filename cambiado
+    with app.app_context():
+        product = db.session.get(Product, 1)
+        assert product.image_filename is None
+
+    upload_dir = os.path.join(app.instance_path, "uploads", "products")
+    assert len(os.listdir(upload_dir)) == 0
+
+
+def test_upload_html_renamed_to_png_endpoint(client, app):
+    """Endpoint rechaza HTML renombrado a .png."""
+    _make_admin_user(app)
+    _create_product(app, "Producto Test", "10.00")
+    login(client, "admin1", "admin-pass")
+    token = csrf_token(client)
+
+    # Limpieza de archivos residuales de pruebas previas
+    upload_dir = os.path.join(app.instance_path, "uploads", "products")
+    for f in os.listdir(upload_dir):
+        try:
+            os.remove(os.path.join(upload_dir, f))
+        except OSError:
+            pass
+
+    file_storage = _make_file_storage(_HTML_DATA, "falso.png", "image/png")
+    resp = client.put(
+        "/products/1/image",
+        data={"image": (file_storage, "falso.png")},
+        headers={"X-CSRF-Token": token},
+        content_type="multipart/form-data",
+    )
+    assert resp.status_code == 400
+
+    with app.app_context():
+        product = db.session.get(Product, 1)
+        assert product.image_filename is None
+
+    upload_dir = os.path.join(app.instance_path, "uploads", "products")
+    assert len(os.listdir(upload_dir)) == 0
