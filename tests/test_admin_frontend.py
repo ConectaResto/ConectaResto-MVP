@@ -229,7 +229,7 @@ const submit = section => section.nodes.form.events.submit({preventDefault() {}}
         availability.checked = available;
         await submit(products);
         assert.equal(calls.at(-1).url, '/admin/products?include_inactive=true');
-        assert.equal(products.nodes['[data-rows]'].children[0].children[4].textContent, label);
+            assert.equal(products.nodes['[data-rows]'].children[0].children[5].textContent, label);
     }
     const productRecord = records['/admin/products?include_inactive=true'][0];
     const productActions = () => products.nodes['[data-rows]'].children[0].children.at(-1).children.map(button => button.dataset.action);

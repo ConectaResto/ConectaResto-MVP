@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     const resources = {
         mesas: { path: '/admin/mesas', singular: 'mesa', fields: ['numero', 'estado'], rows: [] },
         categorias: { path: '/categories', listPath: '/categories?include_inactive=true', singular: 'categoría', fields: ['name', 'description'], rows: [] },
-        productos: { path: '/products', listPath: '/admin/products?include_inactive=true', singular: 'producto', fields: ['name', 'description', 'price', 'categoria_id', 'is_available'], rows: [] },
+        productos: { path: '/products', listPath: '/admin/products?include_inactive=true', singular: 'producto', fields: ['name', 'description', 'price', 'categoria_id', 'is_available', 'image'], rows: [] },
         usuarios: { path: '/users', singular: 'usuario', fields: ['username', 'email', 'rol'], rows: [] },
     };
     const roleLabels = { ADMIN: 'Administrador', WAITER: 'Mesero', KITCHEN: 'Cocina', CASHIER: 'Cajero' };
@@ -31,7 +31,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         const headers = { Accept: 'application/json' };
         if (options.method) {
             headers['X-CSRF-Token'] = csrf;
-            headers['Content-Type'] = 'application/json';
+            if (!(options.body instanceof FormData)) {
+                headers['Content-Type'] = 'application/json';
+            }
         }
         const response = await fetch(url, { credentials: 'same-origin', ...options, headers });
         const payload = await response.json().catch(() => null);
@@ -55,8 +57,13 @@ document.addEventListener('DOMContentLoaded', async function () {
         const form = section.querySelector('form');
         form.reset();
         delete form.dataset.recordId;
+        delete form.dataset.removeImage;
         section.querySelector('[data-form-title]').textContent = 'Crear ' + resource.singular;
         if (form.elements.password) form.elements.password.required = true;
+        const preview = document.getElementById('producto-image-preview');
+        const remove = document.getElementById('producto-image-remove');
+        if (preview) preview.hidden = true;
+        if (remove) remove.hidden = true;
     }
 
     function edit(section, resource, record) {
@@ -65,6 +72,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         form.dataset.recordId = String(record.id);
         for (const field of resource.fields) {
             const input = form.elements.namedItem(field);
+            if (!input) continue;
             if (input.type === 'checkbox') input.checked = Boolean(record[field]);
             else input.value = record[field] ?? '';
         }
@@ -72,6 +80,20 @@ document.addEventListener('DOMContentLoaded', async function () {
             form.elements.password.value = '';
             form.elements.password.required = false;
         }
+        const imageInput = form.elements.namedItem('image');
+        if (imageInput) imageInput.value = '';
+        const preview = document.getElementById('producto-image-preview');
+        const remove = document.getElementById('producto-image-remove');
+        const previewImg = document.getElementById('producto-image-preview-img');
+        if (preview && previewImg) {
+            if (record.image_url) {
+                previewImg.src = record.image_url;
+                preview.hidden = false;
+            } else {
+                preview.hidden = true;
+            }
+        }
+        if (remove) remove.hidden = !record.image_url;
         section.querySelector('[data-form-title]').textContent = 'Editar ' + resource.singular + ' #' + record.id;
         form.querySelector('input').focus();
     }
@@ -118,10 +140,19 @@ document.addEventListener('DOMContentLoaded', async function () {
                     record.is_available ? 'Disponible' : 'No disponible', record.is_active ? 'Activo' : 'Inactivo'];
             }
             if (name === 'usuarios') values = [record.id, record.username, record.email, roleLabels[record.rol] || record.rol, record.is_active ? 'Activo' : 'Inactivo'];
-            for (const value of values) {
+            for (const [index, value] of values.entries()) {
                 const cell = document.createElement('td');
                 cell.textContent = String(value);
                 row.appendChild(cell);
+                if (name === 'productos' && index === 0) {
+                    const thumbCell = document.createElement('td');
+                    const img = document.createElement('img');
+                    img.src = record.image_url || '/static/img/default-product.svg';
+                    img.alt = '';
+                    img.setAttribute('style', 'width:40px;height:40px;object-fit:cover;border-radius:4px');
+                    thumbCell.appendChild(img);
+                    row.appendChild(thumbCell);
+                }
             }
             const actions = document.createElement('td');
             const choices = ['editar'];
@@ -198,6 +229,55 @@ document.addEventListener('DOMContentLoaded', async function () {
         const resource = resources[name];
         const form = section.querySelector('form');
         section.querySelector('[data-cancel]').addEventListener('click', () => resetForm(section, resource));
+        if (name === 'productos') {
+            const imageInput = form.elements.namedItem('image');
+            if (imageInput) {
+                imageInput.addEventListener('change', () => {
+                    const file = imageInput.files[0];
+                    const preview = document.getElementById('producto-image-preview');
+                    const remove = document.getElementById('producto-image-remove');
+                    const previewImg = document.getElementById('producto-image-preview-img');
+                    if (file && preview && previewImg) {
+                        previewImg.src = URL.createObjectURL(file);
+                        preview.hidden = false;
+                        form.dataset.removeImage = 'false';
+                    } else if (preview) {
+                        preview.hidden = true;
+                    }
+                    if (remove) remove.hidden = !file;
+                });
+            }
+            const removeBtn = document.getElementById('producto-image-remove');
+            if (removeBtn) {
+                removeBtn.querySelector('button').addEventListener('click', async () => {
+                    const imageInput = form.elements.namedItem('image');
+                    const preview = document.getElementById('producto-image-preview');
+                    const remove = document.getElementById('producto-image-remove');
+                    const recordId = form.dataset.recordId;
+                    if (!recordId) {
+                        if (imageInput) imageInput.value = '';
+                        if (preview) preview.hidden = true;
+                        if (remove) remove.hidden = true;
+                        delete form.dataset.removeImage;
+                        feedback(section, 'Fotografía descartada.');
+                        return;
+                    }
+                    setBusy(section, true);
+                    try {
+                        await request('/products/' + recordId + '/image', { method: 'DELETE' });
+                        if (imageInput) imageInput.value = '';
+                        if (preview) preview.hidden = true;
+                        if (remove) remove.hidden = true;
+                        delete form.dataset.removeImage;
+                        feedback(section, 'Fotografía eliminada.');
+                    } catch (error) {
+                        feedback(section, error.message, true);
+                    } finally {
+                        setBusy(section, false);
+                    }
+                });
+            }
+        }
         section.querySelector('[data-refresh]').addEventListener('click', async () => {
             if (section.dataset.busy === 'true') return;
             setBusy(section, true);
@@ -220,9 +300,26 @@ document.addEventListener('DOMContentLoaded', async function () {
             const data = payloadFor(form, name);
             setBusy(section, true);
             try {
-                await request(resource.path + (recordId ? '/' + recordId : ''), {
+                const payload = await request(resource.path + (recordId ? '/' + recordId : ''), {
                     method: recordId ? 'PATCH' : 'POST', body: JSON.stringify(data),
                 });
+                const productId = payload?.data?.id ?? payload?.id ?? (recordId ? Number(recordId) : null);
+                let imageUploadFailed = false;
+                if (name === 'productos' && productId) {
+                    const imageFile = form.elements.namedItem('image')?.files?.[0];
+                    if (imageFile) {
+                        try {
+                            const fd = new FormData();
+                            fd.append('image', imageFile);
+                            await request('/products/' + productId + '/image', {
+                                method: 'PUT', body: fd,
+                            });
+                        } catch (imageError) {
+                            imageUploadFailed = true;
+                            feedback(section, 'El producto se guardó correctamente, pero no fue posible subir su fotografía.', true);
+                        }
+                    }
+                }
                 if (name === 'usuarios' && Number(recordId) === currentUserId) {
                     const me = await request('/auth/me');
                     if (me.data.rol !== 'ADMIN') {
@@ -231,7 +328,11 @@ document.addEventListener('DOMContentLoaded', async function () {
                     }
                 }
                 resetForm(section, resource);
-                feedback(section, 'Cambios guardados.');
+                if (imageUploadFailed) {
+                    feedback(section, 'El producto se guardó correctamente, pero no fue posible subir su fotografía.', true);
+                } else {
+                    feedback(section, 'Cambios guardados.');
+                }
                 try {
                     await loadList(section, name);
                 } catch (error) {

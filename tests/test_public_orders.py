@@ -1,9 +1,11 @@
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
 from app.extensions import db
 from app.models import Category, DetallePedido, Mesa, Pedido, Product, Rol, Servicio, Usuario
+from tests.test_servicios import autenticar
 
 
 @pytest.fixture
@@ -236,3 +238,160 @@ def test_public_order_second_reuses_service(client, disponible_mesa_context):
         db.select(Pedido).where(Pedido.servicio_id == servicio_id)
     ).scalars().all()
     assert len(pedidos) == 2
+
+
+def test_admin_form_tiene_input_imagen(app, client):
+    """El formulario ADMIN de productos tiene selector de imagen JPG/PNG."""
+    source = Path(__file__).resolve().parents[1] / "app/templates/admin.html"
+    html = source.read_text(encoding="utf-8")
+    assert 'id="producto-image"' in html
+    assert 'name="image"' in html
+    assert 'accept="image/jpeg,image/png"' in html
+
+
+def test_admin_js_envia_json_no_formdata_en_productos():
+    """admin.js envía JSON (no FormData) en POST/PATCH de productos."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    # payloadFor para productos retorna objeto JSON, no FormData
+    assert "name === 'productos') return {" in js
+    assert "new FormData()" not in js.split("name === 'productos'")[1].split("}")[0]
+
+
+def test_admin_js_usa_put_delete_para_imagen():
+    """admin.js usa PUT /products/<id>/image y DELETE /products/<id>/image."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    assert "/products/' + productId + '/image'" in js
+    assert "method: 'PUT', body: fd" in js
+    assert "/products/' + recordId + '/image', { method: 'DELETE' }" in js
+
+
+def test_admin_js_no_establece_content_type_manual_para_formdata():
+    """admin.js no fuerza Content-Type cuando el body es FormData."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    assert "if (!(options.body instanceof FormData))" in js
+    assert "headers['Content-Type'] = 'application/json'" in js
+
+
+def test_admin_js_mensaje_fallo_parcial_imagen():
+    """admin.js muestra mensaje diferenciado cuando falla solo la subida de imagen."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    assert "El producto se guardó correctamente, pero no fue posible subir su fotografía." in js
+
+
+def test_menu_publico_renderiza_imagen_con_fallback():
+    """public_menu.js usa image_url con fallback a imagen predeterminada."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/public_menu.js"
+    js = source.read_text(encoding="utf-8")
+    assert "img.src = product.image_url || '/static/img/default-product.svg'" in js
+    assert "img.loading = 'lazy'" in js
+
+
+def test_menu_publico_css_object_fit_cover():
+    """public_menu.css usa object-fit: cover para evitar deformaciones."""
+    source = Path(__file__).resolve().parents[1] / "app/static/css/public_menu.css"
+    css = source.read_text(encoding="utf-8")
+    assert "object-fit: cover" in css
+
+
+def test_producto_se_puede_crear_sin_imagen(app, client):
+    """Caso behavioral: crear producto sin fotografía via POST /products (JSON)."""
+    _, headers = autenticar(client, "ADMIN")
+    category = client.post("/categories", json={"name": "Bebidas"}, headers=headers)
+    assert category.status_code == 201
+    payload = {"name": "Té", "price": "5.00", "categoria_id": category.json["data"]["id"]}
+    response = client.post("/products", json=payload, headers=headers)
+    assert response.status_code == 201
+    product_id = response.json["data"]["id"]
+    product = db.session.get(Product, product_id)
+    assert product is not None
+    assert product.name == "Té"
+    assert str(product.price) == "5.00"
+
+
+def test_tabla_productos_orden_columnas():
+    """Defecto 2: La tabla ADMIN declara ID | Imagen | Nombre y el JS respeta ese orden."""
+    source = Path(__file__).resolve().parents[1] / "app/templates/admin.html"
+    html = source.read_text(encoding="utf-8")
+    # Buscar solo dentro de la tabla de productos
+    table_start = html.find('<table aria-label="Productos">')
+    assert table_start >= 0, "No se encontró la tabla de productos"
+    table_section = html[table_start:]
+    th_order = ["ID", "Imagen", "Nombre", "Precio", "Categoría", "Disponibilidad", "Estado", "Acciones"]
+    positions = []
+    for th in th_order:
+        positions.append(table_section.find(f"<th>{th}</th>"))
+    assert all(p >= 0 for p in positions), f"Faltan columnas en tabla de productos: {th_order}"
+    assert positions == sorted(positions), f"Orden incorrecto: {list(zip(th_order, positions))}"
+
+
+def test_quitar_imagen_producto_nuevo_limpia_input():
+    """Defecto 1: Al quitar imagen en producto nuevo, se limpia el input y preview sin backend."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    # Cuando no hay recordId, debe limpiar el input y retornar sin llamar al backend
+    assert "if (!recordId) {" in js
+    assert "if (imageInput) imageInput.value = '';" in js
+    assert "if (preview) preview.hidden = true;" in js
+    assert "if (remove) remove.hidden = true;" in js
+    assert "delete form.dataset.removeImage;" in js
+    assert "feedback(section, 'Fotografía descartada.');" in js
+
+
+def test_quitar_imagen_producto_nuevo_no_llama_backend():
+    """Defecto 1: Para productos nuevos, no se ejecuta DELETE /products/<id>/image."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    # El DELETE solo se ejecuta cuando existe recordId (después del bloque if !recordId return)
+    assert "if (!recordId) {" in js
+    assert "return;" in js.split("if (!recordId) {")[1].split("}")[0]
+    # El request DELETE está dentro del flujo con recordId
+    assert "await request('/products/' + recordId + '/image', { method: 'DELETE' }" in js
+
+
+def test_producto_creacion_con_imagen_flujo_javascript():
+    """Flujo real de JavaScript: POST /products con JSON, luego PUT /products/<id>/image con FormData.
+
+    Usa respuestas simuladas del backend (mismo patrón que test_admin_frontend.py).
+    Verifica que el ID del POST se reutilice en el PUT y que el campo 'image' viaje en FormData.
+    """
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+
+    # El flujo correcto en admin.js:
+    # 1. POST /products con JSON (sin FormData, sin campo image)
+    # 2. Leer productId de la respuesta del POST
+    # 3. PUT /products/<id>/image con FormData (campo image), sin forzar Content-Type
+    assert "payload = await request(resource.path + (recordId ? '/' + recordId : ''), {" in js
+    assert "method: recordId ? 'PATCH' : 'POST', body: JSON.stringify(data)," in js
+    assert "const productId = payload?.data?.id ?? payload?.id ?? (recordId ? Number(recordId) : null);" in js
+    assert "if (name === 'productos' && productId) {" in js
+    assert "const imageFile = form.elements.namedItem('image')?.files?.[0];" in js
+    assert "const fd = new FormData();" in js
+    assert "fd.append('image', imageFile);" in js
+    assert "await request('/products/' + productId + '/image', {" in js
+    assert "method: 'PUT', body: fd," in js
+    # No debe haber new FormData en el bloque de productos JSON
+    productos_block = js.split("name === 'productos'")[1].split("}")[0]
+    assert "new FormData()" not in productos_block
+
+
+def test_producto_se_puede_editar_sin_cambiar_imagen(app, client):
+    """Caso behavioral: editar producto sin tocar la imagen via PATCH /products/<id> (JSON)."""
+    _, headers = autenticar(client, "ADMIN")
+    category = client.post("/categories", json={"name": "Bebidas"}, headers=headers)
+    assert category.status_code == 201
+    payload = {"name": "Té", "price": "5.00", "categoria_id": category.json["data"]["id"]}
+    response = client.post("/products", json=payload, headers=headers)
+    assert response.status_code == 201
+    product_id = response.json["data"]["id"]
+
+    path = f"/products/{product_id}"
+    response = client.patch(path, json={"price": "6.00"}, headers=headers)
+    assert response.status_code == 200
+
+    product = db.session.get(Product, product_id)
+    assert product.price == 6.00

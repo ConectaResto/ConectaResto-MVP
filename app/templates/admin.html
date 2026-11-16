@@ -78,6 +78,9 @@
                     <div class="field"><label for="producto-price">Precio</label><input id="producto-price" name="price" type="number" min="0" max="99999999.99" step="0.01" required></div>
                     <div class="field"><label for="producto-categoria">Categoría</label><select id="producto-categoria" name="categoria_id" required><option value="">Selecciona una categoría</option></select></div>
                     <div class="field"><label for="producto-available"><input id="producto-available" name="is_available" type="checkbox" checked> Disponible</label></div>
+                    <div class="field"><label for="producto-image">Imagen (JPG/PNG)</label><input id="producto-image" name="image" type="file" accept="image/jpeg,image/png"></div>
+                    <div class="field" id="producto-image-preview" hidden><img id="producto-image-preview-img" alt="Vista previa"></div>
+                    <div class="field" id="producto-image-remove" hidden><button type="button" data-remove-image class="btn">Quitar imagen</button></div>
                     <button class="btn btn-primary" type="submit">Guardar producto</button>
                     <button class="btn" type="button" data-cancel>Cancelar edición</button>
                 </fieldset>
@@ -85,7 +88,7 @@
             <button class="btn" type="button" data-refresh>Actualizar productos</button>
             <p data-list-status aria-live="polite">Cargando productos…</p>
             <div class="table-wrap">
-                <table aria-label="Productos"><thead><tr><th>ID</th><th>Nombre</th><th>Precio</th><th>Categoría</th><th>Disponibilidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
+                <table aria-label="Productos"><thead><tr><th>ID</th><th>Imagen</th><th>Nombre</th><th>Precio</th><th>Categoría</th><th>Disponibilidad</th><th>Estado</th><th>Acciones</th></tr></thead><tbody data-rows></tbody></table>
             </div>
         </div>
     </section>
