@@ -57,6 +57,11 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function estadoLegible(estado) {
+        const etiquetas = {"DISPONIBLE":"Disponible","OCUPADA":"Ocupada","CERRADA":"Cerrada","ACTIVO":"Activo","CERRADO":"Cerrado","PENDIENTE":"Pendiente","EN_PREPARACION":"En preparación","LISTO":"Listo","ENTREGADO":"Entregado","NO_ENVIADO":"No enviado","RECIBIDO":"Recibido","EN_COCINA":"En cocina","LISTO_PARA_SERVIR":"Listo para servir"};
+        return Object.hasOwn(etiquetas, estado) ? etiquetas[estado] : 'Estado desconocido';
+    }
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const flashEl = document.getElementById('flash-pedidos');
     const servicioSelect = document.getElementById('servicio-id');
@@ -210,8 +215,8 @@ document.addEventListener('DOMContentLoaded', function() {
         for (const p of pedidos) {
             html += '<tr><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.id + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.servicio_id + '</td>';
-            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(p.estado) + '">' + p.estado + '</span></td>';
-            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">' + p.estado_preparacion + '</td>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(p.estado) + '">' + estadoLegible(p.estado) + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">' + estadoLegible(p.estado_preparacion) + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);text-align:right;">$' + p.total + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">';
             if (pendienteAutorizacion(p)) {

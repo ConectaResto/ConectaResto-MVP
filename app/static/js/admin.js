@@ -1,6 +1,10 @@
 /* Administración sobre las APIs existentes. Los datos se insertan como texto. */
 document.addEventListener('DOMContentLoaded', async function () {
     'use strict';
+    function estadoLegible(estado) {
+        const etiquetas = {"DISPONIBLE":"Disponible","OCUPADA":"Ocupada","CERRADA":"Cerrada","ACTIVO":"Activo","CERRADO":"Cerrado","PENDIENTE":"Pendiente","EN_PREPARACION":"En preparación","LISTO":"Listo","ENTREGADO":"Entregado","NO_ENVIADO":"No enviado","RECIBIDO":"Recibido","EN_COCINA":"En cocina","LISTO_PARA_SERVIR":"Listo para servir"};
+        return Object.hasOwn(etiquetas, estado) ? etiquetas[estado] : 'Estado desconocido';
+    }
     const panel = document.getElementById('admin-panel');
     if (!panel) return;
 
@@ -132,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async function () {
         for (const record of resource.rows) {
             const row = document.createElement('tr');
             let values;
-            if (name === 'mesas') values = [record.id, record.numero, record.estado];
+            if (name === 'mesas') values = [record.id, record.numero, estadoLegible(record.estado)];
             if (name === 'categorias') values = [record.id, record.name, record.description || '—', record.is_active ? 'Activo' : 'Inactivo'];
             if (name === 'productos') {
                 const category = resources.categorias.rows.find(item => item.id === record.categoria_id);

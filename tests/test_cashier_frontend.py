@@ -405,7 +405,7 @@ def test_cashier_visual_y_flujo_en_navegador(app, client, tmp_path, scenario):
  await select(ids[1]);
  assert.equal(await run("document.getElementById('btn-pagar-simulado').disabled"),true);
  assert.equal(await run("document.getElementById('btn-cerrar-servicio').disabled"),true);
- assert.equal(await run("document.querySelector('#tabla-pedidos-body tr').lastChild.textContent"),'PENDIENTE');
+ assert.equal(await run("document.querySelector('#tabla-pedidos-body tr').lastChild.textContent"),'Pendiente');
  await select(ids[0]);
  assert.equal(await text('detalle-total-pagar'),'$5000.00');
  assert.equal(await text('detalle-pago-estado'),'Sin pago registrado');

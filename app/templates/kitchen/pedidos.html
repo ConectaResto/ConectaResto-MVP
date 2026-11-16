@@ -38,6 +38,11 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function estadoLegible(estado) {
+        const etiquetas = {"DISPONIBLE":"Disponible","OCUPADA":"Ocupada","CERRADA":"Cerrada","ACTIVO":"Activo","CERRADO":"Cerrado","PENDIENTE":"Pendiente","EN_PREPARACION":"En preparación","LISTO":"Listo","ENTREGADO":"Entregado","NO_ENVIADO":"No enviado","RECIBIDO":"Recibido","EN_COCINA":"En cocina","LISTO_PARA_SERVIR":"Listo para servir"};
+        return Object.hasOwn(etiquetas, estado) ? etiquetas[estado] : 'Estado desconocido';
+    }
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const flashEl = document.getElementById('flash-kitchen');
     const pedidosList = document.getElementById('pedidos-list');
@@ -89,8 +94,8 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '<tr data-pedido-id="' + p.id + '"><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.id + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.servicio_id + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><ul data-pedido-items></ul></td>';
-            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span class="badge" style="background:#fef9e7;color:#b7950b;">' + p.estado + '</span></td>';
-            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span class="badge" style="' + estadoPrepColor(p.estado_preparacion) + '">' + p.estado_preparacion + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span class="badge" style="background:#fef9e7;color:#b7950b;">' + estadoLegible(p.estado) + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span class="badge" style="' + estadoPrepColor(p.estado_preparacion) + '">' + estadoLegible(p.estado_preparacion) + '</span></td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);text-align:right;">$' + p.total + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">';
             if (p.estado_preparacion === 'RECIBIDO') {
