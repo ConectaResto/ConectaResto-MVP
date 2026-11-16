@@ -11,11 +11,24 @@
 
     <div class="flash" id="flash-kitchen" style="display:none;"></div>
 
-    <div class="admin-section">
+    <nav class="section-nav" aria-label="Acciones de cocina">
+        <button class="btn" type="button" id="actualizar-pedidos">Actualizar pedidos</button>
+    </nav>
+
+    <div class="admin-section" aria-labelledby="pedidos-activos-title">
         <div class="admin-section-body">
-            <h2>Pedidos en preparación</h2>
+            <h2 id="pedidos-activos-title">Pedidos activos</h2>
             <div class="table-wrap" id="pedidos-list">
                 <p style="color:var(--color-text-muted);">Cargando pedidos...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section" aria-labelledby="historial-title">
+        <div class="admin-section-body">
+            <h2 id="historial-title">Historial</h2>
+            <div class="table-wrap" id="pedidos-historial">
+                <p style="color:var(--color-text-muted);">Cargando historial...</p>
             </div>
         </div>
     </div>
@@ -28,11 +41,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const flashEl = document.getElementById('flash-kitchen');
     const pedidosList = document.getElementById('pedidos-list');
+    const historialList = document.getElementById('pedidos-historial');
+    const actualizarBtn = document.getElementById('actualizar-pedidos');
+    let loading = false;
+    let updating = false;
 
     function showFlash(message, type) {
         flashEl.style.display = 'block';
         flashEl.className = 'flash ' + type;
         flashEl.textContent = message;
+        flashEl.style.backgroundColor = type === 'error' ? '' : '#e8f6f3';
+        flashEl.style.color = type === 'error' ? '' : '#117a65';
+        flashEl.style.border = type === 'error' ? '' : '1px solid #a9dfbf';
+        flashEl.setAttribute('role', type === 'error' ? 'alert' : 'status');
     }
 
     function hideFlash() {
@@ -55,25 +76,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return map[estado] || '';
     }
 
-    async function loadPedidos() {
-        hideFlash();
-        const [res, catalogo] = await Promise.all([
-            fetchJson('/pedidos'),
-            fetchJson('/products').catch(() => null),
-        ]);
-        if (!res.ok) {
-            pedidosList.innerHTML = '<p style="color:#c0392b;">Error al cargar pedidos.</p>';
-            return;
-        }
-        const pedidos = res.data.data || res.data || [];
+    function renderPedidos(contenedor, pedidos, nombres, mensajeVacio) {
         if (pedidos.length === 0) {
-            pedidosList.innerHTML = '<p style="color:var(--color-text-muted);">No hay pedidos en preparación.</p>';
+            const mensaje = document.createElement('p');
+            mensaje.style.color = 'var(--color-text-muted)';
+            mensaje.textContent = mensajeVacio;
+            contenedor.replaceChildren(mensaje);
             return;
         }
-        const nombres = new Map((catalogo?.data.data || []).map(p => [p.id, p.name]));
-        let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Pedido</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Servicio</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Productos</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Preparación</th><th style="text-align:right;padding:8px;border-bottom:2px solid var(--color-border);">Total</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Acciones</th></tr></thead><tbody>';
+        let html = '<table aria-label="' + (contenedor === pedidosList ? 'Pedidos activos' : 'Historial de cocina') + '" style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Pedido</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Servicio</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Productos</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Preparación</th><th style="text-align:right;padding:8px;border-bottom:2px solid var(--color-border);">Total</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Acciones</th></tr></thead><tbody>';
         for (const p of pedidos) {
-            html += '<tr><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.id + '</td>';
+            html += '<tr data-pedido-id="' + p.id + '"><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.id + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + p.servicio_id + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><ul data-pedido-items></ul></td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span class="badge" style="background:#fef9e7;color:#b7950b;">' + p.estado + '</span></td>';
@@ -89,8 +102,8 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '</td></tr>';
         }
         html += '</tbody></table>';
-        pedidosList.innerHTML = html;
-        pedidosList.querySelectorAll('[data-pedido-items]').forEach((lista, indice) => {
+        contenedor.innerHTML = html;
+        contenedor.querySelectorAll('[data-pedido-items]').forEach((lista, indice) => {
             for (const item of pedidos[indice].items) {
                 const linea = document.createElement('li');
                 const nombre = nombres.get(item.producto_id) || 'Producto #' + item.producto_id;
@@ -100,23 +113,70 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    async function loadPedidos() {
+        if (loading) return false;
+        loading = true;
+        actualizarBtn.disabled = true;
+        pedidosList.setAttribute('aria-busy', 'true');
+        historialList.setAttribute('aria-busy', 'true');
+        try {
+            const [res, catalogo] = await Promise.all([
+                fetchJson('/pedidos'),
+                fetchJson('/products').catch(() => null),
+            ]);
+            if (!res.ok) throw new Error(res.data.error || 'Error al cargar pedidos.');
+            const pedidos = res.data.data || res.data || [];
+            if (!Array.isArray(pedidos)) throw new Error('Error al cargar pedidos.');
+            const nombres = new Map((catalogo?.data.data || []).map(p => [p.id, p.name]));
+            const activos = pedidos.filter(p => ['RECIBIDO', 'EN_COCINA'].includes(p.estado_preparacion));
+            const historial = pedidos.filter(p => p.estado_preparacion === 'LISTO_PARA_SERVIR');
+            renderPedidos(pedidosList, activos, nombres, 'No hay pedidos activos.');
+            renderPedidos(historialList, historial, nombres, 'No hay pedidos en el historial.');
+            return true;
+        } catch (error) {
+            for (const contenedor of [pedidosList, historialList]) {
+                const mensaje = document.createElement('p');
+                mensaje.textContent = 'No se pudieron actualizar los pedidos.';
+                contenedor.replaceChildren(mensaje);
+            }
+            showFlash(error.message || 'Error al cargar pedidos.', 'error');
+            return false;
+        } finally {
+            loading = false;
+            actualizarBtn.disabled = updating;
+            pedidosList.setAttribute('aria-busy', 'false');
+            historialList.setAttribute('aria-busy', 'false');
+        }
+    }
+
     window.cambiarPreparacion = async function(pedidoId, nuevoEstado) {
+        if (loading || updating) return;
+        updating = true;
+        actualizarBtn.disabled = true;
         hideFlash();
-        const res = await fetchJson('/pedidos/' + pedidoId + '/preparacion', {
-            method: 'PATCH',
-            body: JSON.stringify({ estado: nuevoEstado }),
-        });
-        if (res.ok) {
-            const msg = nuevoEstado === 'EN_COCINA' ? 'en cocina' : 'listo para servir';
-            showFlash('Pedido #' + pedidoId + ' ' + msg, '');
-            flashEl.style.backgroundColor = '#e8f6f3';
-            flashEl.style.color = '#117a65';
-            flashEl.style.border = '1px solid #a9dfbf';
-            loadPedidos();
-        } else {
-            showFlash(res.data.error || 'Error al actualizar preparación', 'error');
+        try {
+            const res = await fetchJson('/pedidos/' + pedidoId + '/preparacion', {
+                method: 'PATCH',
+                body: JSON.stringify({ estado: nuevoEstado }),
+            });
+            if (!res.ok) throw new Error(res.data.error || 'Error al actualizar preparación');
+            if (await loadPedidos()) {
+                const msg = nuevoEstado === 'EN_COCINA' ? 'en cocina' : 'listo para servir';
+                showFlash('Pedido #' + pedidoId + ' ' + msg, '');
+            }
+        } catch (error) {
+            showFlash(error.message || 'Error al actualizar preparación', 'error');
+        } finally {
+            updating = false;
+            actualizarBtn.disabled = loading;
         }
     };
+
+    actualizarBtn.addEventListener('click', async function() {
+        if (loading || updating) return;
+        hideFlash();
+        if (await loadPedidos()) showFlash('Pedidos actualizados.', '');
+    });
 
     loadPedidos();
 });
