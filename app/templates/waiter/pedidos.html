@@ -34,10 +34,19 @@
         </div>
     </section>
 
-    <div class="admin-section">
+    <div class="admin-section" aria-labelledby="pendientes-title">
         <div class="admin-section-body">
-            <h2>Todos los pedidos</h2>
+            <h2 id="pendientes-title">Pendientes de autorización</h2>
             <div class="table-wrap" id="pedidos-list">
+                <p style="color:var(--color-text-muted);">Cargando pedidos...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section" aria-labelledby="otros-pedidos-title">
+        <div class="admin-section-body">
+            <h2 id="otros-pedidos-title">Otros pedidos</h2>
+            <div class="table-wrap" id="otros-pedidos-list">
                 <p style="color:var(--color-text-muted);">Cargando pedidos...</p>
             </div>
         </div>
@@ -57,6 +66,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const itemsList = document.getElementById('items-list');
     const crearPedidoBtn = document.getElementById('crear-pedido');
     const pedidosList = document.getElementById('pedidos-list');
+    const otrosPedidosList = document.getElementById('otros-pedidos-list');
 
     let items = [];
 
@@ -90,12 +100,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    const nombresProductos = new Map();
+
     async function loadProductos() {
         const res = await fetchJson('/products');
         if (!res.ok) return;
         const products = res.data.data || res.data || [];
         productoSelect.innerHTML = '';
         for (const p of products) {
+            if (p.is_active !== false) nombresProductos.set(p.id, p.name);
             if (!p.is_available) continue;
             const opt = document.createElement('option');
             opt.value = p.id;
@@ -163,12 +176,34 @@ document.addEventListener('DOMContentLoaded', function() {
         hideFlash();
         const res = await fetchJson('/pedidos');
         if (!res.ok) {
-            pedidosList.innerHTML = '<p style="color:#c0392b;">Error al cargar pedidos.</p>';
+            for (const contenedor of [pedidosList, otrosPedidosList]) {
+                contenedor.innerHTML = '<p style="color:#c0392b;">Error al cargar pedidos.</p>';
+            }
             return;
         }
         const pedidos = res.data.data || res.data || [];
+        const pendientes = [];
+        const otros = [];
+        for (const pedido of pedidos) {
+            (pendienteAutorizacion(pedido) ? pendientes : otros).push(pedido);
+        }
+        pendientes.sort((a, b) => b.id - a.id);
+        renderPedidos(pedidosList, pendientes, 'No hay pedidos pendientes de autorización.');
+        renderPedidos(otrosPedidosList, otros, 'No hay otros pedidos.');
+    }
+
+    function pendienteAutorizacion(pedido) {
+        return pedido.estado === 'PENDIENTE'
+            && pedido.estado_preparacion === 'NO_ENVIADO'
+            && pedido.autorizado_por_id === null;
+    }
+
+    function renderPedidos(contenedor, pedidos, mensajeVacio) {
         if (pedidos.length === 0) {
-            pedidosList.innerHTML = '<p style="color:var(--color-text-muted);">No hay pedidos.</p>';
+            const mensaje = document.createElement('p');
+            mensaje.style.color = 'var(--color-text-muted)';
+            mensaje.textContent = mensajeVacio;
+            contenedor.replaceChildren(mensaje);
             return;
         }
         let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">ID</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Servicio</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Preparación</th><th style="text-align:right;padding:8px;border-bottom:2px solid var(--color-border);">Total</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Acciones</th></tr></thead><tbody>';
@@ -179,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">' + p.estado_preparacion + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);text-align:right;">$' + p.total + '</td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">';
-            if (p.estado === 'PENDIENTE' && p.estado_preparacion === 'NO_ENVIADO') {
+            if (pendienteAutorizacion(p)) {
                 html += '<button class="btn btn-primary" style="padding:6px 12px;font-size:0.85rem;" onclick="autorizarPedido(' + p.id + ')">Autorizar</button>';
             }
             if (p.estado === 'PENDIENTE' && p.estado_preparacion === 'NO_ENVIADO' && p.autorizado_por_id) {
@@ -188,10 +223,33 @@ document.addEventListener('DOMContentLoaded', function() {
             if (p.estado === 'LISTO') {
                 html += '<button class="btn btn-primary" style="padding:6px 12px;font-size:0.85rem;" onclick="entregarPedido(' + p.id + ')">Entregar</button>';
             }
+            html += '<button type="button" class="btn" data-detalles="' + p.id + '" aria-expanded="false" aria-controls="pedido-detalles-' + p.id + '">Detalles</button>';
             html += '</td></tr>';
+            html += '<tr id="pedido-detalles-' + p.id + '" hidden><td colspan="6"><ul data-pedido-items></ul></td></tr>';
         }
         html += '</tbody></table>';
-        pedidosList.innerHTML = html;
+        contenedor.innerHTML = html;
+        contenedor.querySelectorAll('[data-pedido-items]').forEach((lista, indice) => {
+            const detalles = Array.isArray(pedidos[indice].items) ? pedidos[indice].items : [];
+            if (detalles.length === 0) {
+                const mensaje = document.createElement('li');
+                mensaje.textContent = 'No hay productos disponibles para este pedido.';
+                lista.appendChild(mensaje);
+            }
+            for (const item of detalles) {
+                const linea = document.createElement('li');
+                const nombre = nombresProductos.get(item.producto_id) || 'Producto #' + item.producto_id;
+                linea.textContent = item.cantidad + ' \u00d7 ' + nombre;
+                lista.appendChild(linea);
+            }
+        });
+        contenedor.querySelectorAll('[data-detalles]').forEach(boton => {
+            boton.addEventListener('click', () => {
+                const detalles = document.getElementById(boton.getAttribute('aria-controls'));
+                detalles.hidden = !detalles.hidden;
+                boton.setAttribute('aria-expanded', String(!detalles.hidden));
+            });
+        });
     }
 
     function estadoColor(estado) {
@@ -273,8 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     loadServicios();
-    loadProductos();
-    loadPedidos();
+    loadProductos().catch(() => {}).finally(() => loadPedidos());
 });
 </script>
 {% endblock %}
