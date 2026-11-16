@@ -142,6 +142,8 @@ document.addEventListener('DOMContentLoaded', async function () {
             if (name === 'usuarios') values = [record.id, record.username, record.email, roleLabels[record.rol] || record.rol, record.is_active ? 'Activo' : 'Inactivo'];
             for (const [index, value] of values.entries()) {
                 const cell = document.createElement('td');
+                cell.textContent = String(value);
+                row.appendChild(cell);
                 if (name === 'productos' && index === 0) {
                     const thumbCell = document.createElement('td');
                     const img = document.createElement('img');
@@ -151,8 +153,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                     thumbCell.appendChild(img);
                     row.appendChild(thumbCell);
                 }
-                cell.textContent = String(value);
-                row.appendChild(cell);
             }
             const actions = document.createElement('td');
             const choices = ['editar'];
@@ -250,15 +250,22 @@ document.addEventListener('DOMContentLoaded', async function () {
             const removeBtn = document.getElementById('producto-image-remove');
             if (removeBtn) {
                 removeBtn.querySelector('button').addEventListener('click', async () => {
+                    const imageInput = form.elements.namedItem('image');
+                    const preview = document.getElementById('producto-image-preview');
+                    const remove = document.getElementById('producto-image-remove');
                     const recordId = form.dataset.recordId;
-                    if (!recordId) return;
+                    if (!recordId) {
+                        if (imageInput) imageInput.value = '';
+                        if (preview) preview.hidden = true;
+                        if (remove) remove.hidden = true;
+                        delete form.dataset.removeImage;
+                        feedback(section, 'Fotografía descartada.');
+                        return;
+                    }
                     setBusy(section, true);
                     try {
                         await request('/products/' + recordId + '/image', { method: 'DELETE' });
-                        const imageInput = form.elements.namedItem('image');
                         if (imageInput) imageInput.value = '';
-                        const preview = document.getElementById('producto-image-preview');
-                        const remove = document.getElementById('producto-image-remove');
                         if (preview) preview.hidden = true;
                         if (remove) remove.hidden = true;
                         delete form.dataset.removeImage;

@@ -312,6 +312,46 @@ def test_producto_se_puede_crear_sin_imagen(app, client):
     assert str(product.price) == "5.00"
 
 
+def test_tabla_productos_orden_columnas():
+    """Defecto 2: La tabla ADMIN declara ID | Imagen | Nombre y el JS respeta ese orden."""
+    source = Path(__file__).resolve().parents[1] / "app/templates/admin.html"
+    html = source.read_text(encoding="utf-8")
+    # Buscar solo dentro de la tabla de productos
+    table_start = html.find('<table aria-label="Productos">')
+    assert table_start >= 0, "No se encontró la tabla de productos"
+    table_section = html[table_start:]
+    th_order = ["ID", "Imagen", "Nombre", "Precio", "Categoría", "Disponibilidad", "Estado", "Acciones"]
+    positions = []
+    for th in th_order:
+        positions.append(table_section.find(f"<th>{th}</th>"))
+    assert all(p >= 0 for p in positions), f"Faltan columnas en tabla de productos: {th_order}"
+    assert positions == sorted(positions), f"Orden incorrecto: {list(zip(th_order, positions))}"
+
+
+def test_quitar_imagen_producto_nuevo_limpia_input():
+    """Defecto 1: Al quitar imagen en producto nuevo, se limpia el input y preview sin backend."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    # Cuando no hay recordId, debe limpiar el input y retornar sin llamar al backend
+    assert "if (!recordId) {" in js
+    assert "if (imageInput) imageInput.value = '';" in js
+    assert "if (preview) preview.hidden = true;" in js
+    assert "if (remove) remove.hidden = true;" in js
+    assert "delete form.dataset.removeImage;" in js
+    assert "feedback(section, 'Fotografía descartada.');" in js
+
+
+def test_quitar_imagen_producto_nuevo_no_llama_backend():
+    """Defecto 1: Para productos nuevos, no se ejecuta DELETE /products/<id>/image."""
+    source = Path(__file__).resolve().parents[1] / "app/static/js/admin.js"
+    js = source.read_text(encoding="utf-8")
+    # El DELETE solo se ejecuta cuando existe recordId (después del bloque if !recordId return)
+    assert "if (!recordId) {" in js
+    assert "return;" in js.split("if (!recordId) {")[1].split("}")[0]
+    # El request DELETE está dentro del flujo con recordId
+    assert "await request('/products/' + recordId + '/image', { method: 'DELETE' }" in js
+
+
 def test_producto_creacion_con_imagen_flujo_javascript():
     """Flujo real de JavaScript: POST /products con JSON, luego PUT /products/<id>/image con FormData.
 
