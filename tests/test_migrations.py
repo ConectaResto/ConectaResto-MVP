@@ -563,3 +563,119 @@ def test_detalle_pedido_model_fields(app):
         db.session.delete(producto)
         db.session.delete(cat)
         db.session.commit()
+
+# Regression: revision 014 exceeds Alembic's default VARCHAR(32).
+@pytest.mark.parametrize("dialect", ["mysql", "mariadb"])
+@pytest.mark.parametrize("version_length", [32, 64, 128])
+def test_image_migration_widens_version_before_mysql_version_update(
+    dialect, version_length, monkeypatch,
+):
+    import importlib.util
+    import io
+    import sqlalchemy as sa
+    from alembic.config import Config
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+    from alembic.script import ScriptDirectory
+
+    path = os.path.join(MIGRATIONS_DIR, "014_add_image_filename_to_products.py")
+    spec = importlib.util.spec_from_file_location("image_revision_sql", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert len(module.revision) == 34
+
+    class Inspector:
+        def get_columns(self, table):
+            if table == "alembic_version":
+                return [{"name": "version_num", "type": sa.String(version_length, collation="utf8mb4_unicode_ci"),
+                         "nullable": False}]
+            assert table == "products"
+            return [{"name": "id"}]
+
+    monkeypatch.setattr(module.sa, "inspect", lambda connection: Inspector())
+    output = io.StringIO()
+    config = Config()
+    config.set_main_option("script_location", os.path.dirname(MIGRATIONS_DIR))
+    script = ScriptDirectory.from_config(config)
+    migration = MigrationContext.configure(
+        dialect_name=dialect,
+        opts={"as_sql": True, "output_buffer": output,
+              "starting_rev": module.down_revision,
+              "fn": lambda heads, context: script._upgrade_revs("head", heads)},
+    )
+    # ScriptDirectory loads the actual revision module separately; run the
+    # same approved upgrade through its revision step with inspection mocked.
+    step = script.get_revision("head")
+    monkeypatch.setattr(step.module, "upgrade", module.upgrade)
+    with Operations.context(migration), migration.begin_transaction():
+        migration.run_migrations()
+    sql = output.getvalue()
+    assert "UPDATE alembic_version" in sql
+    assert module.revision in sql
+    assert "ADD COLUMN image_filename VARCHAR(255)" in sql
+    if version_length == 32:
+        assert "MODIFY version_num VARCHAR(64) COLLATE utf8mb4_unicode_ci NOT NULL" in sql
+        assert sql.index("MODIFY version_num") < sql.index("UPDATE alembic_version")
+    else:
+        assert "MODIFY version_num" not in sql
+
+
+@pytest.mark.parametrize("partial_upgrade", [False, True])
+def test_image_migration_retry_preserves_products_and_revision_chain(partial_upgrade):
+    import sqlalchemy as sa
+    from alembic.config import Config
+    from alembic.migration import MigrationContext
+    from alembic.operations import Operations
+    from alembic.script import ScriptDirectory
+
+    config = Config()
+    config.set_main_option("script_location", os.path.dirname(MIGRATIONS_DIR))
+    script = ScriptDirectory.from_config(config)
+    revision = script.get_revision("head")
+    assert revision.revision == "014_add_image_filename_to_products"
+    assert revision.down_revision == "013_allow_null_abierto_por_id"
+    metadata = sa.MetaData()
+    columns = [sa.Column("id", sa.Integer, primary_key=True),
+               sa.Column("name", sa.String(100), nullable=False)]
+    if partial_upgrade:
+        columns.append(sa.Column("image_filename", sa.String(255), nullable=True))
+    products = sa.Table("products", metadata, *columns)
+    versions = sa.Table("alembic_version", metadata,
+                        sa.Column("version_num", sa.String(32), primary_key=True))
+    engine = sa.create_engine("sqlite:///:memory:")
+    try:
+        with engine.begin() as connection:
+            metadata.create_all(connection)
+            values = {"id": 1, "name": "Producto previo"}
+            if partial_upgrade:
+                values["image_filename"] = "existing.png"
+            connection.execute(products.insert(), values)
+            connection.execute(versions.insert(), {"version_num": revision.down_revision})
+            context = MigrationContext.configure(
+                connection,
+                opts={"fn": lambda heads, context: script._upgrade_revs("head", heads)},
+            )
+            with Operations.context(context):
+                context.run_migrations()
+            assert context.get_current_revision() == revision.revision
+            assert connection.execute(sa.text(
+                "SELECT name, image_filename FROM products WHERE id=1"
+            )).one() == ("Producto previo", "existing.png" if partial_upgrade else None)
+            # Repeating upgrade at head must not repeat DDL or lose existing data.
+            with Operations.context(context):
+                context.run_migrations()
+            assert len(sa.inspect(connection).get_columns("products")) == 3
+            context = MigrationContext.configure(
+                connection,
+                opts={"fn": lambda heads, context: script._downgrade_revs(
+                    revision.down_revision, heads)},
+            )
+            with Operations.context(context):
+                context.run_migrations()
+            assert context.get_current_revision() == revision.down_revision
+            assert connection.execute(sa.text("SELECT name FROM products")).scalar_one() == "Producto previo"
+            assert "image_filename" not in {
+                col["name"] for col in sa.inspect(connection).get_columns("products")
+            }
+    finally:
+        engine.dispose()
