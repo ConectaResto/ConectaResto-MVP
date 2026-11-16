@@ -73,7 +73,8 @@ def test_qr_mesa_inexistente(client, admin_headers):
 
 
 def test_qr_svg_sin_public_base_url_devuelve_error(client, mesa_token,
-                                                   admin_headers):
+                                                   admin_headers, app, monkeypatch):
+    monkeypatch.setitem(app.config, "PUBLIC_BASE_URL", None)
     mesa_id, _ = mesa_token
     response = client.get(f"/admin/mesas/{mesa_id}/qr.svg", headers=admin_headers)
     assert response.status_code == 500

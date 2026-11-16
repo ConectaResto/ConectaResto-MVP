@@ -42,6 +42,11 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    function estadoLegible(estado) {
+        const etiquetas = {"DISPONIBLE":"Disponible","OCUPADA":"Ocupada","CERRADA":"Cerrada","ACTIVO":"Activo","CERRADO":"Cerrado","PENDIENTE":"Pendiente","EN_PREPARACION":"En preparación","LISTO":"Listo","ENTREGADO":"Entregado","NO_ENVIADO":"No enviado","RECIBIDO":"Recibido","EN_COCINA":"En cocina","LISTO_PARA_SERVIR":"Listo para servir"};
+        return Object.hasOwn(etiquetas, estado) ? etiquetas[estado] : 'Estado desconocido';
+    }
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const flashEl = document.getElementById('flash-mesas');
     const mesaSelect = document.getElementById('mesa-select');
@@ -109,7 +114,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 mesaSelect.appendChild(opt);
             }
             html += '<tr><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + m.numero + '</td>';
-            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(m.estado) + '">' + m.estado + '</span></td></tr>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;' + estadoColor(m.estado) + '">' + estadoLegible(m.estado) + '</span></td></tr>';
         }
         html += '</tbody></table>';
         mesasTable.innerHTML = html;
@@ -130,12 +135,12 @@ document.addEventListener('DOMContentLoaded', function() {
         let html = '<table style="width:100%; border-collapse:collapse; margin-top:12px;"><thead><tr><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Mesa</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Estado</th><th style="text-align:left;padding:8px;border-bottom:2px solid var(--color-border);">Pedidos</th></tr></thead><tbody>';
         for (const s of servicios) {
             html += '<tr><td style="padding:8px;border-bottom:1px solid var(--color-border);">#' + s.mesa_id + '</td>';
-            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;background:#e8f6f3;color:#117a65;">' + s.estado + '</span></td>';
+            html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);"><span style="padding:4px 8px;border-radius:4px;font-size:0.85rem;background:#e8f6f3;color:#117a65;">' + estadoLegible(s.estado) + '</span></td>';
             html += '<td style="padding:8px;border-bottom:1px solid var(--color-border);">';
             if (s.pedidos && s.pedidos.length > 0) {
                 html += '<ul style="margin:0;padding-left:16px;">';
                 for (const p of s.pedidos) {
-                    html += '<li>Pedido #' + p.id + ' - ' + p.estado + ' (' + p.estado_preparacion + ') - Total: $' + p.total + '</li>';
+                    html += '<li>Pedido #' + p.id + ' - ' + estadoLegible(p.estado) + ' (' + estadoLegible(p.estado_preparacion) + ') - Total: $' + p.total + '</li>';
                 }
                 html += '</ul>';
             } else {

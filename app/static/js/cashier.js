@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', function() {
+    function estadoLegible(estado) {
+        const etiquetas = {"DISPONIBLE":"Disponible","OCUPADA":"Ocupada","CERRADA":"Cerrada","ACTIVO":"Activo","CERRADO":"Cerrado","PENDIENTE":"Pendiente","EN_PREPARACION":"En preparación","LISTO":"Listo","ENTREGADO":"Entregado","NO_ENVIADO":"No enviado","RECIBIDO":"Recibido","EN_COCINA":"En cocina","LISTO_PARA_SERVIR":"Listo para servir"};
+        return Object.hasOwn(etiquetas, estado) ? etiquetas[estado] : 'Estado desconocido';
+    }
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]');
     const token = csrfToken ? csrfToken.getAttribute('content') : '';
 
@@ -77,7 +82,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 const pEstado = document.createElement('p');
                 pEstado.className = 'badge pending';
-                pEstado.textContent = 'Estado: ' + servicio.estado;
+                pEstado.textContent = 'Estado: ' + estadoLegible(servicio.estado);
 
                 const total = document.createElement('p');
                 total.className = 'cashier-card-total';
@@ -156,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Mostrar detalle del servicio
             document.getElementById('detalle-servicio-id').textContent = servicio.id;
             document.getElementById('detalle-servicio-mesa').textContent = servicio.mesa_id;
-            document.getElementById('detalle-servicio-estado').textContent = servicio.estado;
+            document.getElementById('detalle-servicio-estado').textContent = estadoLegible(servicio.estado);
             const estadoPago = document.getElementById('detalle-pago-estado');
             estadoPago.textContent = servicio.pago ? 'Pago registrado' : 'Sin pago registrado';
             estadoPago.className = 'badge ' + (servicio.pago ? 'active' : 'pending');
@@ -172,12 +177,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const valores = [
                         '#' + pedido.id, catalogo.get(item.producto_id) || 'Producto #' + item.producto_id,
                         item.cantidad, '$' + item.precio_unitario,
-                        '$' + item.subtotal, pedido.estado,
+                        '$' + item.subtotal, estadoLegible(pedido.estado),
                     ];
-                    valores.forEach(function(valor) {
+                    valores.forEach(function(valor, indice) {
                         const celda = document.createElement('td');
                         celda.textContent = valor;
-                        if (valor === pedido.estado) celda.className = 'cashier-order-state';
+                        if (indice === 5) celda.className = 'cashier-order-state';
                         fila.appendChild(celda);
                     });
                     tablaBody.appendChild(fila);

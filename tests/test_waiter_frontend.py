@@ -213,3 +213,43 @@ assert.equal(itemsList.children[0].textContent, 'Sin productos agregados.');
     result = subprocess.run([node, "-", str(source)], input=harness, text=True,
                             encoding="utf-8", capture_output=True, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("relative_path", [
+    "app/static/js/admin.js",
+    "app/static/js/cashier.js",
+    "app/templates/waiter/mesas.html",
+    "app/templates/waiter/pedidos.html",
+    "app/templates/kitchen/pedidos.html",
+])
+def test_etiquetas_estados_legibles(relative_path):
+    from pathlib import Path
+    import shutil
+    import subprocess
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node opcional para verificar JavaScript vanilla")
+    source = Path(__file__).resolve().parents[1] / relative_path
+    harness = r"""
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const source = fs.readFileSync(process.argv[2], 'utf8');
+const script = source.includes('<script>') ? source.split('<script>')[1].split('</script>')[0] : source;
+new vm.Script(script);
+const start = source.indexOf('    function estadoLegible(');
+const end = source.indexOf('\n    }', start) + 6;
+vm.runInThisContext(source.slice(start, end));
+const expected = {
+ DISPONIBLE:'Disponible', OCUPADA:'Ocupada', CERRADA:'Cerrada', ACTIVO:'Activo', CERRADO:'Cerrado',
+ PENDIENTE:'Pendiente', EN_PREPARACION:'En preparaci\u00f3n', LISTO:'Listo', ENTREGADO:'Entregado',
+ NO_ENVIADO:'No enviado', RECIBIDO:'Recibido', EN_COCINA:'En cocina', LISTO_PARA_SERVIR:'Listo para servir'
+};
+for (const [state,label] of Object.entries(expected)) assert.equal(estadoLegible(state),label);
+for (const state of [null,undefined,'__proto__','<img src=x onerror=alert(1)>','OTRO_ESTADO']) {
+ assert.equal(estadoLegible(state),'Estado desconocido');
+}
+"""
+    result = subprocess.run([node, "-", str(source)], input=harness, text=True,
+                            encoding="utf-8", capture_output=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
