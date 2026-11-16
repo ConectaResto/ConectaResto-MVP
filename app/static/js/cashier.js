@@ -12,6 +12,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnCerrar = document.getElementById('btn-cerrar-servicio');
     const mensajeError = document.getElementById('mensaje-error');
 
+    // One catalog request per page, shared by all service selections.
+    const nombresProductos = fetch('/products', {
+        headers: { 'X-CSRF-Token': token },
+    }).then(async function(response) {
+        if (!response.ok) return new Map();
+        const data = await response.json();
+        if (!Array.isArray(data.data)) return new Map();
+        return new Map(data.data
+            .filter(producto => producto.is_active !== false && producto.is_available !== false)
+            .map(producto => [producto.id, producto.name]));
+    }).catch(() => new Map());
+
     // Cargar servicios activos al iniciar
     cargarServiciosActivos();
 
@@ -138,6 +150,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (servicioId !== servicioSeleccionadoId) return;
             const servicio = data.data;
 
+            const catalogo = await nombresProductos;
+            if (servicioId !== servicioSeleccionadoId) return;
+
             // Mostrar detalle del servicio
             document.getElementById('detalle-servicio-id').textContent = servicio.id;
             document.getElementById('detalle-servicio-mesa').textContent = servicio.mesa_id;
@@ -155,7 +170,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 pedido.items.forEach(function(item) {
                     const fila = document.createElement('tr');
                     const valores = [
-                        '#' + pedido.id, item.producto_id, item.cantidad, '$' + item.precio_unitario,
+                        '#' + pedido.id, catalogo.get(item.producto_id) || 'Producto #' + item.producto_id,
+                        item.cantidad, '$' + item.precio_unitario,
                         '$' + item.subtotal, pedido.estado,
                     ];
                     valores.forEach(function(valor) {
