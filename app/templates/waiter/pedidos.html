@@ -43,10 +43,19 @@
         </div>
     </div>
 
-    <div class="admin-section" aria-labelledby="otros-pedidos-title">
+    <div class="admin-section" aria-labelledby="pedidos-curso-title">
         <div class="admin-section-body">
-            <h2 id="otros-pedidos-title">Otros pedidos</h2>
-            <div class="table-wrap" id="otros-pedidos-list">
+            <h2 id="pedidos-curso-title">Pedidos en curso</h2>
+            <div class="table-wrap" id="pedidos-curso-list">
+                <p style="color:var(--color-text-muted);">Cargando pedidos...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-section" aria-labelledby="historial-title">
+        <div class="admin-section-body">
+            <h2 id="historial-title">Historial de pedidos entregados</h2>
+            <div class="table-wrap" id="pedidos-historial">
                 <p style="color:var(--color-text-muted);">Cargando pedidos...</p>
             </div>
         </div>
@@ -71,7 +80,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const itemsList = document.getElementById('items-list');
     const crearPedidoBtn = document.getElementById('crear-pedido');
     const pedidosList = document.getElementById('pedidos-list');
-    const otrosPedidosList = document.getElementById('otros-pedidos-list');
+    const pedidosCursoList = document.getElementById('pedidos-curso-list');
+    const historialList = document.getElementById('pedidos-historial');
 
     let items = [];
 
@@ -181,20 +191,26 @@ document.addEventListener('DOMContentLoaded', function() {
         hideFlash();
         const res = await fetchJson('/pedidos');
         if (!res.ok) {
-            for (const contenedor of [pedidosList, otrosPedidosList]) {
+            for (const contenedor of [pedidosList, pedidosCursoList, historialList]) {
                 contenedor.innerHTML = '<p style="color:#c0392b;">Error al cargar pedidos.</p>';
             }
             return;
         }
         const pedidos = res.data.data || res.data || [];
         const pendientes = [];
-        const otros = [];
+        const enCurso = [];
+        const historial = [];
         for (const pedido of pedidos) {
-            (pendienteAutorizacion(pedido) ? pendientes : otros).push(pedido);
+            if (pedido.estado === 'ENTREGADO') historial.push(pedido);
+            else if (pendienteAutorizacion(pedido)) pendientes.push(pedido);
+            else enCurso.push(pedido);
         }
-        pendientes.sort((a, b) => b.id - a.id);
+        for (const grupo of [pendientes, enCurso, historial]) {
+            grupo.sort((a, b) => b.id - a.id);
+        }
         renderPedidos(pedidosList, pendientes, 'No hay pedidos pendientes de autorización.');
-        renderPedidos(otrosPedidosList, otros, 'No hay otros pedidos.');
+        renderPedidos(pedidosCursoList, enCurso, 'No hay pedidos en curso.');
+        renderPedidos(historialList, historial, 'No hay pedidos entregados en el historial.');
     }
 
     function pendienteAutorizacion(pedido) {
