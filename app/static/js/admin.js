@@ -166,6 +166,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 button.type = 'button';
                 button.className = 'btn' + (action === 'desactivar' ? ' btn-desactivar' : action === 'reactivar' ? ' btn-activar' : '');
                 button.textContent = { editar: 'Editar', qr: 'Ver QR', desactivar: 'Desactivar', reactivar: 'Reactivar' }[action];
+                if (name === 'mesas' && action === 'editar') button.className += ' btn-primary';
                 button.dataset.action = action;
                 button.dataset.recordId = String(record.id);
                 button.setAttribute('aria-label', button.textContent + ' ' + resource.singular + ' #' + record.id);

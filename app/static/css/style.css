@@ -460,6 +460,16 @@ body {
     margin-inline-end: 0;
 }
 
+#admin-mesas [data-rows] .btn[data-action="qr"] {
+    color: var(--color-primary);
+    box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+#admin-mesas [data-rows] .btn:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+}
+
 #admin-panel #mesa-qr {
     margin: var(--form-space-section) 0 0;
     padding: var(--form-space-padding);
