@@ -45,30 +45,60 @@ class KitchenView {
             tbody.innerHTML = '';
 
             activos.forEach(p => {
-                const itemsHtml = p.items.map(i => {
-                    const prod = nombres.get(i.producto_id) || `Producto #${i.producto_id}`;
-                    return `${i.cantidad} x ${prod}`;
-                }).join('<br>');
+                const itemsText = p.items.map(i => i.cantidad + ' x ' + (nombres.get(i.producto_id) || 'Producto #' + i.producto_id)).join(', ');
 
-                const prepBadge = `<span class="badge bg-${badgeColor(p.estado_preparacion)}">${estadoLegible(p.estado_preparacion)}</span>`;
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>#${p.id}</td>
-                    <td>#${p.servicio_id}</td>
-                    <td>${itemsHtml}</td>
-                    <td><span class="badge bg-secondary">${estadoLegible(p.estado)}</span></td>
-                    <td>${prepBadge}</td>
-                    <td>${p.total}</td>
-                    <td>
-                        ${p.estado_preparacion === 'RECIBIDO' ?
-                            `<button class="btn btn-sm btn-primary" onclick="appKitchen.cambiarPreparacion(${p.id}, 'EN_COCINA')">En cocina</button>` : ''
-                        }
-                        ${p.estado_preparacion === 'EN_COCINA' ?
-                            `<button class="btn btn-sm btn-success" onclick="appKitchen.cambiarPreparacion(${p.id}, 'LISTO_PARA_SERVIR')">Listo para servir</button>` : ''
-                        }
-                    </td>
-                `;
-                tbody.appendChild(row);
+                const tr = document.createElement('tr');
+
+                const tdId = document.createElement('td');
+                tdId.textContent = '#' + p.id;
+                tr.appendChild(tdId);
+
+                const tdServicio = document.createElement('td');
+                tdServicio.textContent = '#' + p.servicio_id;
+                tr.appendChild(tdServicio);
+
+                const tdItems = document.createElement('td');
+                tdItems.textContent = itemsText;
+                tr.appendChild(tdItems);
+
+                const tdEstado = document.createElement('td');
+                const badgeEstado = document.createElement('span');
+                badgeEstado.className = 'badge bg-secondary';
+                badgeEstado.textContent = estadoLegible(p.estado);
+                tdEstado.appendChild(badgeEstado);
+                tr.appendChild(tdEstado);
+
+                const tdPrep = document.createElement('td');
+                const badgePrep = document.createElement('span');
+                badgePrep.className = 'badge bg-' + badgeColor(p.estado_preparacion);
+                badgePrep.textContent = estadoLegible(p.estado_preparacion);
+                tdPrep.appendChild(badgePrep);
+                tr.appendChild(tdPrep);
+
+                const tdTotal = document.createElement('td');
+                tdTotal.textContent = p.total;
+                tr.appendChild(tdTotal);
+
+                const tdAcciones = document.createElement('td');
+                if (p.estado_preparacion === 'RECIBIDO') {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-primary';
+                    btn.textContent = 'En cocina';
+                    btn.addEventListener('click', () => this.cambiarPreparacion(p.id, 'EN_COCINA'));
+                    tdAcciones.appendChild(btn);
+                }
+                if (p.estado_preparacion === 'EN_COCINA') {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-success';
+                    btn.textContent = 'Listo para servir';
+                    btn.addEventListener('click', () => this.cambiarPreparacion(p.id, 'LISTO_PARA_SERVIR'));
+                    tdAcciones.appendChild(btn);
+                }
+                tr.appendChild(tdAcciones);
+
+                tbody.appendChild(tr);
             });
 
             if (activos.length === 0) {
