@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from flask import Blueprint, request
 
 from app.auth.decorators import roles_required
@@ -7,6 +5,8 @@ from app.auth.service import current_user
 from app.common.responses import error_response, success_response
 from app.extensions import db
 from app.models import Pedido
+from app.pedidos.dto import PedidoDTO
+from app.pedidos.repository import PedidoRepository
 from app.pedidos.service import PedidoError, actualizar_pedido
 
 
@@ -20,36 +20,17 @@ def responder_error(error):
 pedidos_bp.register_error_handler(PedidoError, responder_error)
 
 
-def serializar_pedido(pedido):
-    detalles = [{
-        "id": detalle.id, "producto_id": detalle.producto_id,
-        "cantidad": detalle.cantidad,
-        "precio_unitario": format(detalle.precio_unitario, ".2f"),
-        "subtotal": format(detalle.precio_unitario * detalle.cantidad, ".2f"),
-    } for detalle in pedido.detalles]
-    return {
-        "id": pedido.id, "servicio_id": pedido.servicio_id,
-        "origen": pedido.origen, "creado_por_id": pedido.creado_por_id,
-        "autorizado_por_id": pedido.autorizado_por_id,
-        "autorizado_at": pedido.autorizado_at.isoformat() if pedido.autorizado_at else None,
-        "estado": pedido.estado, "estado_preparacion": pedido.estado_preparacion,
-        "items": detalles,
-        "total": format(sum((d.precio_unitario * d.cantidad for d in pedido.detalles), Decimal("0.00")), ".2f"),
-    }
-
-
 @pedidos_bp.get("")
 @roles_required("WAITER", "KITCHEN")
 def listar_pedidos():
-    consulta = db.select(Pedido).order_by(Pedido.id)
-    if current_user().rol.name == "KITCHEN":
-        consulta = consulta.where(Pedido.estado_preparacion != "NO_ENVIADO")
     estado = request.args.get("estado")
     if estado is not None:
         if estado not in ("PENDIENTE", "EN_PREPARACION", "LISTO", "ENTREGADO"):
             raise PedidoError("Estado invalido")
-        consulta = consulta.where(Pedido.estado == estado)
-    return success_response([serializar_pedido(p) for p in db.session.execute(consulta).scalars()])
+    pedidos = PedidoRepository.list_by_rol_and_estado(
+        current_user().rol.name, estado
+    )
+    return success_response([PedidoDTO.serialize(p) for p in pedidos])
 
 
 @pedidos_bp.get("/<int:pedido_id>")
@@ -60,7 +41,7 @@ def consultar_pedido(pedido_id):
     pedido = db.get_or_404(Pedido, pedido_id)
     if current_user().rol.name == "KITCHEN" and pedido.estado_preparacion == "NO_ENVIADO":
         raise PedidoError("Pedido no encontrado", 404)
-    return success_response(serializar_pedido(pedido))
+    return success_response(PedidoDTO.serialize(pedido))
 
 
 @pedidos_bp.post("/<int:pedido_id>/autorizar", defaults={"accion": "autorizar"})
@@ -71,7 +52,7 @@ def ejecutar_accion(pedido_id, accion):
     if request.get_data() and request.get_json(silent=True) != {}:
         raise PedidoError("Esta accion no acepta campos")
     pedido = actualizar_pedido(pedido_id, accion, actor=current_user())
-    return success_response(serializar_pedido(pedido))
+    return success_response(PedidoDTO.serialize(pedido))
 
 
 @pedidos_bp.patch("/<int:pedido_id>/preparacion")
@@ -83,4 +64,4 @@ def preparar_pedido(pedido_id):
     pedido = actualizar_pedido(
         pedido_id, "preparacion", actor=current_user(), estado_preparacion=data["estado"],
     )
-    return success_response(serializar_pedido(pedido))
+    return success_response(PedidoDTO.serialize(pedido))

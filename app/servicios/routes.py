@@ -5,29 +5,16 @@ from app.auth.service import current_user
 from app.common.responses import success_response
 from app.extensions import db
 from app.models import Servicio
-from app.pedidos.routes import responder_error, serializar_pedido
+from app.pedidos.dto import PedidoDTO
+from app.pedidos.routes import responder_error
 from app.pedidos.service import PedidoError, crear_pedido
-from app.servicios.service import abrir_servicio, calcular_total_servicio, procesar_caja
+from app.servicios.dto import ServicioDTO
+from app.servicios.repository import ServicioRepository
+from app.servicios.service import abrir_servicio, procesar_caja
 
 
 servicios_bp = Blueprint("servicios", __name__, url_prefix="/servicios")
 servicios_bp.register_error_handler(PedidoError, responder_error)
-
-
-def serializar_servicio(servicio):
-    pago = servicio.pago
-    return {
-        "id": servicio.id, "mesa_id": servicio.mesa_id,
-        "abierto_por_id": servicio.abierto_por_id, "estado": servicio.estado,
-        "pedidos": [serializar_pedido(p) for p in servicio.pedidos],
-        "total": format(calcular_total_servicio(servicio.id), ".2f"),
-        "pago": {
-            "id": pago.id, "servicio_id": pago.servicio_id,
-            "importe": format(pago.importe, ".2f"),
-            "registrado_por_id": pago.registrado_por_id,
-            "fecha_registro": pago.fecha_registro.isoformat(),
-        } if pago is not None else None,
-    }
 
 
 @servicios_bp.post("")
@@ -37,19 +24,18 @@ def crear_servicio():
     if not isinstance(data, dict) or set(data) != {"mesa_id"}:
         raise PedidoError("Se requiere solamente mesa_id")
     servicio = abrir_servicio(data["mesa_id"], actor=current_user())
-    return success_response(serializar_servicio(servicio), status_code=201)
+    return success_response(ServicioDTO.serialize(servicio), status_code=201)
 
 
 @servicios_bp.get("")
 @roles_required("WAITER", "CASHIER")
 def listar_servicios():
-    consulta = db.select(Servicio).order_by(Servicio.id)
     estado = request.args.get("estado")
     if estado is not None:
         if estado not in ("ACTIVO", "CERRADO"):
             raise PedidoError("Estado invalido")
-        consulta = consulta.where(Servicio.estado == estado)
-    return success_response([serializar_servicio(s) for s in db.session.execute(consulta).scalars()])
+    servicios = ServicioRepository.list_by_estado(estado)
+    return success_response([ServicioDTO.serialize(s) for s in servicios])
 
 
 @servicios_bp.get("/<int:servicio_id>")
@@ -57,7 +43,7 @@ def listar_servicios():
 def consultar_servicio(servicio_id):
     if not 0 < servicio_id <= 2147483647:
         raise PedidoError("Servicio no encontrado", 404)
-    return success_response(serializar_servicio(db.get_or_404(Servicio, servicio_id)))
+    return success_response(ServicioDTO.serialize(db.get_or_404(Servicio, servicio_id)))
 
 
 @servicios_bp.post("/<int:servicio_id>/pago-simulado", defaults={"accion": "pago-simulado"})
@@ -68,7 +54,7 @@ def operar_caja(servicio_id, accion):
         raise PedidoError("Esta accion no acepta campos")
     servicio = procesar_caja(servicio_id, accion, actor=current_user())
     return success_response(
-        serializar_servicio(servicio), status_code=201 if accion == "pago-simulado" else 200,
+        ServicioDTO.serialize(servicio), status_code=201 if accion == "pago-simulado" else 200,
     )
 
 
@@ -81,4 +67,4 @@ def crear_pedido_interno(servicio_id):
     pedido = crear_pedido(
         servicio_id, data["items"], origen="MESERO", creado_por_id=current_user().id,
     )
-    return success_response(serializar_pedido(pedido), status_code=201)
+    return success_response(PedidoDTO.serialize(pedido), status_code=201)
