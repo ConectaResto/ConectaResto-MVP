@@ -376,6 +376,13 @@
   <li>Comparación constante con <code>hmac.compare_digest</code>.</li>
 </ul>
 
+<h3>7.4 Mejora de seguridad en el frontend (SPA)</h3>
+<ul>
+  <li>Uso de <code>textContent</code> en lugar de <code>innerHTML</code> para insertar texto dinámico, evitando inyección de código HTML/JavaScript malicioso.</li>
+  <li>Creación segura de elementos DOM mediante <code>document.createElement</code> y anexado con <code>appendChild</code>, sin concatenar cadenas HTML.</li>
+  <li>Sustitución de eventos inline (<code>onclick</code>, <code>onload</code>, etc.) por escuchadores de eventos añadidos con <code>addEventListener</code>, separando estructura de comportamiento.</li>
+</ul>
+
 <h2>8. Flujo completo de funcionamiento</h2>
 
 <div class="evidence">
@@ -385,7 +392,7 @@
 <p>El flujo principal del MVP, según la consigna de entrega (21 nov 2026):</p>
 
 <ol>
-  <li><strong>Cliente escanea QR:</strong> ADMIN genera QR SVG para una mesa (<code>GET /admin/mesas/&lt;id&gt;/qr.svg</code>) que apunta a <code>{PUBLIC_BASE_URL}/public/mesas/&lt;public_token&gt;/menu</code>. El QR se genera localmente con <code>segno</code>.</li>
+  <li><strong>Cliente escanea QR:</strong> ADMIN genera QR SVG para una mesa (<code>GET /admin/mesas/&lt;id&gt;/qr.svg</code>) que apunta a <code>/app/?token=TOKEN#public</code>. El QR se genera localmente con <code>segno</code>.</li>
   <li><strong>Consulta menú y realiza pedido:</strong> El cliente abre el menú público sin sesión (<code>GET /public/mesas/&lt;token&gt;/menu</code>), agrega productos al carrito y confirma (<code>POST /public/mesas/&lt;token&gt;/pedidos</code> con CSRF). El backend reutiliza un servicio ACTIVO o abre uno automáticamente para una mesa DISPONIBLE.</li>
   <li><strong>Mesero autoriza el pedido:</strong> WAITER autoriza el pedido PENDIENTE (<code>POST /pedidos/&lt;id&gt;/autorizar</code>).</li>
   <li><strong>Cocina recibe y prepara:</strong> WAITER envía a cocina (<code>POST /pedidos/&lt;id&gt;/enviar-cocina</code> → estado EN_PREPARACION, preparación RECIBIDO). KITCHEN cambia a EN_COCINA y luego LISTO_PARA_SERVIR (<code>PATCH /pedidos/&lt;id&gt;/preparacion</code> → pedido LISTO).</li>
