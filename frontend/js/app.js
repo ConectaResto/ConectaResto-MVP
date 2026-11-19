@@ -134,17 +134,13 @@ function initRouter() {
             const data = await api.get('/auth/me');
             state.setUser(data.data);
             updateNav();
-            const hash = window.location.hash || '#login';
-            if (checkRouteAccess(hash)) {
-                navigate(hash);
-            }
         } catch (err) {
             state.clearUser();
             updateNav();
-            const hash = window.location.hash || '#login';
-            if (checkRouteAccess(hash)) {
-                navigate(hash);
-            }
+        }
+        const hash = window.location.hash || '#login';
+        if (checkRouteAccess(hash)) {
+            navigate(hash);
         }
     });
 }

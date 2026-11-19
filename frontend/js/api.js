@@ -39,7 +39,6 @@ async function apiRequest(url, options = {}) {
 
     if (response.status === 401) {
         state.clearUser();
-        window.location.hash = '#login';
         throw new Error('Sesion expirada. Inicie sesion nuevamente.');
     }
 
