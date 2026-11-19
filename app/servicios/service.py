@@ -3,20 +3,13 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import DetallePedido, Mesa, Pago, Pedido, Servicio
+from app.models import Mesa, Pago, Pedido, Servicio
 from app.pedidos.service import PedidoError, bloquear_servicio
+from app.servicios.repository import ServicioRepository
 
 
 def calcular_total_servicio(servicio_id, *, bloquear=False):
-    consulta = (
-        db.select(DetallePedido).join(Pedido)
-        .where(Pedido.servicio_id == servicio_id)
-        .execution_options(populate_existing=True)
-    )
-    if bloquear:
-        consulta = consulta.with_for_update()
-    detalles = db.session.execute(consulta).scalars()
-    return sum((d.precio_unitario * d.cantidad for d in detalles), Decimal("0.00"))
+    return ServicioRepository.calcular_total(servicio_id, bloquear=bloquear)
 
 
 def procesar_caja(servicio_id, accion, *, actor):
@@ -42,7 +35,7 @@ def procesar_caja(servicio_id, accion, *, actor):
         ).scalars().all()
         if any(p.estado != "ENTREGADO" for p in pedidos):
             raise PedidoError("Todos los pedidos deben estar entregados", 409)
-        total = calcular_total_servicio(servicio.id, bloquear=True)
+        total = ServicioRepository.calcular_total(servicio.id, bloquear=True)
         if accion == "pago-simulado":
             if not pedidos or total <= 0:
                 raise PedidoError("El servicio debe tener pedidos y un total mayor a cero", 409)

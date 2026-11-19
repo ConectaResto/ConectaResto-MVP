@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from app.catalog.service import get_product
 from app.extensions import db
 from app.models import DetallePedido, Mesa, Pago, Pedido, Servicio, Usuario
+from app.pedidos.repository import PedidoRepository
 
 
 class PedidoError(ValueError):
@@ -106,10 +107,7 @@ def actualizar_pedido(pedido_id, accion, *, actor, estado_preparacion=None):
         rol = "KITCHEN" if accion == "preparacion" else "WAITER"
         if not actor.is_active or actor.rol.name != rol:
             raise PedidoError("Prohibido", 403)
-        pedido = db.session.execute(
-            db.select(Pedido).where(Pedido.id == pedido_id)
-            .with_for_update().execution_options(populate_existing=True)
-        ).scalar_one_or_none()
+        pedido = PedidoRepository.get_by_id_for_update(pedido_id)
         if pedido is None:
             raise PedidoError("Pedido no encontrado", 404)
         if pedido.servicio.estado != "ACTIVO":
