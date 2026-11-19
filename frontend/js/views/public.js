@@ -71,14 +71,35 @@ class PublicView {
         const cartEl = this.container.querySelector('#publicCart');
 
         catalogEl.innerHTML = `
-            <div class="mb-3">
-                <button class="btn btn-outline-secondary btn-sm" data-cat="">Todas</button>
-                ${this.categories.map(c => `<button class="btn btn-outline-secondary btn-sm" data-cat="${c.id}">${c.name}</button>`).join('')}
-            </div>
-            <div id="publicProductsGrid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
-                ${this.products.map(p => this.productCard(p)).join('')}
-            </div>
+            <div id="publicProductsGrid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3"></div>
         `;
+
+        const catButtons = document.createElement('div');
+        catButtons.className = 'mb-3';
+        const btnTodas = document.createElement('button');
+        btnTodas.type = 'button';
+        btnTodas.className = 'btn btn-outline-secondary btn-sm';
+        btnTodas.textContent = 'Todas';
+        btnTodas.dataset.cat = '';
+        catButtons.appendChild(btnTodas);
+        this.categories.forEach(c => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-outline-secondary btn-sm';
+            btn.textContent = c.name;
+            btn.dataset.cat = String(c.id);
+            catButtons.appendChild(btn);
+        });
+        catalogEl.insertBefore(catButtons, catalogEl.firstChild);
+
+        catButtons.querySelectorAll('[data-cat]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const catId = btn.dataset.cat || null;
+                this.container.querySelectorAll('[data-cat]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.renderProducts(catId);
+            });
+        });
 
         cartEl.innerHTML = `
             <h6>Tu carrito</h6>
@@ -108,15 +129,6 @@ class PublicView {
         this.cartTotalEl = this.container.querySelector('#publicCartTotal');
         this.orderForm = this.container.querySelector('#publicReviewBtn');
 
-        this.container.querySelectorAll('[data-cat]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const catId = btn.dataset.cat || null;
-                this.container.querySelectorAll('[data-cat]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.renderProducts(catId);
-            });
-        });
-
         this.container.querySelector('#publicReviewBtn').addEventListener('click', () => this.showReview());
         this.container.querySelector('#publicCancelReview').addEventListener('click', () => this.hideReview());
         this.container.querySelector('#publicSendOrder').addEventListener('click', () => this.sendOrder());
@@ -127,27 +139,67 @@ class PublicView {
 
     productCard(p) {
         const cents = parseFloat(p.price) * 100;
-        return `
-            <div class="col">
-                <div class="card h-100">
-                    <img src="${p.image_url || '/static/img/default-product.svg'}" class="card-img-top" alt="${p.name}" style="height:160px;object-fit:cover;">
-                    <div class="card-body">
-                        <h5 class="card-title">${p.name}</h5>
-                        <p class="card-text text-muted small">${p.description || ''}</p>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold">${formatMoney(cents)}</span>
-                            <button class="btn btn-primary btn-sm" onclick="appPublic.addToCart(${p.id})">Agregar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        const col = document.createElement('div');
+        col.className = 'col';
+
+        const card = document.createElement('div');
+        card.className = 'card h-100';
+
+        const img = document.createElement('img');
+        img.className = 'card-img-top';
+        img.alt = p.name;
+        img.style.height = '160px';
+        img.style.objectFit = 'cover';
+        const imageUrl = p.image_url || '/static/img/default-product.svg';
+        if (/^\/[^/]/.test(imageUrl)) {
+            img.src = imageUrl;
+        } else {
+            img.src = '/static/img/default-product.svg';
+        }
+
+        const cardBody = document.createElement('div');
+        cardBody.className = 'card-body';
+
+        const title = document.createElement('h5');
+        title.className = 'card-title';
+        title.textContent = p.name;
+
+        const desc = document.createElement('p');
+        desc.className = 'card-text text-muted small';
+        desc.textContent = p.description || '';
+
+        const flex = document.createElement('div');
+        flex.className = 'd-flex justify-content-between align-items-center';
+
+        const price = document.createElement('span');
+        price.className = 'fw-bold';
+        price.textContent = formatMoney(cents);
+
+        const addBtn = document.createElement('button');
+        addBtn.type = 'button';
+        addBtn.className = 'btn btn-primary btn-sm';
+        addBtn.textContent = 'Agregar';
+        addBtn.addEventListener('click', () => this.addToCart(p.id));
+
+        flex.appendChild(price);
+        flex.appendChild(addBtn);
+        cardBody.appendChild(title);
+        cardBody.appendChild(desc);
+        cardBody.appendChild(flex);
+        card.appendChild(img);
+        card.appendChild(cardBody);
+        col.appendChild(card);
+
+        return col;
     }
 
     renderProducts(catId = null) {
         const grid = this.container.querySelector('#publicProductsGrid');
         const filtered = catId === null ? this.products : this.products.filter(p => p.categoria_id == catId);
-        grid.innerHTML = filtered.map(p => this.productCard(p)).join('');
+        grid.innerHTML = '';
+        filtered.forEach(p => {
+            grid.appendChild(this.productCard(p));
+        });
     }
 
     addToCart(productId) {
@@ -176,15 +228,24 @@ class PublicView {
         for (const [id, item] of state.cart) {
             const div = document.createElement('div');
             div.className = 'd-flex justify-content-between align-items-center border-bottom py-2';
-            div.innerHTML = `
-                <div>
-                    <div>${item.name}</div>
-                    <div class="small text-muted">${formatMoney(item.cents)} x ${item.quantity}</div>
-                </div>
-                <div>
-                    <button class="btn btn-sm btn-outline-danger" onclick="appPublic.removeFromCart(${id})">&times;</button>
-                </div>
-            `;
+
+            const info = document.createElement('div');
+            const nameDiv = document.createElement('div');
+            nameDiv.textContent = item.name;
+            const qtyDiv = document.createElement('div');
+            qtyDiv.className = 'small text-muted';
+            qtyDiv.textContent = formatMoney(item.cents) + ' x ' + item.quantity;
+            info.appendChild(nameDiv);
+            info.appendChild(qtyDiv);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn btn-sm btn-outline-danger';
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', () => this.removeFromCart(id));
+
+            div.appendChild(info);
+            div.appendChild(removeBtn);
             list.appendChild(div);
         }
         totalEl.textContent = state.getCartTotal();
@@ -199,7 +260,12 @@ class PublicView {
         for (const [id, item] of state.cart) {
             const div = document.createElement('div');
             div.className = 'd-flex justify-content-between mb-1';
-            div.innerHTML = `<span>${item.quantity} x ${item.name}</span><span>${formatMoney(item.cents * item.quantity)}</span>`;
+            const qtySpan = document.createElement('span');
+            qtySpan.textContent = item.quantity + ' x ' + item.name;
+            const priceSpan = document.createElement('span');
+            priceSpan.textContent = formatMoney(item.cents * item.quantity);
+            div.appendChild(qtySpan);
+            div.appendChild(priceSpan);
             items.appendChild(div);
         }
         total.textContent = state.getCartTotal();

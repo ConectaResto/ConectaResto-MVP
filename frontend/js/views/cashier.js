@@ -44,25 +44,42 @@ class CashierView {
             return;
         }
 
-        let html = '<div class="list-group list-group-flush">';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'list-group list-group-flush';
         this.servicios.forEach(s => {
             const pagoEstado = s.pago ? 'Pago registrado' : 'Sin pago';
-            const badge = s.pago ? 'bg-success' : 'bg-warning text-dark';
-            html += `
-                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center cursor-pointer" onclick="appCashier.selectService(${s.id})">
-                    <div>
-                        <div class="fw-bold">Servicio #${s.id} - Mesa ${s.mesa_id}</div>
-                        <div class="small text-muted">Estado: ${estadoLegible(s.estado)}</div>
-                    </div>
-                    <div>
-                        <div class="fw-bold">${s.total}</div>
-                        <div class="badge ${badge}">${pagoEstado}</div>
-                    </div>
-                </div>
-            `;
+            const badgeClass = s.pago ? 'bg-success' : 'bg-warning text-dark';
+
+            const item = document.createElement('div');
+            item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center cursor-pointer';
+            item.addEventListener('click', () => this.selectService(s.id));
+
+            const left = document.createElement('div');
+            const servicioDiv = document.createElement('div');
+            servicioDiv.className = 'fw-bold';
+            servicioDiv.textContent = 'Servicio #' + s.id + ' - Mesa ' + s.mesa_id;
+            const estadoDiv = document.createElement('div');
+            estadoDiv.className = 'small text-muted';
+            estadoDiv.textContent = 'Estado: ' + estadoLegible(s.estado);
+            left.appendChild(servicioDiv);
+            left.appendChild(estadoDiv);
+
+            const right = document.createElement('div');
+            const totalDiv = document.createElement('div');
+            totalDiv.className = 'fw-bold';
+            totalDiv.textContent = s.total;
+            const badgeDiv = document.createElement('div');
+            badgeDiv.className = 'badge ' + badgeClass;
+            badgeDiv.textContent = pagoEstado;
+            right.appendChild(totalDiv);
+            right.appendChild(badgeDiv);
+
+            item.appendChild(left);
+            item.appendChild(right);
+            wrapper.appendChild(item);
         });
-        html += '</div>';
-        container.innerHTML = html;
+        container.innerHTML = '';
+        container.appendChild(wrapper);
     }
 
     async selectService(serviceId) {
@@ -78,60 +95,143 @@ class CashierView {
 
     renderDetail(servicio) {
         const container = this.container.querySelector('#cashierDetail');
+
         const pedidosHtml = servicio.pedidos.map(p => {
-            const itemsHtml = p.items.map(i => `${i.cantidad} x ${i.producto_id} - ${i.precio_unitario}`).join(', ');
-            return `
-                <tr>
-                    <td>#${p.id}</td>
-                    <td>${itemsHtml}</td>
-                    <td>${p.total}</td>
-                    <td><span class="badge bg-${badgeColor(p.estado)}">${estadoLegible(p.estado)}</span></td>
-                </tr>
-            `;
-        }).join('');
+            const itemsHtml = p.items.map(i => i.cantidad + ' x #' + i.producto_id + ' - ' + i.precio_unitario).join(', ');
+            const tr = document.createElement('tr');
+
+            const tdId = document.createElement('td');
+            tdId.textContent = '#' + p.id;
+            tr.appendChild(tdId);
+
+            const tdItems = document.createElement('td');
+            tdItems.textContent = itemsHtml;
+            tr.appendChild(tdItems);
+
+            const tdTotal = document.createElement('td');
+            tdTotal.textContent = p.total;
+            tr.appendChild(tdTotal);
+
+            const tdEstado = document.createElement('td');
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-' + badgeColor(p.estado);
+            badge.textContent = estadoLegible(p.estado);
+            tdEstado.appendChild(badge);
+            tr.appendChild(tdEstado);
+
+            return tr;
+        });
 
         const allEntregados = servicio.pedidos.length > 0 && servicio.pedidos.every(p => p.estado === 'ENTREGADO');
         const tienePago = !!servicio.pago;
 
-        container.innerHTML = `
-            <div class="card">
-                <div class="card-header bg-dark text-white">
-                    <h6 class="mb-0">Servicio #${servicio.id} - Mesa ${servicio.mesa_id}</h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <strong>Estado:</strong> <span class="badge bg-${badgeColor(servicio.estado)}">${estadoLegible(servicio.estado)}</span>
-                    </div>
-                    <table class="table table-sm mb-3">
-                        <thead><tr><th>Pedido</th><th>Productos</th><th>Total</th><th>Estado</th></tr></thead>
-                        <tbody>${pedidosHtml}</tbody>
-                    </table>
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <span><strong>Total del servicio:</strong></span>
-                        <span class="fw-lg fs-5">${servicio.total}</span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Pago:</strong>
-                        <span class="badge ${tienePago ? 'bg-success' : 'bg-warning text-dark'} ms-2">
-                            ${tienePago ? 'Registrado' : 'Sin pago'}
-                        </span>
-                    </div>
-                    <div class="d-grid gap-2">
-                        ${!tienePago && allEntregados && parseFloat(servicio.total) > 0 ?
-                            `<button id="cashierPay" class="btn btn-success">Registrar pago simulado</button>` :
-                            `<button id="cashierPay" class="btn btn-success" disabled>Registrar pago simulado</button>`
-                        }
-                        ${tienePago && allEntregados ?
-                            `<button id="cashierClose" class="btn btn-danger">Cerrar servicio</button>` :
-                            `<button id="cashierClose" class="btn btn-danger" disabled>Cerrar servicio</button>`
-                        }
-                    </div>
-                </div>
-            </div>
-        `;
+        const card = document.createElement('div');
+        card.className = 'card';
 
-        this.container.querySelector('#cashierPay').addEventListener('click', () => this.registrarPago(servicio.id));
-        this.container.querySelector('#cashierClose').addEventListener('click', () => this.cerrarServicio(servicio.id));
+        const header = document.createElement('div');
+        header.className = 'card-header bg-dark text-white';
+        const h6 = document.createElement('h6');
+        h6.className = 'mb-0';
+        h6.textContent = 'Servicio #' + servicio.id + ' - Mesa ' + servicio.mesa_id;
+        header.appendChild(h6);
+        card.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'card-body';
+
+        const estadoDiv = document.createElement('div');
+        estadoDiv.className = 'mb-3';
+        const estadoLabel = document.createElement('strong');
+        estadoLabel.textContent = 'Estado: ';
+        const estadoBadge = document.createElement('span');
+        estadoBadge.className = 'badge bg-' + badgeColor(servicio.estado);
+        estadoBadge.textContent = estadoLegible(servicio.estado);
+        estadoDiv.appendChild(estadoLabel);
+        estadoDiv.appendChild(estadoBadge);
+        body.appendChild(estadoDiv);
+
+        const table = document.createElement('table');
+        table.className = 'table table-sm mb-3';
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        ['Pedido', 'Productos', 'Total', 'Estado'].forEach(h => {
+            const th = document.createElement('th');
+            th.textContent = h;
+            headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        pedidosHtml.forEach(tr => tbody.appendChild(tr));
+        table.appendChild(tbody);
+        body.appendChild(table);
+
+        const totalDiv = document.createElement('div');
+        totalDiv.className = 'd-flex justify-content-between align-items-center mb-3';
+        const totalLabel = document.createElement('span');
+        totalLabel.innerHTML = '<strong>Total del servicio:</strong>';
+        const totalValue = document.createElement('span');
+        totalValue.className = 'fw-lg fs-5';
+        totalValue.textContent = servicio.total;
+        totalDiv.appendChild(totalLabel);
+        totalDiv.appendChild(totalValue);
+        body.appendChild(totalDiv);
+
+        const pagoDiv = document.createElement('div');
+        pagoDiv.className = 'mb-3';
+        const pagoLabel = document.createElement('strong');
+        pagoLabel.textContent = 'Pago: ';
+        const pagoBadge = document.createElement('span');
+        pagoBadge.className = 'badge ' + (tienePago ? 'bg-success' : 'bg-warning text-dark') + ' ms-2';
+        pagoBadge.textContent = tienePago ? 'Registrado' : 'Sin pago';
+        pagoDiv.appendChild(pagoLabel);
+        pagoDiv.appendChild(pagoBadge);
+        body.appendChild(pagoDiv);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'd-grid gap-2';
+
+        if (!tienePago && allEntregados && parseFloat(servicio.total) > 0) {
+            const btnPay = document.createElement('button');
+            btnPay.id = 'cashierPay';
+            btnPay.type = 'button';
+            btnPay.className = 'btn btn-success';
+            btnPay.textContent = 'Registrar pago simulado';
+            btnPay.addEventListener('click', () => this.registrarPago(servicio.id));
+            actionsDiv.appendChild(btnPay);
+        } else {
+            const btnPay = document.createElement('button');
+            btnPay.id = 'cashierPay';
+            btnPay.type = 'button';
+            btnPay.className = 'btn btn-success';
+            btnPay.textContent = 'Registrar pago simulado';
+            btnPay.disabled = true;
+            actionsDiv.appendChild(btnPay);
+        }
+
+        if (tienePago && allEntregados) {
+            const btnClose = document.createElement('button');
+            btnClose.id = 'cashierClose';
+            btnClose.type = 'button';
+            btnClose.className = 'btn btn-danger';
+            btnClose.textContent = 'Cerrar servicio';
+            btnClose.addEventListener('click', () => this.cerrarServicio(servicio.id));
+            actionsDiv.appendChild(btnClose);
+        } else {
+            const btnClose = document.createElement('button');
+            btnClose.id = 'cashierClose';
+            btnClose.type = 'button';
+            btnClose.className = 'btn btn-danger';
+            btnClose.textContent = 'Cerrar servicio';
+            btnClose.disabled = true;
+            actionsDiv.appendChild(btnClose);
+        }
+
+        body.appendChild(actionsDiv);
+        card.appendChild(body);
+        container.innerHTML = '';
+        container.appendChild(card);
     }
 
     async registrarPago(serviceId) {

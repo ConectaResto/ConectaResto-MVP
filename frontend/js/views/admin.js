@@ -75,21 +75,46 @@ class AdminView {
             <div class="table-responsive">
                 <table class="table table-striped table-hover align-middle">
                     <thead><tr><th>N&uacute;mero</th><th>Estado</th><th>QR</th><th>Acciones</th></tr></thead>
-                    <tbody>
-                        ${mesas.map(m => `
-                            <tr>
-                                <td>Mesa ${m.numero}</td>
-                                <td><span class="badge bg-${badgeColor(m.estado)}">${estadoLegible(m.estado)}</span></td>
-                                <td><button class="btn btn-sm btn-outline-primary" onclick="appAdmin.verQr(${m.id})">Ver QR</button></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="appAdmin.editMesa(${m.id}, '${m.numero}', '${m.estado}')">Editar</button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
+                    <tbody id="adminMesasBody"></tbody>
                 </table>
             </div>
         `;
+
+        const tbody = container.querySelector('#adminMesasBody');
+        mesas.forEach(m => {
+            const tr = document.createElement('tr');
+
+            const tdNumero = document.createElement('td');
+            tdNumero.textContent = 'Mesa ' + m.numero;
+            tr.appendChild(tdNumero);
+
+            const tdEstado = document.createElement('td');
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-' + badgeColor(m.estado);
+            badge.textContent = estadoLegible(m.estado);
+            tdEstado.appendChild(badge);
+            tr.appendChild(tdEstado);
+
+            const tdQr = document.createElement('td');
+            const btnQr = document.createElement('button');
+            btnQr.type = 'button';
+            btnQr.className = 'btn btn-sm btn-outline-primary';
+            btnQr.textContent = 'Ver QR';
+            btnQr.addEventListener('click', () => this.verQr(m.id));
+            tdQr.appendChild(btnQr);
+            tr.appendChild(tdQr);
+
+            const tdAcciones = document.createElement('td');
+            const btnEdit = document.createElement('button');
+            btnEdit.type = 'button';
+            btnEdit.className = 'btn btn-sm btn-outline-secondary';
+            btnEdit.textContent = 'Editar';
+            btnEdit.addEventListener('click', () => this.editMesa(m.id, m.numero, m.estado));
+            tdAcciones.appendChild(btnEdit);
+            tr.appendChild(tdAcciones);
+
+            tbody.appendChild(tr);
+        });
 
         this.container.querySelector('#adminMesaCreate').addEventListener('click', () => this.crearMesa());
     }
@@ -188,21 +213,41 @@ class AdminView {
             <div class="table-responsive">
                 <table class="table table-striped table-hover align-middle">
                     <thead><tr><th>Nombre</th><th>Descripci&oacute;n</th><th>Acciones</th></tr></thead>
-                    <tbody>
-                        ${cats.map(c => `
-                            <tr>
-                                <td>${c.name}</td>
-                                <td>${c.description || '-'}</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="appAdmin.editCategoria(${c.id}, '${c.name}', '${c.description || ''}')">Editar</button>
-                                    <button class="btn btn-sm btn-outline-danger" onclick="appAdmin.deleteCategoria(${c.id})">Desactivar</button>
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
+                    <tbody id="adminCategoriasBody"></tbody>
                 </table>
             </div>
         `;
+
+        const tbody = container.querySelector('#adminCategoriasBody');
+        cats.forEach(c => {
+            const tr = document.createElement('tr');
+
+            const tdName = document.createElement('td');
+            tdName.textContent = c.name;
+            tr.appendChild(tdName);
+
+            const tdDesc = document.createElement('td');
+            tdDesc.textContent = c.description || '-';
+            tr.appendChild(tdDesc);
+
+            const tdAcciones = document.createElement('td');
+            const btnEdit = document.createElement('button');
+            btnEdit.type = 'button';
+            btnEdit.className = 'btn btn-sm btn-outline-secondary';
+            btnEdit.textContent = 'Editar';
+            btnEdit.addEventListener('click', () => this.editCategoria(c.id, c.name, c.description || ''));
+            tdAcciones.appendChild(btnEdit);
+
+            const btnDel = document.createElement('button');
+            btnDel.type = 'button';
+            btnDel.className = 'btn btn-sm btn-outline-danger';
+            btnDel.textContent = 'Desactivar';
+            btnDel.addEventListener('click', () => this.deleteCategoria(c.id));
+            tdAcciones.appendChild(btnDel);
+            tr.appendChild(tdAcciones);
+
+            tbody.appendChild(tr);
+        });
 
         this.container.querySelector('#adminCatCreate').addEventListener('click', () => this.crearCategoria());
     }
@@ -264,7 +309,7 @@ class AdminView {
                 <div class="col-md-2">
                     <select id="adminProdCat" class="form-select">
                         <option value="">Categor&iacute;a</select>
-                        ${categorias.filter(c => c.is_active).map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+                        ${categorias.filter(c => c.is_active).map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
@@ -274,27 +319,69 @@ class AdminView {
             <div class="table-responsive">
                 <table class="table table-striped table-hover align-middle">
                     <thead><tr><th>Nombre</th><th>Categor&iacute;a</th><th>Precio</th><th>Disponible</th><th>Activo</th><th>Acciones</th></tr></thead>
-                    <tbody>
-                        ${productos.map(p => {
-                            const cat = categorias.find(c => c.id === p.categoria_id);
-                            return `
-                                <tr>
-                                    <td>${p.name}</td>
-                                    <td>${cat ? cat.name : '#' + p.categoria_id}</td>
-                                    <td>${p.price}</td>
-                                    <td><span class="badge bg-${p.is_available ? 'success' : 'secondary'}">${p.is_available ? 'S&iacute;' : 'No'}</span></td>
-                                    <td><span class="badge bg-${p.is_active ? 'success' : 'danger'}">${p.is_active ? 'S&iacute;' : 'No'}</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-secondary" onclick="appAdmin.editProducto(${p.id}, '${p.name}', '${p.description || ''}', ${p.price}, ${p.categoria_id}, ${p.is_available})">Editar</button>
-                                        ${p.is_active ? `<button class="btn btn-sm btn-outline-danger" onclick="appAdmin.deleteProducto(${p.id})">Desactivar</button>` : `<button class="btn btn-sm btn-outline-success" onclick="appAdmin.reactivarProducto(${p.id})">Reactivar</button>`}
-                                    </td>
-                                </tr>
-                            `;
-                        }).join('')}
-                    </tbody>
+                    <tbody id="adminProductosBody"></tbody>
                 </table>
             </div>
         `;
+
+        const tbody = container.querySelector('#adminProductosBody');
+        productos.forEach(p => {
+            const cat = categorias.find(c => c.id === p.categoria_id);
+            const tr = document.createElement('tr');
+
+            const tdName = document.createElement('td');
+            tdName.textContent = p.name;
+            tr.appendChild(tdName);
+
+            const tdCat = document.createElement('td');
+            tdCat.textContent = cat ? cat.name : '#' + p.categoria_id;
+            tr.appendChild(tdCat);
+
+            const tdPrice = document.createElement('td');
+            tdPrice.textContent = p.price;
+            tr.appendChild(tdPrice);
+
+            const tdAvail = document.createElement('td');
+            const badgeAvail = document.createElement('span');
+            badgeAvail.className = 'badge bg-' + (p.is_available ? 'success' : 'secondary');
+            badgeAvail.textContent = p.is_available ? 'S&iacute;' : 'No';
+            tdAvail.appendChild(badgeAvail);
+            tr.appendChild(tdAvail);
+
+            const tdActive = document.createElement('td');
+            const badgeActive = document.createElement('span');
+            badgeActive.className = 'badge bg-' + (p.is_active ? 'success' : 'danger');
+            badgeActive.textContent = p.is_active ? 'S&iacute;' : 'No';
+            tdActive.appendChild(badgeActive);
+            tr.appendChild(tdActive);
+
+            const tdAcciones = document.createElement('td');
+            const btnEdit = document.createElement('button');
+            btnEdit.type = 'button';
+            btnEdit.className = 'btn btn-sm btn-outline-secondary';
+            btnEdit.textContent = 'Editar';
+            btnEdit.addEventListener('click', () => this.editProducto(p.id, p.name, p.description || '', p.price, p.categoria_id, p.is_available));
+            tdAcciones.appendChild(btnEdit);
+
+            if (p.is_active) {
+                const btnDel = document.createElement('button');
+                btnDel.type = 'button';
+                btnDel.className = 'btn btn-sm btn-outline-danger';
+                btnDel.textContent = 'Desactivar';
+                btnDel.addEventListener('click', () => this.deleteProducto(p.id));
+                tdAcciones.appendChild(btnDel);
+            } else {
+                const btnReact = document.createElement('button');
+                btnReact.type = 'button';
+                btnReact.className = 'btn btn-sm btn-outline-success';
+                btnReact.textContent = 'Reactivar';
+                btnReact.addEventListener('click', () => this.reactivarProducto(p.id));
+                tdAcciones.appendChild(btnReact);
+            }
+            tr.appendChild(tdAcciones);
+
+            tbody.appendChild(tr);
+        });
 
         this.container.querySelector('#adminProdCreate').addEventListener('click', () => this.crearProducto());
     }
@@ -377,23 +464,61 @@ class AdminView {
             <div class="table-responsive">
                 <table class="table table-striped table-hover align-middle">
                     <thead><tr><th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
-                    <tbody>
-                        ${users.map(u => `
-                            <tr>
-                                <td>${u.username}</td>
-                                <td>${u.email}</td>
-                                <td>${u.rol}</td>
-                                <td><span class="badge bg-${u.is_active ? 'success' : 'danger'}">${u.is_active ? 'Activo' : 'Inactivo'}</span></td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-secondary" onclick="appAdmin.editUsuario(${u.id}, '${u.username}', '${u.email}', '${u.rol}', ${u.is_active})">Editar</button>
-                                    ${u.is_active ? `<button class="btn btn-sm btn-outline-danger" onclick="appAdmin.deleteUsuario(${u.id})">Desactivar</button>` : `<button class="btn btn-sm btn-outline-success" onclick="appAdmin.reactivarUsuario(${u.id})">Reactivar</button>`}
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
+                    <tbody id="adminUsuariosBody"></tbody>
                 </table>
             </div>
         `;
+
+        const tbody = container.querySelector('#adminUsuariosBody');
+        users.forEach(u => {
+            const tr = document.createElement('tr');
+
+            const tdUsername = document.createElement('td');
+            tdUsername.textContent = u.username;
+            tr.appendChild(tdUsername);
+
+            const tdEmail = document.createElement('td');
+            tdEmail.textContent = u.email;
+            tr.appendChild(tdEmail);
+
+            const tdRol = document.createElement('td');
+            tdRol.textContent = u.rol;
+            tr.appendChild(tdRol);
+
+            const tdEstado = document.createElement('td');
+            const badgeEstado = document.createElement('span');
+            badgeEstado.className = 'badge bg-' + (u.is_active ? 'success' : 'danger');
+            badgeEstado.textContent = u.is_active ? 'Activo' : 'Inactivo';
+            tdEstado.appendChild(badgeEstado);
+            tr.appendChild(tdEstado);
+
+            const tdAcciones = document.createElement('td');
+            const btnEdit = document.createElement('button');
+            btnEdit.type = 'button';
+            btnEdit.className = 'btn btn-sm btn-outline-secondary';
+            btnEdit.textContent = 'Editar';
+            btnEdit.addEventListener('click', () => this.editUsuario(u.id, u.username, u.email, u.rol, u.is_active));
+            tdAcciones.appendChild(btnEdit);
+
+            if (u.is_active) {
+                const btnDel = document.createElement('button');
+                btnDel.type = 'button';
+                btnDel.className = 'btn btn-sm btn-outline-danger';
+                btnDel.textContent = 'Desactivar';
+                btnDel.addEventListener('click', () => this.deleteUsuario(u.id));
+                tdAcciones.appendChild(btnDel);
+            } else {
+                const btnReact = document.createElement('button');
+                btnReact.type = 'button';
+                btnReact.className = 'btn btn-sm btn-outline-success';
+                btnReact.textContent = 'Reactivar';
+                btnReact.addEventListener('click', () => this.reactivarUsuario(u.id));
+                tdAcciones.appendChild(btnReact);
+            }
+            tr.appendChild(tdAcciones);
+
+            tbody.appendChild(tr);
+        });
 
         this.container.querySelector('#adminUserCreate').addEventListener('click', () => this.crearUsuario());
     }

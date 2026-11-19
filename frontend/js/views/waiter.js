@@ -104,17 +104,24 @@ class WaiterView {
 
         this.mesas.forEach(m => {
             const tr = document.createElement('tr');
-            const badge = `<span class="badge bg-${badgeColor(m.estado)}">${estadoLegible(m.estado)}</span>`;
-            tr.innerHTML = `
-                <td>Mesa ${m.numero}</td>
-                <td>${badge}</td>
-            `;
+
+            const tdNumero = document.createElement('td');
+            tdNumero.textContent = 'Mesa ' + m.numero;
+            tr.appendChild(tdNumero);
+
+            const tdEstado = document.createElement('td');
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-' + badgeColor(m.estado);
+            badge.textContent = estadoLegible(m.estado);
+            tdEstado.appendChild(badge);
+            tr.appendChild(tdEstado);
+
             tbody.appendChild(tr);
 
             if (m.estado === 'DISPONIBLE') {
                 const opt = document.createElement('option');
                 opt.value = m.id;
-                opt.textContent = `Mesa ${m.numero}`;
+                opt.textContent = 'Mesa ' + m.numero;
                 select.appendChild(opt);
             }
         });
@@ -155,18 +162,49 @@ class WaiterView {
             return;
         }
 
-        let html = '<div class="table-responsive"><table class="table table-sm align-middle">';
-        html += '<thead><tr><th>Servicio</th><th>Mesa</th><th>Estado</th><th>Total</th></tr></thead><tbody>';
-        this.servicios.forEach(s => {
-            html += `<tr>
-                <td>#${s.id}</td>
-                <td>Mesa ${s.mesa_id}</td>
-                <td><span class="badge bg-${badgeColor(s.estado)}">${estadoLegible(s.estado)}</span></td>
-                <td>${s.total}</td>
-            </tr>`;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-responsive';
+        const table = document.createElement('table');
+        table.className = 'table table-sm align-middle';
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        ['Servicio', 'Mesa', 'Estado', 'Total'].forEach(h => {
+            const th = document.createElement('th');
+            th.textContent = h;
+            headerRow.appendChild(th);
         });
-        html += '</tbody></table></div>';
-        container.innerHTML = html;
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
+        this.servicios.forEach(s => {
+            const tr = document.createElement('tr');
+
+            const tdServicio = document.createElement('td');
+            tdServicio.textContent = '#' + s.id;
+            tr.appendChild(tdServicio);
+
+            const tdMesa = document.createElement('td');
+            tdMesa.textContent = 'Mesa ' + s.mesa_id;
+            tr.appendChild(tdMesa);
+
+            const tdEstado = document.createElement('td');
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-' + badgeColor(s.estado);
+            badge.textContent = estadoLegible(s.estado);
+            tdEstado.appendChild(badge);
+            tr.appendChild(tdEstado);
+
+            const tdTotal = document.createElement('td');
+            tdTotal.textContent = s.total;
+            tr.appendChild(tdTotal);
+
+            tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        wrapper.appendChild(table);
+        container.innerHTML = '';
+        container.appendChild(wrapper);
     }
 
     async renderPedidosTab(container) {
@@ -226,7 +264,7 @@ class WaiterView {
         });
 
         this.pedidoItems = [];
-        const renderItems = () => {
+        this._renderItems = () => {
             itemsContainer.innerHTML = '';
             if (this.pedidoItems.length === 0) {
                 itemsContainer.innerHTML = '<p class="text-muted small">Sin productos agregados.</p>';
@@ -238,15 +276,23 @@ class WaiterView {
                 total += parseFloat(it.precio) * it.cantidad;
                 const div = document.createElement('div');
                 div.className = 'd-flex justify-content-between align-items-center mb-1';
-                div.innerHTML = `
-                    <span>${it.productoName} x${it.cantidad}</span>
-                    <button class="btn btn-sm btn-outline-danger" onclick="appWaiter.removePedidoItem(${idx})">&times;</button>
-                `;
+
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = it.productoName + ' x' + it.cantidad;
+                div.appendChild(nameSpan);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'btn btn-sm btn-outline-danger';
+                removeBtn.textContent = '&times;';
+                removeBtn.addEventListener('click', () => this.removePedidoItem(idx));
+                div.appendChild(removeBtn);
+
                 itemsContainer.appendChild(div);
             });
             const totalDiv = document.createElement('div');
             totalDiv.className = 'text-end fw-bold';
-            totalDiv.textContent = `Total: $${total.toFixed(2)}`;
+            totalDiv.textContent = 'Total: $' + total.toFixed(2);
             itemsContainer.appendChild(totalDiv);
             crearBtn.disabled = false;
         };
@@ -334,33 +380,97 @@ class WaiterView {
                 container.innerHTML = `<p class="text-muted">${emptyMsg}</p>`;
                 return;
             }
-            let html = '<table class="table table-sm align-middle">';
-            html += '<thead><tr><th>ID</th><th>Mesa</th><th>Estado</th><th>Preparaci&oacute;n</th><th>Total</th><th>Acciones</th></tr></thead><tbody>';
+
+            const table = document.createElement('table');
+            table.className = 'table table-sm align-middle';
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            ['ID', 'Mesa', 'Estado', 'Preparaci&oacute;n', 'Total', 'Acciones'].forEach(h => {
+                const th = document.createElement('th');
+                th.textContent = h;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
             pedidos.forEach(p => {
                 const mesaNumero = mesaPorServicio.get(p.servicio_id) || 'Desconocida';
+                const tr = document.createElement('tr');
+
+                const tdId = document.createElement('td');
+                tdId.textContent = '#' + p.id;
+                tr.appendChild(tdId);
+
+                const tdMesa = document.createElement('td');
+                tdMesa.textContent = 'Mesa ' + mesaNumero;
+                tr.appendChild(tdMesa);
+
+                const tdEstado = document.createElement('td');
+                const badgeEstado = document.createElement('span');
+                badgeEstado.className = 'badge bg-' + badgeColor(p.estado);
+                badgeEstado.textContent = estadoLegible(p.estado);
+                tdEstado.appendChild(badgeEstado);
+                tr.appendChild(tdEstado);
+
+                const tdPrep = document.createElement('td');
+                tdPrep.textContent = estadoLegible(p.estado_preparacion);
+                tr.appendChild(tdPrep);
+
+                const tdTotal = document.createElement('td');
+                tdTotal.textContent = p.total;
+                tr.appendChild(tdTotal);
+
+                const tdAcciones = document.createElement('td');
                 const actions = [];
                 if (allowActions && p.estado === 'PENDIENTE' && p.estado_preparacion === 'NO_ENVIADO' && p.autorizado_por_id === null) {
-                    actions.push(`<button class="btn btn-sm btn-primary" onclick="appWaiter.autorizar(${p.id})">Autorizar</button>`);
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-primary';
+                    btn.textContent = 'Autorizar';
+                    btn.addEventListener('click', () => this.autorizar(p.id));
+                    tdAcciones.appendChild(btn);
                 }
                 if (allowActions && p.estado === 'PENDIENTE' && p.estado_preparacion === 'NO_ENVIADO' && p.autorizado_por_id !== null) {
-                    actions.push(`<button class="btn btn-sm btn-primary" onclick="appWaiter.enviarCocina(${p.id})">Enviar a cocina</button>`);
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-primary';
+                    btn.textContent = 'Enviar a cocina';
+                    btn.addEventListener('click', () => this.enviarCocina(p.id));
+                    tdAcciones.appendChild(btn);
                 }
                 if (allowActions && p.estado === 'LISTO') {
-                    actions.push(`<button class="btn btn-sm btn-success" onclick="appWaiter.entregar(${p.id})">Entregar</button>`);
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-success';
+                    btn.textContent = 'Entregar';
+                    btn.addEventListener('click', () => this.entregar(p.id));
+                    tdAcciones.appendChild(btn);
                 }
-                actions.push(`<button class="btn btn-sm btn-outline-secondary" onclick="appWaiter.detalles(${p.id})">Detalles</button>`);
-                html += `<tr>
-                    <td>#${p.id}</td>
-                    <td>Mesa ${mesaNumero}</td>
-                    <td><span class="badge bg-${badgeColor(p.estado)}">${estadoLegible(p.estado)}</span></td>
-                    <td>${estadoLegible(p.estado_preparacion)}</td>
-                    <td>${p.total}</td>
-                    <td>${actions.join(' ')}</td>
-                </tr>`;
-                html += `<tr><td colspan="6"><small>${p.items.map(i => `${i.cantidad} x ${nombres.get(i.producto_id) || 'Producto #' + i.producto_id}`).join(', ')}</small></td></tr>`;
+                const btnDet = document.createElement('button');
+                btnDet.type = 'button';
+                btnDet.className = 'btn btn-sm btn-outline-secondary';
+                btnDet.textContent = 'Detalles';
+                btnDet.addEventListener('click', () => this.detalles(p.id));
+                tdAcciones.appendChild(btnDet);
+                tr.appendChild(tdAcciones);
+
+                tbody.appendChild(tr);
+
+                // Detalles de ítems
+                const trDet = document.createElement('tr');
+                const tdDet = document.createElement('td');
+                tdDet.colSpan = 6;
+                const small = document.createElement('small');
+                const itemTexts = p.items.map(i => i.cantidad + ' x ' + (nombres.get(i.producto_id) || 'Producto #' + i.producto_id));
+                small.textContent = itemTexts.join(', ');
+                tdDet.appendChild(small);
+                trDet.appendChild(tdDet);
+                tbody.appendChild(trDet);
             });
-            html += '</tbody></table>';
-            container.innerHTML = html;
+            table.appendChild(tbody);
+            container.innerHTML = '';
+            container.appendChild(table);
         };
 
         renderGroup('waiterPendientes', pendientes, 'No hay pedidos pendientes de autorizaci&oacute;n.', true);
@@ -405,8 +515,13 @@ class WaiterView {
         const p = this.pedidos.find(x => x.id === pedidoId);
         if (!p) return;
         const nombres = new Map(this.productos.map(x => [x.id, x.name]));
-        const items = p.items.map(i => `${i.cantidad} x ${nombres.get(i.producto_id) || 'Producto #' + i.producto_id}`).join('<br>');
-        alert(`Pedido #${p.id}\nEstado: ${estadoLegible(p.estado)}\nProductos:\n${items}`);
+        const items = p.items.map(i => i.cantidad + ' x ' + (nombres.get(i.producto_id) || 'Producto #' + i.producto_id)).join('\n');
+        alert('Pedido #' + p.id + '\nEstado: ' + estadoLegible(p.estado) + '\nProductos:\n' + items);
+    }
+
+    removePedidoItem(idx) {
+        this.pedidoItems.splice(idx, 1);
+        this._renderItems();
     }
 
     destroy() {}
