@@ -1,9 +1,15 @@
-from flask import Blueprint, current_app, render_template, redirect, url_for
+import os
+from flask import Blueprint, current_app, render_template, redirect, url_for, send_from_directory
 
 from app.auth.csrf import csrf_token as _csrf_token
 from app.auth.service import current_user
 
 frontend_bp = Blueprint("frontend", __name__, template_folder="../templates")
+
+FRONTEND_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "frontend",
+)
 
 
 @frontend_bp.before_request
@@ -213,3 +219,13 @@ def kitchen_pedidos():
         panel_title=_PANEL_TITLES["KITCHEN"],
         user={"username": user.username, "rol": user.rol.name},
     )
+
+
+@frontend_bp.get("/app/")
+def spa_index():
+    return send_from_directory(FRONTEND_DIR, "index.html")
+
+
+@frontend_bp.get("/app/<path:filename>")
+def spa_assets(filename):
+    return send_from_directory(FRONTEND_DIR, filename)
