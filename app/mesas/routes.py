@@ -119,7 +119,7 @@ def qr_table(mesa_id):
     base_url = current_app.config.get("PUBLIC_BASE_URL")
     if not base_url:
         return error_response("PUBLIC_BASE_URL no configurada", 500)
-    menu_url = f"{base_url.rstrip('/')}/public/mesas/{mesa.public_token}/menu"
+    menu_url = f"{base_url.rstrip('/')}/app/?token={mesa.public_token}#public"
     qr = segno.make(menu_url)
     svg = BytesIO()
     qr.save(svg, kind="svg", scale=4, light="#fff")
