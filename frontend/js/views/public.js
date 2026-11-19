@@ -5,10 +5,9 @@ class PublicView {
         this.mesaNumero = null;
         this.categories = [];
         this.products = [];
-        this.cartContainer = null;
-        this.cartItemsContainer = null;
-        this.cartTotalEl = null;
-        this.orderForm = null;
+        this.cartBtn = null;
+        this.cartCountEl = null;
+        this.cartModalInstance = null;
     }
 
     async init() {
@@ -32,17 +31,46 @@ class PublicView {
             return;
         }
 
+        // Ocultar navbar en vista pública del cliente
+        const navbar = document.querySelector('nav.navbar');
+        if (navbar) navbar.style.display = 'none';
+
         this.container.innerHTML = `
             <div class="view-card">
                 <div class="view-card-header">
                     Men&uacute; p&uacute;blico - Mesa <span id="publicMesaNumero">--</span>
                 </div>
-                <div class="view-card-body row">
-                    <div class="col-lg-8" id="publicCatalog">
+                <div class="view-card-body">
+                    <div id="publicCatalog">
                         <div class="text-center py-4"><div class="spinner-border" role="status"></div><p class="mt-2">Cargando carta...</p></div>
                     </div>
-                    <div class="col-lg-4" id="publicCart">
-                        <div class="text-center py-4"><div class="spinner-border" role="status"></div><p class="mt-2">Cargando carrito...</p></div>
+                </div>
+            </div>
+            <button id="publicCartBtn" class="btn btn-primary public-cart-btn">
+                <span class="cart-icon">🛒</span>
+                <span id="publicCartCount" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">0</span>
+            </button>
+            <div class="modal fade" id="publicCartModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-dark text-white">
+                            <h5 class="modal-title">Tu carrito - Mesa <span id="modalMesaNumero">--</span></h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="publicCartListModal" class="mb-3"></div>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <strong>Total:</strong>
+                                <strong id="publicCartTotalModal">${state.getCartTotal()}</strong>
+                            </div>
+                            <div class="mb-3">
+                                <p class="text-muted small">Los precios se validan al enviar. No se realiza pago aqu&iacute;.</p>
+                                <div id="publicOrderStatusModal" class="small"></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button id="publicCheckoutBtn" class="btn btn-success w-100" disabled>Confirmar y enviar</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -52,6 +80,7 @@ class PublicView {
             const mesaData = await api.get(`/public/mesas/${this.mesaToken}`);
             this.mesaNumero = mesaData.data.numero;
             this.container.querySelector('#publicMesaNumero').textContent = this.mesaNumero;
+            this.container.querySelector('#modalMesaNumero').textContent = this.mesaNumero;
 
             const [cats, prods] = await Promise.all([
                 api.get('/categories'),
@@ -68,10 +97,9 @@ class PublicView {
 
     render() {
         const catalogEl = this.container.querySelector('#publicCatalog');
-        const cartEl = this.container.querySelector('#publicCart');
 
         catalogEl.innerHTML = `
-            <div id="publicProductsGrid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3"></div>
+            <div id="publicProductsGrid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3"></div>
         `;
 
         const catButtons = document.createElement('div');
@@ -101,37 +129,16 @@ class PublicView {
             });
         });
 
-        cartEl.innerHTML = `
-            <h6>Tu carrito</h6>
-            <div id="publicCartList" class="mb-3"></div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <strong>Total:</strong>
-                <strong id="publicCartTotal">${state.getCartTotal()}</strong>
-            </div>
-            <div class="mb-3">
-                <p class="text-muted small">Los precios se validan al enviar. No se realiza pago aqu&iacute;.</p>
-                <div id="publicOrderStatus" class="small"></div>
-            </div>
-            <button id="publicReviewBtn" class="btn btn-primary w-100" disabled>Revisar pedido</button>
-            <div id="publicReviewSection" style="display:none;" class="mt-3 p-3 border rounded">
-                <h6>Confirma tu pedido</h6>
-                <div id="publicReviewItems"></div>
-                <p>Total estimado: <strong id="publicReviewTotal"></strong></p>
-                <p class="text-muted small">El pedido quedar&aacute; pendiente de atenci&oacute;n del mesero.</p>
-                <div class="d-grid gap-2 mt-2">
-                    <button id="publicCancelReview" class="btn btn-outline-secondary">Seguir editando</button>
-                    <button id="publicSendOrder" class="btn btn-success">Confirmar y enviar</button>
-                </div>
-            </div>
-        `;
+        // Botón flotante del carrito
+        this.cartBtn = this.container.querySelector('#publicCartBtn');
+        this.cartCountEl = this.container.querySelector('#publicCartCount');
+        this.cartBtn.addEventListener('click', () => {
+            this.cartModalInstance = new bootstrap.Modal(document.getElementById('publicCartModal'));
+            this.cartModalInstance.show();
+        });
 
-        this.cartContainer = this.container.querySelector('#publicCartList');
-        this.cartTotalEl = this.container.querySelector('#publicCartTotal');
-        this.orderForm = this.container.querySelector('#publicReviewBtn');
-
-        this.container.querySelector('#publicReviewBtn').addEventListener('click', () => this.showReview());
-        this.container.querySelector('#publicCancelReview').addEventListener('click', () => this.hideReview());
-        this.container.querySelector('#publicSendOrder').addEventListener('click', () => this.sendOrder());
+        // Checkout button en el modal
+        this.container.querySelector('#publicCheckoutBtn').addEventListener('click', () => this.sendOrder());
 
         this.renderProducts();
         this.updateCartUI();
@@ -212,15 +219,31 @@ class PublicView {
     }
 
     updateCartUI() {
-        if (!this.cartContainer) return;
-        const list = this.container.querySelector('#publicCartList');
-        const totalEl = this.container.querySelector('#publicCartTotal');
-        const reviewBtn = this.container.querySelector('#publicReviewBtn');
+        // Actualizar contador del botón flotante
+        if (this.cartCountEl) {
+            if (state.cart.size === 0) {
+                this.cartCountEl.style.display = 'none';
+                this.cartBtn.classList.remove('btn-danger');
+                this.cartBtn.classList.add('btn-primary');
+            } else {
+                this.cartCountEl.style.display = 'block';
+                this.cartCountEl.textContent = state.cart.size;
+            }
+        }
+
+        // Actualizar contenido del modal si está renderizado
+        const list = this.container.querySelector('#publicCartListModal');
+        const totalEl = this.container.querySelector('#publicCartTotalModal');
+        const checkoutBtn = this.container.querySelector('#publicCheckoutBtn');
+        const orderStatus = this.container.querySelector('#publicOrderStatusModal');
+
+        if (!list) return;
 
         if (state.cart.size === 0) {
             list.innerHTML = '<p class="text-muted small">El carrito est&aacute; vac&iacute;o.</p>';
             totalEl.textContent = state.getCartTotal();
-            reviewBtn.disabled = true;
+            checkoutBtn.disabled = true;
+            if (orderStatus) orderStatus.textContent = '';
             return;
         }
 
@@ -249,37 +272,12 @@ class PublicView {
             list.appendChild(div);
         }
         totalEl.textContent = state.getCartTotal();
-        reviewBtn.disabled = false;
-    }
-
-    showReview() {
-        const section = this.container.querySelector('#publicReviewSection');
-        const items = this.container.querySelector('#publicReviewItems');
-        const total = this.container.querySelector('#publicReviewTotal');
-        items.innerHTML = '';
-        for (const [id, item] of state.cart) {
-            const div = document.createElement('div');
-            div.className = 'd-flex justify-content-between mb-1';
-            const qtySpan = document.createElement('span');
-            qtySpan.textContent = item.quantity + ' x ' + item.name;
-            const priceSpan = document.createElement('span');
-            priceSpan.textContent = formatMoney(item.cents * item.quantity);
-            div.appendChild(qtySpan);
-            div.appendChild(priceSpan);
-            items.appendChild(div);
-        }
-        total.textContent = state.getCartTotal();
-        section.style.display = 'block';
-        this.container.querySelector('#publicReviewBtn').style.display = 'none';
-    }
-
-    hideReview() {
-        this.container.querySelector('#publicReviewSection').style.display = 'none';
-        this.container.querySelector('#publicReviewBtn').style.display = 'block';
+        checkoutBtn.disabled = false;
+        if (orderStatus) orderStatus.textContent = '';
     }
 
     async sendOrder() {
-        const btn = this.container.querySelector('#publicSendOrder');
+        const btn = this.container.querySelector('#publicCheckoutBtn');
         btn.disabled = true;
         btn.textContent = 'Enviando...';
 
@@ -292,10 +290,9 @@ class PublicView {
             const data = await api.post(`/public/mesas/${this.mesaToken}/pedidos`, { items });
             flash(`Pedido #${data.data.id} recibido. Estado: ${estadoLegible(data.data.estado)}.`, 'success');
             state.clearCart();
-            this.hideReview();
-            this.container.querySelector('#publicReviewBtn').style.display = 'block';
             this.updateCartUI();
-            this.container.querySelector('#publicOrderStatus').textContent = `Pedido #${data.data.id} enviado.`;
+            this.container.querySelector('#publicOrderStatusModal').textContent = `Pedido #${data.data.id} enviado.`;
+            if (this.cartModalInstance) this.cartModalInstance.hide();
         } catch (err) {
             flash(err.message, 'danger');
         } finally {
@@ -309,7 +306,14 @@ class PublicView {
         this.updateCartUI();
     }
 
-    destroy() {}
+    destroy() {
+        // Restaurar navbar al salir de la vista pública
+        const navbar = document.querySelector('nav.navbar');
+        if (navbar) navbar.style.display = '';
+        if (this.cartModalInstance) {
+            this.cartModalInstance.hide();
+        }
+    }
 }
 
 window.appPublic = null;
