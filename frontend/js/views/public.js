@@ -71,9 +71,6 @@ class PublicView {
         const cartEl = this.container.querySelector('#publicCart');
 
         catalogEl.innerHTML = `
-            <div class="mb-3">
-                <button class="btn btn-outline-secondary btn-sm" data-cat="">Todas</button>
-            </div>
             <div id="publicProductsGrid" class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3"></div>
         `;
 
@@ -244,7 +241,7 @@ class PublicView {
             const removeBtn = document.createElement('button');
             removeBtn.type = 'button';
             removeBtn.className = 'btn btn-sm btn-outline-danger';
-            removeBtn.textContent = '&times;';
+            removeBtn.textContent = '×';
             removeBtn.addEventListener('click', () => this.removeFromCart(id));
 
             div.appendChild(info);
