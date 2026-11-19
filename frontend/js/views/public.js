@@ -8,6 +8,10 @@ class PublicView {
         this.cartBtn = null;
         this.cartCountEl = null;
         this.cartModalInstance = null;
+        this.navbarToggler = null;
+        this.navPublic = null;
+        this.navAuth = null;
+        this._navOldDisplays = null;
     }
 
     async init() {
@@ -31,9 +35,19 @@ class PublicView {
             return;
         }
 
-        // Ocultar navbar en vista pública del cliente
-        const navbar = document.querySelector('nav.navbar');
-        if (navbar) navbar.style.display = 'none';
+        this.navbarToggler = document.querySelector('.navbar-toggler');
+        this.navPublic = document.getElementById('navPublic');
+        this.navAuth = document.getElementById('navAuthenticated');
+        this._navOldDisplays = {};
+        const hide = (el) => {
+            if (el) {
+                this._navOldDisplays[el.id || 'toggler'] = el.style.display;
+                el.style.display = 'none';
+            }
+        };
+        hide(this.navbarToggler);
+        hide(this.navPublic);
+        hide(this.navAuth);
 
         this.container.innerHTML = `
             <div class="view-card">
@@ -307,9 +321,17 @@ class PublicView {
     }
 
     destroy() {
-        // Restaurar navbar al salir de la vista pública
-        const navbar = document.querySelector('nav.navbar');
-        if (navbar) navbar.style.display = '';
+        if (this._navOldDisplays) {
+            const restore = (el, key) => {
+                if (el) {
+                    el.style.display = this._navOldDisplays[key] !== undefined ? this._navOldDisplays[key] : '';
+                }
+            };
+            restore(this.navbarToggler, 'toggler');
+            restore(this.navPublic, 'navPublic');
+            restore(this.navAuth, 'navAuthenticated');
+            this._navOldDisplays = null;
+        }
         if (this.cartModalInstance) {
             this.cartModalInstance.hide();
         }
