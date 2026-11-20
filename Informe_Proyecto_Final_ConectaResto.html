@@ -428,7 +428,7 @@
   <tr><td>Esquema MySQL 8.0.46 y 14 migraciones</td><td>Verificadas por separado</td><td>MySQL 8.0.46</td><td>API</td></tr>
   <tr><td>Cuatro paneles Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER)</td><td>APROBADOS (abertura QR en SPA, menú visible)</td><td>Chrome + MySQL 8.0.46</td><td>Visual</td></tr>
   <tr><td>Flujo completo QR → pedido → mesero → cocina → caja → cierre</td><td>APROBADO mediante API</td><td>MySQL 8.0.46 + API REST</td><td>API</td></tr>
-  <tr><td>Completar pedido mediante botones de la SPA</td><td>PENDIENTE de prueba manual</td><td>Chrome + SPA</td><td>Visual</td></tr>
+  <tr><td>Completar pedido mediante botones de la SPA</td><td>APROBADO (confirmación manual del usuario)</td><td>Chrome + SPA</td><td>Visual</td></tr>
   <tr><td>Corrección de login</td><td>PR #56 aplicado</td><td>MySQL 8.0.46</td><td>API</td></tr>
 </table>
 
@@ -437,8 +437,8 @@
 <h3>9.1 Pruebas pendientes (visuales)</h3>
 <ul>
   <li>Pruebas visuales por rol (ADMIN, WAITER, KITCHEN, CASHIER, cliente público) — APROBADAS en cuatro paneles Chrome con sesiones independientes.</li>
-  <li>Completar pedido mediante los botones de la SPA — PENDIENTE de prueba manual.</li>
-  <li>Validación visual completa del QR hacia la nueva SPA — pendiente.</li>
+  <li>Completar pedido mediante los botones de la SPA — APROBADO (confirmación manual del usuario).</li>
+  <li>Validación visual completa del QR hacia la nueva SPA — APROBADO (confirmación manual del usuario).</li>
   <li>Funciones ADMIN marcadas como «Próximamente» — declaradas explícitamente no implementadas.</li>
 </ul>
 
@@ -505,10 +505,10 @@
 <table>
   <tr><th>Categoría</th><th>Contenido en este informe</th><th>Estado</th></tr>
   <tr><td>Código implementado y fusionado</td><td>Backend Flask (modelos, rutas, servicios, migraciones 001-014), SPA de Agente A (<code>frontend/</code>), repositorios y DTO de Agente B (<code>app/pedidos/repository.py</code>, <code>app/pedidos/dto.py</code>, <code>app/servicios/repository.py</code>, <code>app/servicios/dto.py</code>), integración Flask de Agente D (<code>/app/</code>)</td><td><span class="badge badge-ok">VERIFICADO EN CÓDIGO</span></td></tr>
-  <tr><td>Pruebas ejecutadas por D</td><td>692 aprobadas, 0 fallidas, 1 omitida (pytest contra SQLite); MySQL 8.0.46 y 14 migraciones verificadas por separado; flujo completo QR → pedido → mesero → cocina → caja → cierre probado vía API; PR #56 (corrección login). Cuatro paneles Chrome con sesiones independientes APROBADOS. Completar pedido mediante botones de la SPA pendiente de prueba manual.</td><td><span class="badge badge-ok">VERIFICADO POR D</span></td></tr>
+  <tr><td>Pruebas ejecutadas por D</td><td>692 aprobadas, 0 fallidas, 1 omitida (pytest contra SQLite); MySQL 8.0.46 y 14 migraciones verificadas por separado; flujo completo QR → pedido → mesero → cocina → caja → cierre probado vía API; PR #56 (corrección login). Cuatro paneles Chrome con sesiones independientes APROBADOS. Recorrido completo confirmado manualmente por el usuario.</td><td><span class="badge badge-ok">VERIFICADO POR D</span></td></tr>
   <tr><td>Pruebas visuales por rol</td><td>Cuatro paneles Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER, cliente público) — APROBADOS.</td><td><span class="badge badge-ok">VERIFICADO POR D</span></td></tr>
-  <tr><td>Completar pedido desde SPA</td><td>Pendiente de prueba manual mediante los botones de la SPA.</td><td><span class="badge badge-pend">PENDIENTE</span></td></tr>
-  <tr><td>Validación visual QR hacia SPA</td><td>Validación visual completa del QR hacia la nueva SPA — pendiente.</td><td><span class="badge badge-pend">PENDIENTE</span></td></tr>
+  <tr><td>Completar pedido desde SPA</td><td>APROBADO (confirmación manual del usuario mediante los botones de la SPA).</td><td><span class="badge badge-ok">VERIFICADO POR D (manual)</span></td></tr>
+  <tr><td>Validación visual QR hacia SPA</td><td>APROBADO (confirmación manual del usuario).</td><td><span class="badge badge-ok">VERIFICADO POR D (manual)</span></td></tr>
   <tr><td>Documentación académica histórica</td><td>Inventario de documentos de Drive (01-05) y 5 ADR confirmados por el coordinador; no se ha leído el contenido íntegro</td><td><span class="badge badge-pend">INVENTARIO SOLO</span></td></tr>
 </table>
 
@@ -572,9 +572,9 @@
 <li>Que la SPA de Agente A (frontend/, Bootstrap, navegación por hash) NO está integrada: está verificada y fusionada en main (PR #51, rama <code>feat/spa-vanilla-bootstrap</code>).</li>
 <li>Que repositorios y DTO de Agente B NO están integrados: están verificados y fusionados en main (PR #50, rama <code>feat/repositorios-dto-minimos</code>).</li>
 <li>Que la integración Flask de Agente D NO está implementada: está verificada y fusionada en main (PR #52, rama <code>feat/integracion-spa-flask</code>, rutas <code>/app/</code>).</li>
-<li>Que las pruebas de D son pruebas visuales: las 692 aprobadas son pruebas API contra MySQL; las pruebas visuales por rol y la validación QR→SPA están pendientes.</li>
+<li>Que las pruebas de D son pruebas visuales: las 692 aprobadas son pruebas pytest contra SQLite; las pruebas API contra MySQL 8.0.46 y las pruebas visuales por rol fueron verificadas por separado; el recorrido completo fue confirmado manualmente por el usuario.</li>
 <li>Que se cumplió la consigna oficial del profesor: el documento no está accesible.</li>
-<li>Que los diagramas C4/UML/despliegue existen como archivos gráficos independientes (.drawio, .mmd): no hay tales archivos en el repositorio; los diagramas se incluyen como bloques Mermaid dentro del HTML, derivados del código.</li>
+<li>Que los diagramas C4/UML/despliegue existen como archivos gráficos independientes (.drawio, .mmd): no hay tales archivos en el repositorio; los diagramas se incluyen como archivos SVG locales en la carpeta diagramas/, derivados del código.</li>
 <li>Que se ha leído el contenido íntegro de los documentos Word de Drive: solo se conoce el inventario verificado por el coordinador.</li>
 </ul>
 
@@ -588,14 +588,14 @@
 </ul>
 
 <footer>
-  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-final-academico</code>, creada a partir de <code>main</code>. Commit <code>4cc5914</code> (docs: actualizar informe con seguridad SPA y flujo QR). PR #57 fusionado en main (commit <code>cc76c26</code>). Working tree contiene únicamente el archivo <code>Informe_Proyecto_Final_ConectaResto.html</code> modificado. No se ha realizado commit, push ni merge.</p>
+  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-final-academico</code>, creada a partir de <code>main</code>. Commit <code>22e9020</code> (docs: cerrar informe académico con estado final del proyecto y PR #57). PR #57 fusionado en main (commit <code>cc76c26</code>). Working tree contiene únicamente el archivo <code>Informe_Proyecto_Final_ConectaResto.html</code> modificado. No se ha realizado commit, push ni merge.</p>
   <p><strong>Archivos creados:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code>, <code>diagramas/</code> (8 SVG).</p>
   <p><strong>Archivos modificados en esta sesión:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code> (estado final del proyecto, confirmación manual del usuario, PR #57, corrección de afirmaciones sobre integración A/B/D).</p>
   <p><strong>Restricciones respetadas:</strong> No se modificó backend, frontend, modelos, migraciones, pruebas ni contratos. No se realizó commit, push ni merge.</p>
   <p><strong>Clasificación de evidencias en este informe:</strong></p>
   <ul>
     <li><strong>Respaldadas por código:</strong> secciones 1 a 9 y 10 (arquitectura, modelos, endpoints, seguridad, flujo, SPA de Agente A, repositorios/DTO de Agente B, integración Flask de Agente D, PR #57 en main, y diagramas arquitectónicos derivados del código).</li>
-    <li><strong>Evidencias de Agente D:</strong> sección 9 (692 aprobadas, 0 fallidas, 1 omitida en pytest contra SQLite; MySQL 8.0.46 y 14 migraciones verificadas por separado; flujo completo vía API; PR #56 login). Cuatro paneles Chrome con sesiones independientes APROBADOS. Completar pedido mediante botones de la SPA pendiente de prueba manual.</li>
+    <li><strong>Evidencias de Agente D:</strong> sección 9 (692 aprobadas, 0 fallidas, 1 omitida en pytest contra SQLite; MySQL 8.0.46 y 14 migraciones verificadas por separado; flujo completo vía API; PR #56 login). Cuatro paneles Chrome con sesiones independientes APROBADOS. Recorrido completo confirmado manualmente por el usuario.</li>
     <li><strong>Confirmación manual del usuario:</strong> sección 9.3 (recorrido del restaurante verificado manualmente, diferenciado de pruebas automatizadas).</li>
     <li><strong>Históricas confirmadas por el coordinador:</strong> secciones 11 y 12 (inventario de documentos de Drive y ADR).</li>
     <li><strong>Pendiente de consigna oficial:</strong> cierre de fases 01-05 y contenido académico completo.</li>
