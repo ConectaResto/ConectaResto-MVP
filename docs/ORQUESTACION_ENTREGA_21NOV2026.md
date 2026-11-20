@@ -34,7 +34,7 @@ Entregar ConectaResto-MVP cumpliendo la consigna oficial del profesor, con el fl
 | Dependencias | No se añaden dependencias innecesarias. |
 | Pruebas | No se eliminan pruebas existentes. |
 | Componentes | Se reutilizan componentes actuales (modelos, rutas, servicios, fixtures, pruebas, utilidades). |
-| Organización antigua | No se utiliza la antigua organización de equipos Kilo/Codex. |
+| Organización antigua | No se utiliza la antigua organización de equipos. |
 | Reglas técnicas | Se mantienen las reglas técnicas y de seguridad vigentes de `AGENTS.md`. |
 | Documentación | La documentación final debe coincidir con el código implementado. |
 | Prioridad | La consigna oficial del profesor tiene prioridad sobre los ejemplos del manual ALOJAMIENTOS. |
@@ -53,7 +53,7 @@ Entregar ConectaResto-MVP cumpliendo la consigna oficial del profesor, con el fl
 8. No añadir dependencias innecesarias.
 9. No eliminar pruebas existentes.
 10. Reutilizar componentes actuales antes de crear otros.
-11. No utilizar la antigua organización de equipos Kilo/Codex.
+11. No utilizar la antigua organización de equipos.
 12. Mantener las reglas técnicas y de seguridad válidas de `AGENTS.md`.
 13. La consigna oficial del profesor tiene prioridad sobre los ejemplos del manual ALOJAMIENTOS.
 14. La documentación final debe coincidir con el código implementado.
@@ -108,7 +108,7 @@ Cuando varias fuentes definan alcance o reglas, aplicar el siguiente orden de pr
 3. Documento maestro actual (`docs/ORQUESTACION_ENTREGA_21NOV2026.md`) para responsabilidades A/B/C/D.
 4. `AGENTS.md` para reglas técnicas y de seguridad compatibles.
 
-No aplicar asignaciones de equipos antiguos Kilo/Codex.
+No aplicar asignaciones de equipos antiguos.
 
 ---
 

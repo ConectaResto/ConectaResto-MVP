@@ -1,6 +1,6 @@
 # E3 — Acceso público y menú QR
 
-Responsable: **Portátil Codex 2** (backend QR y menú público).
+Responsable: Backend QR y menú público.
 
 ## Lectura del documento y estado actual
 
@@ -42,7 +42,7 @@ Se verifica que cerrar y reabrir la mesa no altera el token almacenado.
 En la ronda 2 original, una mesa CERRADA o sin servicio activo no aceptaba pedidos. En main actual se conserva el rechazo de CERRADA y se admite apertura automática para DISPONIBLE. No se infiere de
 esa restricción una prohibición de lectura del menú. No se expone información
 interna ni pedidos ajenos. La creación pública reutiliza el contrato
-compartido de Escritorio Codex 1, sin modificar su implementación.
+compartido del módulo de servicios y pedidos, sin modificar su implementación.
 
 ## Ruta implementada y registrada
 

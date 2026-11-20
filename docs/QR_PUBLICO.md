@@ -1,6 +1,6 @@
 # QR público y menú por mesa
 
-Responsable: **Portátil Codex 2** (backend QR y menú público).
+Responsable: Backend QR y menú público.
 
 ## Variable de entorno
 
@@ -28,7 +28,7 @@ Comportamiento contrastado con main `91f416c`, posterior a Entrega F.
 
 ## Interfaz pública del cliente
 
-La entrega original de Portátil Codex 2 completó `app/templates/public/menu.html` con `public_menu.js` y `public_menu.css`, sin modificar entonces mesero/cocina. La coordinación vigente se conserva en `COORDINACION_EQUIPOS_IA.md`.
+La entrega original completó `app/templates/public/menu.html` con `public_menu.js` y `public_menu.css`, sin modificar entonces mesero/cocina. La coordinación vigente se conserva en `COORDINACION_EQUIPOS_IA.md`.
 
 El QR existente abre directamente la interfaz móvil. Esta consulta el
 catálogo público y obtiene CSRF mediante `/auth/csrf` cuando el cliente
