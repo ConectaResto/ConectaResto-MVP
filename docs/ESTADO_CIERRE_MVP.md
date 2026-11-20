@@ -9,7 +9,7 @@ Referencia de esta revisión documental: `91f416c3fde08204abd2b747f1d2bb8536da32
 - **D / PR #45:** estados legibles en administración, mesero, cocina y caja; corrección de aislamiento de PUBLIC_BASE_URL en una prueba QR.
 - **E / PR #46:** pendientes, en curso e historial de entregados, orden descendente por ID; Detalles en todos e historial sin acciones operativas.
 - **F / PR #47:** MESA muestra Mesa.numero mediante pedido/servicio/mesa, con resaltado solo en pendientes/en curso y «Mesa desconocida» si falta la relación o falla una consulta auxiliar. Sin N+1.
-- Última validación de Codex previa a publicar F: **692 aprobadas, 0 fallidas y 1 omitida**, en 166,73 s; 21 pruebas del mesero aprobadas. La omitida requiere collation MySQL. Se ejecutó con SQLite de pruebas; no se repitió Pytest en esta actualización Markdown.
+- Última validación previa a publicar F: **692 aprobadas, 0 fallidas y 1 omitida**, en 166,73 s; 21 pruebas del mesero aprobadas. La omitida requiere collation MySQL. Se ejecutó con SQLite de pruebas; no se repitió Pytest en esta actualización Markdown.
 - La lectura de código y las pruebas específicas acreditan las funcionalidades descritas, no una nueva demostración manual integral posterior a F. Falta revisión visual manual de D/E/F y escaneo con teléfono físico. El recorrido MySQL/Chrome del bloque 3 conserva validez como evidencia de aquella versión histórica.
 - Fases **11 y 12: PARCIAL**. Pendientes: validar el recorrido integral actualizado, manuales por rol, documentación consolidada de endpoints y aceptación final. Los contratos por módulo y README existentes no sustituyen esos entregables.
 
