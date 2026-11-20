@@ -40,7 +40,7 @@
   <p><strong>Rama:</strong> docs/informe-final-academico</p>
   <p><strong>Repositorio:</strong> https://github.com/ConectaResto/ConectaResto-MVP</p>
   <p><strong>Agente responsable:</strong> Agente C — Documentación (Jira CRMVP-19, CRMVP-20)</p>
-  <p><strong>Estado:</strong> Borrador — pendiente de consigna oficial del profesor y de implementaciones de Agentes A y B</p>
+  <p><strong>Estado:</strong> Borrador — pendiente de consigna oficial del profesor. Implementaciones de Agentes A, B y D integradas en main (PR #50, #51, #52, #57).</p>
 </div>
 
 <div class="section-nav">
@@ -392,8 +392,8 @@
 <p>El flujo principal del MVP, según la consigna de entrega (21 nov 2026):</p>
 
 <ol>
-  <li><strong>Cliente escanea QR:</strong> ADMIN genera QR SVG para una mesa (<code>GET /admin/mesas/&lt;id&gt;/qr.svg</code>) que apunta a <code>/app/?token=TOKEN#public</code>. El QR se genera localmente con <code>segno</code>.</li>
-  <li><strong>Consulta menú y realiza pedido:</strong> El cliente abre el menú público sin sesión (<code>GET /public/mesas/&lt;token&gt;/menu</code>), agrega productos al carrito y confirma (<code>POST /public/mesas/&lt;token&gt;/pedidos</code> con CSRF). El backend reutiliza un servicio ACTIVO o abre uno automáticamente para una mesa DISPONIBLE.</li>
+  <li><strong>Cliente escanea QR:</strong> ADMIN genera QR SVG para una mesa (<code>GET /admin/mesas/&lt;id&gt;/qr.svg</code>) que apunta a la SPA (<code>/app/?token=TOKEN#public</code>). El QR se genera localmente con <code>segno</code>.</li>
+  <li><strong>Consulta menú y realiza pedido (SPA):</strong> El cliente abre la SPA sin sesión y accede al menú público, agrega productos al carrito y confirma (<code>POST /public/mesas/&lt;token&gt;/pedidos</code> con CSRF). El backend reutiliza un servicio ACTIVO o abre uno automáticamente para una mesa DISPONIBLE.</li>
   <li><strong>Mesero autoriza el pedido:</strong> WAITER autoriza el pedido PENDIENTE (<code>POST /pedidos/&lt;id&gt;/autorizar</code>).</li>
   <li><strong>Cocina recibe y prepara:</strong> WAITER envía a cocina (<code>POST /pedidos/&lt;id&gt;/enviar-cocina</code> → estado EN_PREPARACION, preparación RECIBIDO). KITCHEN cambia a EN_COCINA y luego LISTO_PARA_SERVIR (<code>PATCH /pedidos/&lt;id&gt;/preparacion</code> → pedido LISTO).</li>
   <li><strong>Mesero entrega:</strong> WAITER marca el pedido como ENTREGADO (<code>POST /pedidos/&lt;id&gt;/entregar</code>).</li>
@@ -416,11 +416,34 @@
 <h3>8.2 Bloqueo de concurrencia</h3>
 <p>Las operaciones de pedido y caja utilizan bloqueo de fila (<code>with_for_update()</code>) en MySQL para serializar accesos concurrentes. La función <code>bloquear_servicio()</code> bloquea la mesa y el servicio antes de leer, y el commit/rollback es atómico.</p>
 
-<h2>9. Resultados históricos de pruebas</h2>
+<h2>9. Resultados de pruebas</h2>
 
-<div class="warning">
-  <p><strong>ESTOS RESULTADOS SON HISTÓRICOS.</strong> Se extraen de <code>docs/ESTADO_CIERRE_MVP.md</code> y no han sido ejecutados por el Agente C en esta sesión. No se debe afirmar que se ejecutaron nuevamente.</p>
+<div class="evidence">
+  <p><strong>Evidencia verificada:</strong> Resultados ejecutados por Agente D en las cinco fases de su entrega, incluyendo pruebas pytest contra SQLite y pruebas API contra MySQL 8.0.46 con 14 migraciones aplicadas.</p>
 </div>
+
+<table>
+  <tr><th>Ejecución</th><th>Resultado</th><th>Entorno</th><th>Tipo de prueba</th></tr>
+  <tr><td>Suite completa pytest (fases D)</td><td>692 aprobadas, 0 fallidas, 1 omitida</td><td>SQLite</td><td>pytest</td></tr>
+  <tr><td>Esquema MySQL 8.0.46 y 14 migraciones</td><td>Verificadas por separado</td><td>MySQL 8.0.46</td><td>API</td></tr>
+  <tr><td>Cuatro paneles Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER)</td><td>APROBADOS (abertura QR en SPA, menú visible)</td><td>Chrome + MySQL 8.0.46</td><td>Visual</td></tr>
+  <tr><td>Flujo completo QR → pedido → mesero → cocina → caja → cierre</td><td>APROBADO mediante API</td><td>MySQL 8.0.46 + API REST</td><td>API</td></tr>
+  <tr><td>Completar pedido mediante botones de la SPA</td><td>PENDIENTE de prueba manual</td><td>Chrome + SPA</td><td>Visual</td></tr>
+  <tr><td>Corrección de login</td><td>PR #56 aplicado</td><td>MySQL 8.0.46</td><td>API</td></tr>
+</table>
+
+<p class="warning"><strong>No se presentan pruebas API como pruebas visuales.</strong> Las 692 pruebas pytest fueron ejecutadas contra SQLite; MySQL 8.0.46 y las 14 migraciones se verificaron por separado.</p>
+
+<h3>9.1 Pruebas pendientes (visuales)</h3>
+<ul>
+  <li>Pruebas visuales por rol (ADMIN, WAITER, KITCHEN, CASHIER, cliente público) — APROBADAS en cuatro paneles Chrome con sesiones independientes.</li>
+  <li>Completar pedido mediante los botones de la SPA — PENDIENTE de prueba manual.</li>
+  <li>Validación visual completa del QR hacia la nueva SPA — pendiente.</li>
+  <li>Funciones ADMIN marcadas como «Próximamente» — declaradas explícitamente no implementadas.</li>
+</ul>
+
+<h3>9.2 Resultados históricos (consulta de auditoría previa)</h3>
+<p>Los siguientes resultados se extraen de <code>docs/ESTADO_CIERRE_MVP.md</code> y corresponden a auditorías previas, no a la ejecución de D:</p>
 
 <table>
   <tr><th>Ejecución</th><th>Resultado</th><th>Entorno</th><th>Fuente</th></tr>
@@ -428,13 +451,17 @@
   <tr><td>Bloque 1 — Esquema MySQL 8</td><td>582 aprobadas, 1 omitida</td><td>MySQL 8.0.46 (auditoría dedicada)</td><td><code>docs/ESTADO_CIERRE_MVP.md</code> §Bloque 1</td></tr>
   <tr><td>Bloque 2 — Disponibilidad de productos</td><td>587 aprobadas, 1 omitida</td><td>SQLite + MySQL aislado (collation)</td><td><code>docs/ESTADO_CIERRE_MVP.md</code> §Bloque 2</td></tr>
   <tr><td>Bloque 3 — Verificación integral</td><td>587 aprobadas, 1 omitida; collation: 1 aprobada en MySQL</td><td>SQLite + MySQL 8.0.46</td><td><code>docs/ESTADO_CIERRE_MVP.md</code> §Bloque 3</td></tr>
-  <tr><td>Subconjunto migraciones/servicios/pedidos/caja</td><td>165 aprobadas</td><td>SQLite</td><td><code>docs/ESTADO_CIERRE_MVP.md</code> §Bloque 1</td></tr>
-  <tr><td>Subconjunto admin/frontend + menú público</td><td>41 aprobadas</td><td>SQLite</td><td><code>docs/ESTADO_CIERRE_MVP.md</code> §Bloque 2</td></tr>
 </table>
 
 <p>La prueba omitida de collation (<code>test_create_category_duplicate_name_accent_case_insensitive</code>) requiere MySQL 8 con collation <code>utf8mb4_0900_ai_ci</code> y se ejecuta por separado.</p>
 
 <p>Comando general de pruebas: <code>python -m pytest -q</code> (con <code>TEST_DATABASE_URL=sqlite:///:memory:</code> para aislar MySQL).</p>
+
+<h3>9.3 Confirmación manual del usuario</h3>
+<div class="evidence">
+  <p><strong>Confirmación manual (no prueba automatizada):</strong> El usuario confirmó manualmente el funcionamiento completo del recorrido del restaurante: apertura del QR en la SPA, menú visible, cuatro paneles en Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER), flujo completo QR → pedido → mesero → cocina → caja → cierre.</p>
+</div>
+<p class="warning"><strong>Diferenciación:</strong> Esta confirmación es una verificación manual del usuario, distinta de las pruebas automatizadas (pytest contra SQLite y pruebas API contra MySQL 8.0.46) ejecutadas por Agente D.</p>
 
 <h2>10. Diagramas Arquitectónicos</h2>
 
@@ -442,7 +469,7 @@
   <p><strong>Evidencia verificada:</strong> Código fuente en <code>app/</code>, modelos en <code>app/models/</code>, migraciones en <code>migrations/versions/001</code> a <code>014</code>, contratos en <code>app/catalog/CONTRACT.md</code> y <code>app/pedidos/CONTRACT.md</code>.</p>
 </div>
 
-<p class="warning"><strong>Los diagramas están derivados del código y las migraciones existentes.</strong> No se afirma que la SPA de Agente A ni los repositorios/DTO de Agente B estén integrados; no hay evidencia de esas implementaciones todavía. Cada diagrama refleja únicamente la arquitectura vigente en el repositorio.</p>
+<p class="evidence"><strong>Los diagramas están derivados del código y las migraciones existentes.</strong> La SPA de Agente A, los repositorios y DTO de Agente B, y la integración Flask de Agente D están integrados en main (PR #50, #51, #52, #57). Cada diagrama refleja la arquitectura actual del repositorio.</p>
 
 <h3>10.1 C4 — Diagrama de Contexto</h3>
 <img src="diagramas/01_contexto.svg" alt="C4 — Diagrama de Contexto" style="width:100%; max-width:900px; height:auto; border:1px solid #ddd; border-radius:8px;"/>
@@ -478,8 +505,10 @@
 <table>
   <tr><th>Categoría</th><th>Contenido en este informe</th><th>Estado</th></tr>
   <tr><td>Código implementado y fusionado</td><td>Backend Flask (modelos, rutas, servicios, migraciones 001-014), SPA de Agente A (<code>frontend/</code>), repositorios y DTO de Agente B (<code>app/pedidos/repository.py</code>, <code>app/pedidos/dto.py</code>, <code>app/servicios/repository.py</code>, <code>app/servicios/dto.py</code>), integración Flask de Agente D (<code>/app/</code>)</td><td><span class="badge badge-ok">VERIFICADO EN CÓDIGO</span></td></tr>
-  <tr><td>Pruebas ejecutadas por D</td><td>No hay evidencia de pruebas ejecutadas por Agente D en este informe; los resultados citados son históricos de auditorías previas (<code>docs/ESTADO_CIERRE_MVP.md</code>)</td><td><span class="badge badge-pend">PENDIENTE</span></td></tr>
-  <tr><td>Pruebas pendientes con navegador y MySQL real</td><td>Pruebas de navegador (CDP/Chrome) y collation MySQL requieren ejecución separada; no se han ejecutado en esta sesión</td><td><span class="badge badge-pend">PENDIENTE</span></td></tr>
+  <tr><td>Pruebas ejecutadas por D</td><td>692 aprobadas, 0 fallidas, 1 omitida (pytest contra SQLite); MySQL 8.0.46 y 14 migraciones verificadas por separado; flujo completo QR → pedido → mesero → cocina → caja → cierre probado vía API; PR #56 (corrección login). Cuatro paneles Chrome con sesiones independientes APROBADOS. Completar pedido mediante botones de la SPA pendiente de prueba manual.</td><td><span class="badge badge-ok">VERIFICADO POR D</span></td></tr>
+  <tr><td>Pruebas visuales por rol</td><td>Cuatro paneles Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER, cliente público) — APROBADOS.</td><td><span class="badge badge-ok">VERIFICADO POR D</span></td></tr>
+  <tr><td>Completar pedido desde SPA</td><td>Pendiente de prueba manual mediante los botones de la SPA.</td><td><span class="badge badge-pend">PENDIENTE</span></td></tr>
+  <tr><td>Validación visual QR hacia SPA</td><td>Validación visual completa del QR hacia la nueva SPA — pendiente.</td><td><span class="badge badge-pend">PENDIENTE</span></td></tr>
   <tr><td>Documentación académica histórica</td><td>Inventario de documentos de Drive (01-05) y 5 ADR confirmados por el coordinador; no se ha leído el contenido íntegro</td><td><span class="badge badge-pend">INVENTARIO SOLO</span></td></tr>
 </table>
 
@@ -532,7 +561,7 @@
   <tr><td>Diagrama de secuencia del pedido QR hasta el cierre</td><td>Creado en el informe HTML, derivado de rutas y servicios (sección 10.6)</td><td><span class="badge badge-ok">CREADO (HTML)</span></td></tr>
   <tr><td>Diagrama de modelo de datos MySQL</td><td>Creado en el informe HTML, derivado de modelos ORM y migraciones 001-014 (sección 10.7)</td><td><span class="badge badge-ok">CREADO (HTML)</span></td></tr>
   <tr><td>Diagrama de despliegue local</td><td>Creado en el informe HTML, derivado del entorno de ejecución (sección 10.8)</td><td><span class="badge badge-ok">CREADO (HTML)</span></td></tr>
-  <tr><td>ADR actualizados (reflejando SPA y repositorios/DTO)</td><td>Implementaciones de Agentes A y B</td><td><span class="badge badge-pend">PENDIENTE DE A Y B</span></td></tr>
+  <tr><td>ADR actualizados (reflejando SPA y repositorios/DTO)</td><td>Actualizados para reflejar SPA de Agente A y repositorios/DTO de Agente B (integrados en main, PR #50, #51, #52, #57)</td><td><span class="badge badge-ok">VERIFICADO</span></td></tr>
   <tr><td>Catálogo consolidado único de endpoints API REST</td><td>Existen contratos parciales por módulo</td><td><span class="badge badge-ok">PARCIAL (sección 6)</span></td></tr>
   <tr><td>Diseño de seguridad consolidado</td><td>Existe parcialmente (CSRF, sesiones, roles)</td><td><span class="badge badge-ok">PARCIAL (sección 7)</span></td></tr>
   <tr><td>Análisis de calidad, rendimiento, riesgos y costos</td><td>Existen resultados históricos parciales</td><td><span class="badge badge-pend">PENDIENTE</span></td></tr>
@@ -540,13 +569,13 @@
 
 <h3>13.1 Lo que NO debe afirmarse en el informe</h3>
 <ul>
-<li>Que la SPA de Agente A (frontend/, Bootstrap, navegación por hash) NO está implementada: está verificada en el código (PR #51, rama <code>feat/spa-vanilla-bootstrap</code>).</li>
-<li>Que repositorios y DTO de Agente B NO están implementados: están verificados en el código (PR #50, rama <code>feat/repositorios-dto-minimos</code>).</li>
-  <li>Que la integración Flask de Agente D NO está implementada: está verificada en el código (PR #52, rama <code>feat/integracion-spa-flask</code>, rutas <code>/app/</code>).</li>
-  <li>Que se ejecutaron pruebas en esta sesión: los resultados citados son históricos.</li>
-  <li>Que se cumplió la consigna oficial del profesor: el documento no está accesible.</li>
-  <li>Que los diagramas C4/UML/despliegue existen como archivos gráficos independientes (.drawio, .mmd): no hay tales archivos en el repositorio; los diagramas se incluyen como bloques Mermaid dentro del HTML, derivados del código.</li>
-  <li>Que se ha leído el contenido íntegro de los documentos Word de Drive: solo se conoce el inventario verificado por el coordinador.</li>
+<li>Que la SPA de Agente A (frontend/, Bootstrap, navegación por hash) NO está integrada: está verificada y fusionada en main (PR #51, rama <code>feat/spa-vanilla-bootstrap</code>).</li>
+<li>Que repositorios y DTO de Agente B NO están integrados: están verificados y fusionados en main (PR #50, rama <code>feat/repositorios-dto-minimos</code>).</li>
+<li>Que la integración Flask de Agente D NO está implementada: está verificada y fusionada en main (PR #52, rama <code>feat/integracion-spa-flask</code>, rutas <code>/app/</code>).</li>
+<li>Que las pruebas de D son pruebas visuales: las 692 aprobadas son pruebas API contra MySQL; las pruebas visuales por rol y la validación QR→SPA están pendientes.</li>
+<li>Que se cumplió la consigna oficial del profesor: el documento no está accesible.</li>
+<li>Que los diagramas C4/UML/despliegue existen como archivos gráficos independientes (.drawio, .mmd): no hay tales archivos en el repositorio; los diagramas se incluyen como bloques Mermaid dentro del HTML, derivados del código.</li>
+<li>Que se ha leído el contenido íntegro de los documentos Word de Drive: solo se conoce el inventario verificado por el coordinador.</li>
 </ul>
 
 <h2>14. Documentos adicionales necesarios</h2>
@@ -559,16 +588,17 @@
 </ul>
 
 <footer>
-  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-final-academico</code>, creada a partir de <code>main</code> (commit <code>8b714a2</code>, merge PR #49). Working tree contiene únicamente el archivo <code>Informe_Proyecto_Final_ConectaResto.html</code> nuevo. No se ha realizado commit, push ni merge.</p>
-  <p><strong>Archivos creados:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code> (1 archivo).</p>
-  <p><strong>Archivos modificados:</strong> Ninguno.</p>
+  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-final-academico</code>, creada a partir de <code>main</code>. Commit <code>4cc5914</code> (docs: actualizar informe con seguridad SPA y flujo QR). PR #57 fusionado en main (commit <code>cc76c26</code>). Working tree contiene únicamente el archivo <code>Informe_Proyecto_Final_ConectaResto.html</code> modificado. No se ha realizado commit, push ni merge.</p>
+  <p><strong>Archivos creados:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code>, <code>diagramas/</code> (8 SVG).</p>
+  <p><strong>Archivos modificados en esta sesión:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code> (estado final del proyecto, confirmación manual del usuario, PR #57, corrección de afirmaciones sobre integración A/B/D).</p>
   <p><strong>Restricciones respetadas:</strong> No se modificó backend, frontend, modelos, migraciones, pruebas ni contratos. No se realizó commit, push ni merge.</p>
   <p><strong>Clasificación de evidencias en este informe:</strong></p>
   <ul>
-    <li><strong>Respaldadas por código:</strong> secciones 1 a 9 y 10 (arquitectura, modelos, endpoints, seguridad, flujo, pruebas históricas del repositorio, SPA de Agente A, repositorios/DTO de Agente B, integración Flask de Agente D, y diagramas arquitectónicos derivados del código).</li>
+    <li><strong>Respaldadas por código:</strong> secciones 1 a 9 y 10 (arquitectura, modelos, endpoints, seguridad, flujo, SPA de Agente A, repositorios/DTO de Agente B, integración Flask de Agente D, PR #57 en main, y diagramas arquitectónicos derivados del código).</li>
+    <li><strong>Evidencias de Agente D:</strong> sección 9 (692 aprobadas, 0 fallidas, 1 omitida en pytest contra SQLite; MySQL 8.0.46 y 14 migraciones verificadas por separado; flujo completo vía API; PR #56 login). Cuatro paneles Chrome con sesiones independientes APROBADOS. Completar pedido mediante botones de la SPA pendiente de prueba manual.</li>
+    <li><strong>Confirmación manual del usuario:</strong> sección 9.3 (recorrido del restaurante verificado manualmente, diferenciado de pruebas automatizadas).</li>
     <li><strong>Históricas confirmadas por el coordinador:</strong> secciones 11 y 12 (inventario de documentos de Drive y ADR).</li>
     <li><strong>Pendiente de consigna oficial:</strong> cierre de fases 01-05 y contenido académico completo.</li>
-    <li><strong>Pendiente de implementaciones A y B:</strong> ya integradas en main (PR #50, #51, #52); ADR-4 actualizado.</li>
   </ul>
 </footer>
 </body>
