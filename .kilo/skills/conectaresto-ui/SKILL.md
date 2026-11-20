@@ -18,7 +18,7 @@ Guiar futuras mejoras visuales del MVP de ConectaResto mediante una estética cl
 
 ## Fuente de verdad y reglas vinculantes
 
-Esta skill opera bajo las instrucciones permanentes de `AGENTS.md`. En caso de conflicto, `AGENTS.md` prevalece. Reglas clave de `AGENTS.md` aplicables a esta skill:
+Esta skill opera bajo las instrucciones permanentes del proyecto. En caso de conflicto, este documento prevalece. Reglas clave de la habilidad aplicables a esta skill:
 
 - Stack obligatorio: HTML, CSS, JavaScript Vanilla (frontend). No se agregan React, Vue, Angular ni Tailwind.
 - Reutilizar primero los componentes y estilos existentes (`app/static/css/style.css`, `app/static/css/public_menu.css`, plantillas en `app/templates/`). Evitar duplicados innecesarios.
@@ -135,13 +135,13 @@ Reglas de integración:
 - No instalar Bootstrap todavía (solo documentar su integración futura mediante CDN).
 - No modificar HTML, CSS ni JavaScript como parte de esta skill; la skill solo documenta el diseño.
 - No crear archivos adicionales más allá de este `SKILL.md`.
-- No modificar `AGENTS.md`.
+- No modificar las reglas permanentes del proyecto.
 - No hacer commit, push ni merge.
 - No acceder a MySQL.
 
 ## Archivos involucrados (referencia, sin modificar aún)
 
-- `AGENTS.md` — reglas permanentes del proyecto.
+- Reglas permanentes del proyecto.
 - `app/templates/base.html` — layout base a integrar con Bootstrap CDN.
 - `app/static/css/style.css` — capa de marca sobre Bootstrap.
 - `app/static/css/public_menu.css` — menú público, se mantiene independiente.
