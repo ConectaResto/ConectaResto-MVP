@@ -89,21 +89,35 @@
   <text x="115" y="510" font-family="Arial" font-size="10" text-anchor="middle">+ importe: decimal</text>
 
   <!-- Relationships -->
+  <!-- roles -> usuarios -->
   <line x1="115" y1="160" x2="250" y2="120" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="175" y="150" font-family="Arial" font-size="10" fill="#666666">tiene</text>
 
-  <line x1="330" y1="190" x2="470" y2="110" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="395" y="185" font-family="Arial" font-size="10" fill="#666666">contiene</text>
-
+  <!-- categories -> products -->
   <line x1="545" y1="160" x2="680" y2="120" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="605" y="155" font-family="Arial" font-size="10" fill="#666666">referenciado en</text>
+  <text x="605" y="155" font-family="Arial" font-size="10" fill="#666666">contiene</text>
 
+  <!-- products -> detalles_pedido -->
+  <line x1="755" y1="190" x2="755" y2="240" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="765" y="215" font-family="Arial" font-size="10" fill="#666666">referenciado en</text>
+
+  <!-- mesas -> servicios -->
   <line x1="115" y1="350" x2="250" y2="290" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="170" y="340" font-family="Arial" font-size="10" fill="#666666">tiene</text>
 
+  <!-- servicios -> pedidos -->
   <line x1="330" y1="350" x2="470" y2="300" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="390" y="345" font-family="Arial" font-size="10" fill="#666666">contiene</text>
 
-  <line x1="545" y1="370" x2="680" y2="300" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
+  <!-- pedidos -> detalles_pedido -->
+  <line x1="545" y1="370" x2="680" y2="240" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="600" y="365" font-family="Arial" font-size="10" fill="#666666">incluye</text>
+
+  <!-- servicios -> pagos -->
+  <line x1="330" y1="350" x2="115" y2="420" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="200" y="395" font-family="Arial" font-size="10" fill="#666666">tiene un</text>
+
+  <!-- usuarios -> pagos -->
+  <line x1="115" y1="190" x2="115" y2="420" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="95" y="395" font-family="Arial" font-size="10" fill="#666666">registra</text>
 </svg>
