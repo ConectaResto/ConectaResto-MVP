@@ -45,7 +45,7 @@
         .fade.show{opacity:1}
         .cursor-pointer{cursor:pointer}
         .view-card{background:#fff;border:1px solid #dee2e6;border-radius:0.5rem;box-shadow:0 0.5rem 1rem rgba(0,0,0,0.15);margin-bottom:1.5rem;overflow:hidden}
-        .view-card-header{background:#0d6efd;color:#fff;padding:0.75rem 1rem;font-weight:600}
+        .view-card-header{background:#163e32;color:#fff;padding:0.75rem 1rem;font-weight:600}
         .view-card-body{padding:1.5rem}
         .btn{display:inline-block;font-weight:400;line-height:1.5;color:#212529;background-color:#fff;border:1px solid #ced4da;padding:0.375rem 0.75rem;border-radius:0.25rem;cursor:pointer}
         .btn-primary{color:#fff;background-color:#0d6efd;border-color:#0d6efd}
@@ -76,6 +76,20 @@
         .navbar{position:relative;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:0.5rem 1rem}
         .navbar-brand{padding-top:0.3125rem;padding-bottom:0.3125rem;margin-right:1rem;font-size:1.25rem;text-decoration:none}
         .navbar-toggler{padding:0.25rem 0.75rem;font-size:1.25rem;line-height:1;background-color:transparent;border:1px solid transparent;border-radius:0.25rem}
+.navbar-conectaresto{background-color:#163e32 !important}
+.navbar-conectaresto .navbar-brand{color:#fff !important}
+.navbar-conectaresto .navbar-toggler{border-color:rgba(255,255,255,0.5) !important}
+        .navbar-conectaresto .navbar-toggler-icon{background-image:url("data:image/svg+xml;charset=utf8,%3Csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath stroke='rgba%28255,255,255,1%29' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E") !important}
+        #publicCartBtn,#publicCheckoutBtn,#publicCatalog button.btn-primary{background-color:#245c49 !important;border-color:#245c49 !important;color:#fff !important}
+        #publicCartBtn:hover,#publicCheckoutBtn:hover,#publicCatalog button.btn-primary:hover{background-color:#1d4a3d !important;border-color:#1d4a3d !important}
+        #publicCartBtn:focus,#publicCheckoutBtn:focus,#publicCatalog button.btn-primary:focus{box-shadow:0 0 0 0.2rem rgba(198,124,18,0.5) !important}
+        #publicCartBtn:disabled,#publicCheckoutBtn:disabled,#publicCatalog button.btn-primary:disabled{background-color:#8b9e93 !important;border-color:#8b9e93 !important;color:#fff !important;opacity:1 !important;pointer-events:none !important}
+        #publicCatalog button.btn-outline-secondary{color:#245c49 !important;border-color:#245c49 !important;background-color:transparent !important}
+        #publicCatalog button.btn-outline-secondary:hover{background-color:#edf4ed !important;color:#1d4a3d !important;border-color:#1d4a3d !important}
+        #publicCatalog button.btn-outline-secondary:focus{box-shadow:0 0 0 0.2rem rgba(198,124,18,0.5) !important}
+        #publicCatalog button.btn-outline-secondary.active{background-color:#245c49 !important;border-color:#245c49 !important;color:#fff !important}
+        #publicCatalog button.btn-outline-secondary:disabled{color:#8b9e93 !important;border-color:#8b9e93 !important;opacity:1 !important;pointer-events:none !important}
+        body:has(#publicCatalog) footer{background-color:#163e32 !important}
         .collapse{display:none}
         .dropdown{position:relative}
         .fixed-top{position:fixed;top:0;right:0;left:0;z-index:1030}
@@ -85,9 +99,9 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-light navbar-conectaresto fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#">ConectaResto MVP</a>
+            <a class="navbar-brand" href="#">ConectaResto</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
