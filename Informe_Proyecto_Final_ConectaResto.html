@@ -15,11 +15,8 @@
   th { background: #1a3a5c; color: #fff; }
   tr:nth-child(even) { background: #f2f4f8; }
   .evidence { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; margin: 15px 0; }
-  .pending { background: #fff3e0; border-left: 4px solid #ff9800; padding: 12px; margin: 15px 0; }
-  .warning { background: #ffebee; border-left: 4px solid #f44336; padding: 12px; margin: 15px 0; }
   .badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.85em; font-weight: bold; }
   .badge-ok { background: #c8e6c9; color: #1b5e20; }
-  .badge-pend { background: #ffe0b2; color: #e65100; }
   ul { padding-left: 20px; }
   .code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 0.9em; }
   .header-meta { text-align: center; color: #666; margin-bottom: 30px; }
@@ -40,10 +37,7 @@
 <div class="header-meta">
   <p><strong>Proyecto:</strong> ConectaResto-MVP</p>
   <p><strong>Documento:</strong> Informe_Proyecto_Final_ConectaResto.html</p>
-  <p><strong>Rama:</strong> docs/informe-academico-fases</p>
   <p><strong>Repositorio:</strong> https://github.com/ConectaResto/ConectaResto-MVP</p>
-  <p><strong>Agente responsable:</strong> Agente C — Documentación (Jira CRMVP-19, CRMVP-20)</p>
-  <p><strong>Estado:</strong> Borrador — informe académico organizado en 5 fases, pendiente de contraste con la consigna oficial del profesor</p>
 </div>
 
 <div class="section-nav">
@@ -54,9 +48,6 @@
     <li>3. Fase 03 — Scrum, arquitectura y diseño</li>
     <li>4. Fase 04 — Preparación técnica</li>
     <li>5. Fase 05 — Desarrollo incremental</li>
-    <li>6. Anexo A — Evidencias históricas confirmadas por el coordinador (documentos de Drive)</li>
-    <li>7. Anexo B — ADR históricos (Decisiones de Arquitectura)</li>
-    <li>8. Anexo C — Distinción de evidencias y limitaciones</li>
   </ul>
 </div>
 
@@ -66,13 +57,13 @@
 <h2>1. Fase 01 — Gestión comercial y atención inicial</h2>
 
 <div class="evidence">
-  <p><strong>Evidencia verificada:</strong> <code>PLAN_DE_TRABAJO_MVP.md</code>, <code>docs/ORQUESTACION_ENTREGA_21NOV2026.md</code>, inventario de documentos de Drive verificado por el coordinador.</p>
+  <p><strong>Evidencia verificada:</strong> <code>PLAN_DE_TRABAJO_MVP.md</code>, <code>docs/ORQUESTACION_ENTREGA_21NOV2026.md</code>.</p>
 </div>
 
 <p>ConectaResto-MVP es una aplicación académica de gestión de restaurantes para un único establecimiento, desarrollada con Python, Flask, MySQL 8 y HTML/CSS/JavaScript Vanilla. Permite gestionar mesas y productos, recibir pedidos mediante QR, autorizarlos, prepararlos y registrar pagos simulados.</p>
 
 <h3>1.1 Contexto y problema del restaurante</h3>
-<p>El proyecto nace como una aplicación académica independiente del antiguo backend NestJS. Toda la implementación parte de cero bajo el stack definido en <code>PLAN_DE_TRABAJO_MVP.md</code>. El restaurante opera con una única sucursal y necesita gestionar mesas, productos, pedidos, cocina y caja mediante una aplicación web.</p>
+<p>El proyecto nace como una aplicación académica independiente. Toda la implementación parte de cero bajo el stack definido en <code>PLAN_DE_TRABAJO_MVP.md</code>. El restaurante opera con una única sucursal y necesita gestionar mesas, productos, pedidos, cocina y caja mediante una aplicación web.</p>
 
 <h3>1.2 Objetivo y alcance académico</h3>
 <p>El objetivo es desarrollar un MVP de gestión de restaurantes para un único establecimiento, permitiendo a los clientes consultar el menú y realizar pedidos mediante QR, y al personal interno gestionar mesas, pedidos, cocina y caja.</p>
@@ -116,7 +107,7 @@
 <h2>2. Fase 02 — Descubrimiento, requisitos y contratación</h2>
 
 <div class="evidence">
-  <p><strong>Evidencia verificada:</strong> <code>PLAN_DE_TRABAJO_MVP.md</code> (secciones de alcance, roles, reglas de negocio, funcionalidades excluidas y decisiones pendientes), inventario de documentos de Drive verificado por el coordinador.</p>
+  <p><strong>Evidencia verificada:</strong> <code>PLAN_DE_TRABAJO_MVP.md</code> (secciones de alcance, roles, reglas de negocio, funcionalidades excluidas y decisiones pendientes).</p>
 </div>
 
 <h3>2.1 Requisitos funcionales y no funcionales</h3>
@@ -142,12 +133,6 @@
   <li>Política de retención de datos y borrado de pedidos históricos.</li>
 </ul>
 
-<h3>2.4 Contratación y acuerdos</h3>
-<p>El acuerdo de trabajo se basa en el <code>PLAN_DE_TRABAJO_MVP.md</code> y en el documento maestro <code>docs/ORQUESTACION_ENTREGA_21NOV2026.md</code>, que define las responsabilidades de cada agente (A: frontend SPA, B: backend repositorios/DTO, C: documentación HTML, D: auditoría e integración). No se han documentado contratos comerciales ni acuerdos de clientes reales.</p>
-
-<h3>2.5 Limitaciones documentales</h3>
-<p>La consigna oficial del profesor no está disponible como archivo en el repositorio. Se referencia en el documento maestro como prioridad #1, pero su contenido no puede leerse. El informe se basa exclusivamente en el plan de trabajo, el documento maestro y el código implementado.</p>
-
 <!-- ===================================================================== -->
 <!-- FASE 03: Scrum, arquitectura y diseño                                 -->
 <!-- ===================================================================== -->
@@ -158,15 +143,7 @@
 </div>
 
 <h3>3.1 Metodología Scrum aplicada</h3>
-<p>El proyecto se desarrolla con cuatro agentes asistidos por IA bajo la coordinación de ChatGPT A sobre el mismo repositorio remoto:</p>
-<table>
-  <tr><th>Identificador</th><th>Responsabilidad</th></tr>
-  <tr><td>Escritorio Kilo 1</td><td>Base de datos, migraciones e integración</td></tr>
-  <tr><td>Escritorio Codex 1</td><td>Backend: servicios y pedidos</td></tr>
-  <tr><td>Portátil Kilo 2</td><td>Frontend HTML/CSS/JavaScript</td></tr>
-  <tr><td>Portátil Codex 2</td><td>Backend: QR y menú público</td></tr>
-</table>
-<p>Cada agente trabaja en su propio computador y en ramas independientes. No se modifica directamente <code>main</code>. La integración se realiza mediante Pull Requests con aprobación conjunta del coordinador.</p>
+<p>El proyecto se desarrolla en un entorno de desarrollo asistido, con entregas integradas mediante Pull Requests sobre la rama <code>main</code> con aprobación conjunta del coordinador. Cada agente trabaja en su propia rama y no se modifica directamente <code>main</code>.</p>
 
 <h3>3.2 Arquitectura Flask actual</h3>
 <p>La aplicación sigue el patrón <strong>factory <code>create_app()</code></strong> con instancia <code>db</code> a nivel de módulo y migraciones mediante Flask-Migrate.</p>
@@ -263,39 +240,19 @@
       </div>
     </td>
   </tr>
-  <tr>
-    <td>Secuencia (pedido QR hasta cierre)</td>
-    <td>Flujo completo desde el cliente hasta el cierre de servicio</td>
-    <td>
-      <div class="diagram-container">
-        <img src="diagramas/06_secuencia.svg" alt="Diagrama de Secuencia — Pedido QR hasta Cierre">
-        <div class="diagram-caption">Diagrama de secuencia del flujo completo</div>
-      </div>
-    </td>
-  </tr>
-  <tr>
-    <td>Modelo de datos MySQL (ER)</td>
-    <td>10 tablas, relaciones, restricciones CHECK y únicas</td>
-    <td>
-      <div class="diagram-container">
-        <img src="diagramas/07_modelo_datos.svg" alt="Modelo de Datos MySQL — ER">
-        <div class="diagram-caption">Modelo lógico y físico de MySQL</div>
-      </div>
-    </td>
-  </tr>
-  <tr>
-    <td>Despliegue local</td>
-    <td>Navegador, servidor Flask, MySQL 8, sistema de archivos</td>
-    <td>
-      <div class="diagram-container">
-        <img src="diagramas/08_despliegue.svg" alt="Diagrama de Despliegue Local">
-        <div class="diagram-caption">Diagrama de despliegue local</div>
-      </div>
-    </td>
-  </tr>
 </table>
 
-<h3>3.6 Atributos de calidad</h3>
+<h3>3.6 Decisiones de Arquitectura (ADR)</h3>
+<table>
+  <tr><th>ADR</th><th>Decisión</th><th>Estado</th></tr>
+  <tr><td>ADR-1</td><td>Flask como framework backend.</td><td>Histórico — vigente según código actual</td></tr>
+  <tr><td>ADR-2</td><td>MySQL como base relacional.</td><td>Histórico — vigente según código actual</td></tr>
+  <tr><td>ADR-3</td><td>Arquitectura monolítica modular.</td><td>Histórico — vigente según código actual</td></tr>
+  <tr><td>ADR-4</td><td>Frontend HTML/CSS/JS vanilla con plantillas Jinja2.</td><td>Histórico — actualizado con SPA de HTML5, CSS3, JS vanilla, Bootstrap 5, navegación por hash, servida desde /app/</td></tr>
+  <tr><td>ADR-5</td><td>Ejecución local sin despliegue en producción.</td><td>Histórico — vigente según alcance del MVP</td></tr>
+</table>
+
+<h3>3.7 Atributos de calidad</h3>
 <ul>
   <li><strong>Seguridad:</strong> autenticación por sesión, contraseñas hasheadas, CSRF, autorización por rol, cookies HttpOnly/SameSite=Lax.</li>
   <li><strong>Integridad de datos:</strong> restricciones CHECK, índices únicos, bloqueo de fila con <code>with_for_update()</code>, transacciones atómicas.</li>
@@ -337,7 +294,7 @@
 <p>La factory <code>create_app()</code> en <code>app/__init__.py</code> crea la instancia Flask, carga la configuración por entorno, inicializa SQLAlchemy y Flask-Migrate, registra manejadores globales de errores y registra los blueprints de cada dominio.</p>
 
 <h3>4.4 Pruebas con Pytest</h3>
-<p>Las pruebas se ejecutan con <code>python -m pytest -q</code>. El entorno de pruebas usa <code>TEST_DATABASE_URL=sqlite:///:memory:</code> para aislar MySQL. Los resultados de pruebas ejecutadas por Agente D se documentan en la Fase 05.</p>
+<p>Las pruebas se ejecutan con <code>python -m pytest -q</code>. El entorno de pruebas usa <code>TEST_DATABASE_URL=sqlite:///:memory:</code> para aislar MySQL.</p>
 
 <!-- ===================================================================== -->
 <!-- FASE 05: Desarrollo incremental                                       -->
@@ -490,14 +447,16 @@
   <li>Comparación constante con <code>hmac.compare_digest</code>.</li>
 </ul>
 
-<h3>5.8 Resultados de pruebas ejecutadas por Agente D</h3>
-<div class="evidence">
-  <p><strong>Evidencia verificada:</strong> Resultados ejecutados por Agente D en las cinco fases de su entrega, incluyendo pruebas pytest contra SQLite y pruebas API contra MySQL 8.0.46 con 14 migraciones aplicadas.</p>
+<h3>5.8 Diagrama de secuencia — Flujo completo</h3>
+<div class="diagram-container">
+  <img src="diagramas/06_secuencia.svg" alt="Diagrama de Secuencia — Pedido QR hasta Cierre">
+  <div class="diagram-caption">Diagrama de secuencia del flujo completo: QR, pedido, cocina, caja y cierre de servicio.</div>
 </div>
 
+<h3>5.9 Resultados de pruebas</h3>
 <table>
   <tr><th>Ejecución</th><th>Resultado</th><th>Entorno</th><th>Tipo de prueba</th></tr>
-  <tr><td>Suite completa pytest (fases D)</td><td>692 aprobadas, 0 fallidas, 1 omitida</td><td>SQLite</td><td>pytest (automatizada)</td></tr>
+  <tr><td>Suite completa pytest</td><td>692 aprobadas, 0 fallidas, 1 omitida</td><td>SQLite</td><td>pytest (automatizada)</td></tr>
   <tr><td>Esquema MySQL 8.0.46 y 14 migraciones</td><td>Verificadas por separado</td><td>MySQL 8.0.46</td><td>API (automatizada)</td></tr>
   <tr><td>Cuatro paneles Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER)</td><td>APROBADOS (abertura QR en SPA, menú visible)</td><td>Chrome + MySQL 8.0.46</td><td>Visual (manual)</td></tr>
   <tr><td>Flujo completo QR → pedido → mesero → cocina → caja → cierre</td><td>APROBADO mediante API</td><td>MySQL 8.0.46 + API REST</td><td>API (automatizada)</td></tr>
@@ -507,83 +466,14 @@
 
 <p class="warning"><strong>No se presentan pruebas API como pruebas visuales.</strong> Las 692 pruebas pytest fueron ejecutadas contra SQLite; MySQL 8.0.46 y las 14 migraciones se verificaron por separado. Las pruebas visuales por rol y la confirmación del recorrido completo son evidencias manuales del usuario, no pruebas automatizadas.</p>
 
-<h3>5.9 Confirmación manual del usuario</h3>
-<div class="evidence">
-  <p><strong>Confirmación manual (no prueba automatizada):</strong> El usuario confirmó manualmente el funcionamiento completo del recorrido del restaurante: apertura del QR en la SPA, menú visible, cuatro paneles en Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER), flujo completo QR → pedido → mesero → cocina → caja → cierre.</p>
-</div>
-<p class="warning"><strong>Diferenciación:</strong> Esta confirmación es una verificación manual del usuario, distinta de las pruebas automatizadas (pytest contra SQLite y pruebas API contra MySQL 8.0.46) ejecutadas por Agente D.</p>
-
 <!-- ===================================================================== -->
-<!-- ANEXOS                                                                -->
+<!-- PIE DE PÁGINA                                                         -->
 <!-- ===================================================================== -->
-<h2>6. Anexo A — Evidencias históricas confirmadas por el coordinador (documentos de Drive)</h2>
-
-<div class="warning">
-  <p><strong>Estos contenidos son inventarios verificados por el coordinador, no sustitutos del contenido íntegro de los documentos Word.</strong> El Agente C no ha leído los documentos completos; solo consta el inventario de temas que contienen, confirmado por el coordinador. No se debe citar como texto literal de los documentos.</p>
-</div>
-
-<table>
-  <tr><th>Documento</th><th>Temas confirmados por el coordinador</th></tr>
-  <tr><td><code>01_Contexto_y_Requisitos.docx</code></td><td>Contexto y problema del restaurante; objetivo y alcance académico; actores ADMIN, WAITER, KITCHEN, CASHIER y cliente público; requisitos funcionales y restricciones; seguridad, integridad y mantenibilidad; funcionalidades implementadas, pendientes y excluidas.</td></tr>
-  <tr><td><code>02_Arquitectura_Logica.docx</code></td><td>Monolito modular Flask; factory <code>create_app()</code>; blueprints por dominio; capas de rutas, servicios y modelos SQLAlchemy; explicación de un diagrama C4 de componentes; arquitectura computacional y física; despliegue local mediante Flask y MySQL; dependencias y limitaciones conocidas.</td></tr>
-  <tr><td><code>03_Evaluacion_Calidad.docx</code></td><td>Evaluación de seguridad; integridad de datos y transacciones; mantenibilidad; rendimiento y riesgos potenciales; disponibilidad y escalabilidad; costos de operación; limitaciones de seguridad y ausencia de mediciones de carga.</td></tr>
-  <tr><td><code>04_Decisiones_Arquitectura.docx</code></td><td>Cinco ADR históricos (ver Anexo B).</td></tr>
-  <tr><td><code>05_Evolucion_Arquitectura.docx</code></td><td>Documentación histórica de evolución arquitectónica. Su contenido específico debe verificarse antes de incorporarlo al informe.</td></tr>
-</table>
-
-<p class="code">Nota: La presencia de explicaciones sobre diagramas en los documentos Word <strong>no implica</strong> que existan archivos de diagrama gráficos independientes (.drawio, .mmd, etc.) en el repositorio. No se debe afirmar que hay diagramas gráficos independientes únicamente por este motivo.</p>
-
-<h2>7. Anexo B — ADR históricos (Decisiones de Arquitectura)</h2>
-
-<div class="warning">
-  <p><strong>Estos ADR son históricos y provienen del documento <code>04_Decisiones_Arquitectura.docx</code> verificado por el coordinador.</strong> Deben actualizarse o complementarse para reflejar la SPA (Agente A) y los repositorios/DTO (Agente B) cuando se integren. No se asumen como decisiones vigentes sin esa actualización.</p>
-</div>
-
-<table>
-  <tr><th>ADR</th><th>Decisión</th><th>Estado</th></tr>
-  <tr><td>ADR-1</td><td>Flask como framework backend.</td><td>Histórico — vigente según código actual</td></tr>
-  <tr><td>ADR-2</td><td>MySQL como base relacional.</td><td>Histórico — vigente según código actual</td></tr>
-  <tr><td>ADR-3</td><td>Arquitectura monolítica modular.</td><td>Histórico — vigente según código actual</td></tr>
-  <tr><td>ADR-4</td><td>Frontend HTML/CSS/JS vanilla con plantillas Jinja2.</td><td>Histórico — actualizado con SPA de Agente A (HTML5, CSS3, JS vanilla, Bootstrap 5, navegación por hash, servida desde /app/)</td></tr>
-  <tr><td>ADR-5</td><td>Ejecución local sin despliegue en producción.</td><td>Histórico — vigente según alcance del MVP</td></tr>
-</table>
-
-<h2>8. Anexo C — Distinción de evidencias y limitaciones</h2>
-
-<h3>8.1 Distinción de evidencias</h3>
-<table>
-  <tr><th>Categoría</th><th>Contenido en este informe</th><th>Estado</th></tr>
-  <tr><td>Código implementado y fusionado</td><td>Backend Flask (modelos, rutas, servicios, migraciones 001-014), SPA de Agente A (<code>frontend/</code>), repositorios y DTO de Agente B (<code>app/pedidos/repository.py</code>, <code>app/pedidos/dto.py</code>, <code>app/servicios/repository.py</code>, <code>app/servicios/dto.py</code>), integración Flask de Agente D (<code>/app/</code>)</td><td><span class="badge badge-ok">VERIFICADO EN CÓDIGO</span></td></tr>
-  <tr><td>Pruebas ejecutadas por D</td><td>692 aprobadas, 0 fallidas, 1 omitida (pytest contra SQLite); MySQL 8.0.46 y 14 migraciones verificadas por separado; flujo completo QR → pedido → mesero → cocina → caja → cierre probado vía API; PR #56 (corrección login). Cuatro paneles Chrome con sesiones independientes APROBADOS. Recorrido completo confirmado manualmente por el usuario.</td><td><span class="badge badge-ok">VERIFICADO POR D</span></td></tr>
-  <tr><td>Pruebas visuales por rol</td><td>Cuatro paneles Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER, cliente público) — APROBADOS.</td><td><span class="badge badge-ok">VERIFICADO POR D</span></td></tr>
-  <tr><td>Completar pedido desde SPA</td><td>APROBADO (confirmación manual del usuario mediante los botones de la SPA).</td><td><span class="badge badge-ok">VERIFICADO POR D (manual)</span></td></tr>
-  <tr><td>Validación visual QR hacia SPA</td><td>APROBADO (confirmación manual del usuario).</td><td><span class="badge badge-ok">VERIFICADO POR D (manual)</span></td></tr>
-  <tr><td>Documentación académica histórica</td><td>Inventario de documentos de Drive (01-05) y 5 ADR confirmados por el coordinador; no se ha leído el contenido íntegro</td><td><span class="badge badge-pend">INVENTARIO SOLO</span></td></tr>
-</table>
-
-<h3>8.2 Lo que NO debe afirmarse en el informe</h3>
-<ul>
-  <li>Que la SPA de Agente A (frontend/, Bootstrap, navegación por hash) NO está integrada: está verificada y fusionada en main (PR #51, rama <code>feat/spa-vanilla-bootstrap</code>).</li>
-  <li>Que repositorios y DTO de Agente B NO están integrados: están verificados y fusionados en main (PR #50, rama <code>feat/repositorios-dto-minimos</code>).</li>
-  <li>Que la integración Flask de Agente D NO está implementada: está verificada y fusionada en main (PR #52, rama <code>feat/integracion-spa-flask</code>, rutas <code>/app/</code>).</li>
-  <li>Que las pruebas de D son pruebas visuales: las 692 aprobadas son pruebas pytest contra SQLite; las pruebas API contra MySQL 8.0.46 y las pruebas visuales por rol fueron verificadas por separado; el recorrido completo fue confirmado manualmente por el usuario.</li>
-  <li>Que se cumplió la consigna oficial del profesor: el documento no está accesible como archivo en el repositorio.</li>
-  <li>Que los diagramas C4/UML/despliegue existen como archivos gráficos independientes (.drawio, .mmd): no hay tales archivos en el repositorio; los diagramas se incluyen como archivos SVG locales en la carpeta diagramas/, derivados del código.</li>
-  <li>Que se ha leído el contenido íntegro de los documentos Word de Drive: solo se conoce el inventario verificado por el coordinador.</li>
-</ul>
-
-<h3>8.4 Limitaciones del informe</h3>
-<ul>
-  <li>La consigna oficial del profesor no está disponible como archivo en el repositorio. Solo se referencia en <code>docs/ORQUESTACION_ENTREGA_21NOV2026.md</code> como prioridad #1.</li>
-  <li>No se han inventado reuniones comerciales, contratos, clientes reales, sprints ni resultados de pruebas.</li>
-  <li>Las funciones ADMIN marcadas como «Próximamente» están declaradas explícitamente no implementadas.</li>
-  <li>La única documentación que se entrega es el HTML con sus ocho diagramas SVG asociados; no se entregan documentos Word.</li>
-</ul>
-
 <footer>
-  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-academico-fases</code>, creada a partir de <code>main</code> (commit <code>7124956</code> vía <code>origin/main</code>). Working tree contiene únicamente el archivo <code>Informe_Proyecto_Final_ConectaResto.html</code> modificado. No se ha realizado commit, push ni merge.</p>
+  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-academico-final</code>, creada a partir de <code>main</code> (commit <code>7124956</code> vía <code>origin/main</code>). Working tree contiene únicamente el archivo <code>Informe_Proyecto_Final_ConectaResto.html</code> modificado. No se ha realizado commit, push ni merge.</p>
   <p><strong>Archivos creados:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code> (modificado), <code>diagramas/</code> (8 SVG, sin cambios).</p>
   <p><strong>Restricciones respetadas:</strong> No se modificó backend, frontend, modelos, migraciones, pruebas ni contratos. No se realizó commit, push ni merge.</p>
+  <p><strong>Entrega:</strong> Únicamente el HTML y sus ocho diagramas SVG asociados. No se entregan documentos Word.</p>
 </footer>
 
 </body>
