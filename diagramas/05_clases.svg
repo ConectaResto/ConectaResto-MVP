@@ -118,6 +118,6 @@
   <text x="200" y="395" font-family="Arial" font-size="10" fill="#666666">tiene un</text>
 
   <!-- usuarios -> pagos -->
-  <line x1="115" y1="190" x2="115" y2="420" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="330" y1="190" x2="115" y2="420" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="95" y="395" font-family="Arial" font-size="10" fill="#666666">registra</text>
 </svg>
