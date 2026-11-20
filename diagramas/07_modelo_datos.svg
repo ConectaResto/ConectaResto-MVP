@@ -112,7 +112,4 @@
 
   <line x1="330" y1="350" x2="115" y2="410" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="395" y="395" font-family="Arial" font-size="10" fill="#666666">1:1</text>
-
-  <line x1="115" y1="520" x2="470" y2="290" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="250" y="515" font-family="Arial" font-size="10" fill="#666666">1:N</text>
 </svg>

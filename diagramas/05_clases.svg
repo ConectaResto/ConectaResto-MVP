@@ -106,10 +106,4 @@
 
   <line x1="545" y1="370" x2="680" y2="300" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
   <text x="600" y="365" font-family="Arial" font-size="10" fill="#666666">incluye</text>
-
-  <line x1="330" y1="350" x2="115" y2="420" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="395" y="395" font-family="Arial" font-size="10" fill="#666666">tiene un</text>
-
-  <line x1="115" y1="520" x2="470" y2="290" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="250" y="515" font-family="Arial" font-size="10" fill="#666666">registra</text>
 </svg>

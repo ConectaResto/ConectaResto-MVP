@@ -40,6 +40,14 @@
   <p><strong>Repositorio:</strong> https://github.com/ConectaResto/ConectaResto-MVP</p>
 </div>
 
+<div class="evidence">
+  <p><strong>Equipo de desarrollo:</strong></p>
+  <ul>
+    <li><strong>Enriqu Alfonso — Backend:</strong> Python, Flask, API REST, modelos, servicios, repositorios, DTO y MySQL.</li>
+    <li><strong>Eric Camacho — Frontend:</strong> HTML5, CSS3, JavaScript Vanilla, Bootstrap, SPA, navegación e integración con la API REST.</li>
+  </ul>
+</div>
+
 <div class="section-nav">
   <h3>Índice</h3>
   <ul>
@@ -57,7 +65,7 @@
 <h2>1. Fase 01 — Gestión comercial y atención inicial</h2>
 
 <div class="evidence">
-  <p><strong>Evidencia verificada:</strong> <code>PLAN_DE_TRABAJO_MVP.md</code>, <code>docs/ORQUESTACION_ENTREGA_21NOV2026.md</code>.</p>
+  <p><strong>Evidencia verificada:</strong> <code>PLAN_DE_TRABAJO_MVP.md</code>.</p>
 </div>
 
 <p>ConectaResto-MVP es una aplicación académica de gestión de restaurantes para un único establecimiento, desarrollada con Python, Flask, MySQL 8 y HTML/CSS/JavaScript Vanilla. Permite gestionar mesas y productos, recibir pedidos mediante QR, autorizarlos, prepararlos y registrar pagos simulados.</p>
@@ -138,12 +146,13 @@
 <!-- ===================================================================== -->
 <h2>3. Fase 03 — Scrum, arquitectura y diseño</h2>
 
-<div class="evidence">
-  <p><strong>Evidencia verificada:</strong> <code>docs/ORQUESTACION_ENTREGA_21NOV2026.md</code>, código fuente en <code>app/</code>, contratos en <code>app/catalog/CONTRACT.md</code> y <code>app/pedidos/CONTRACT.md</code>, migraciones en <code>migrations/versions/001</code> a <code>014</code>.</p>
-</div>
-
-<h3>3.1 Metodología Scrum aplicada</h3>
-<p>El proyecto se desarrolla en un entorno de desarrollo asistido, con entregas integradas mediante Pull Requests sobre la rama <code>main</code> con aprobación conjunta del coordinador. Cada agente trabaja en su propia rama y no se modifica directamente <code>main</code>.</p>
+<h3>3.1 Organización del proyecto</h3>
+<p>El proyecto lo desarrollan dos integrantes:</p>
+<ul>
+  <li><strong>Enriqu Alfonso — Backend:</strong> Python, Flask, API REST, modelos, servicios, repositorios, DTO y MySQL.</li>
+  <li><strong>Eric Camacho — Frontend:</strong> HTML5, CSS3, JavaScript Vanilla, Bootstrap, SPA, navegación e integración con la API REST.</li>
+</ul>
+<p>El seguimiento de tareas se realiza mediante Jira. El control de versiones se gestiona con Git y GitHub. La integración de cambios se realiza mediante ramas independientes y Pull Requests sobre la rama <code>main</code>.</p>
 
 <h3>3.2 Arquitectura Flask actual</h3>
 <p>La aplicación sigue el patrón <strong>factory <code>create_app()</code></strong> con instancia <code>db</code> a nivel de módulo y migraciones mediante Flask-Migrate.</p>
@@ -240,6 +249,26 @@
       </div>
     </td>
   </tr>
+  <tr>
+    <td>Modelo de datos MySQL (ER)</td>
+    <td>10 tablas, relaciones, restricciones CHECK y únicas</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/07_modelo_datos.svg" alt="Modelo de Datos MySQL — ER">
+        <div class="diagram-caption">Modelo lógico y físico de MySQL</div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>Despliegue local</td>
+    <td>Navegador, servidor Flask, MySQL 8, sistema de archivos</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/08_despliegue.svg" alt="Diagrama de Despliegue Local">
+        <div class="diagram-caption">Diagrama de despliegue local</div>
+      </div>
+    </td>
+  </tr>
 </table>
 
 <h3>3.6 Decisiones de Arquitectura (ADR)</h3>
@@ -270,7 +299,7 @@
 <h2>4. Fase 04 — Preparación técnica</h2>
 
 <div class="evidence">
-  <p><strong>Evidencia verificada:</strong> <code>requirements.txt</code>, <code>AGENTS.md</code> §2, <code>README.md</code> §2, código fuente en <code>app/</code>.</p>
+  <p><strong>Evidencia verificada:</strong> <code>requirements.txt</code>, código fuente en <code>app/</code>.</p>
 </div>
 
 <h3>4.1 Stack tecnológico</h3>
@@ -470,9 +499,8 @@
 <!-- PIE DE PÁGINA                                                         -->
 <!-- ===================================================================== -->
 <footer>
-  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-academico-final</code>, creada a partir de <code>main</code> (commit <code>7124956</code> vía <code>origin/main</code>). Working tree contiene únicamente el archivo <code>Informe_Proyecto_Final_ConectaResto.html</code> modificado. No se ha realizado commit, push ni merge.</p>
-  <p><strong>Archivos creados:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code> (modificado), <code>diagramas/</code> (8 SVG, sin cambios).</p>
-  <p><strong>Restricciones respetadas:</strong> No se modificó backend, frontend, modelos, migraciones, pruebas ni contratos. No se realizó commit, push ni merge.</p>
+  <p><strong>ConectaResto-MVP</strong> — Informe académico final del MVP de gestión de restaurantes.</p>
+  <p><strong>Equipo:</strong> Enriqu Alfonso (Backend) y Eric Camacho (Frontend).</p>
   <p><strong>Entrega:</strong> Únicamente el HTML y sus ocho diagramas SVG asociados. No se entregan documentos Word.</p>
 </footer>
 
