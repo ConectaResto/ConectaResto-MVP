@@ -27,6 +27,9 @@
   .section-nav ul { list-style: none; padding: 0; columns: 3; }
   .section-nav li { margin: 4px 0; }
   .section-nav li::before { content: "▹"; color: #1a3a5c; font-weight: bold; display: inline-block; width: 10px; margin-left: -10px; }
+  .diagram-container { text-align: center; margin: 20px 0; border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #fff; }
+  .diagram-container img { max-width: 100%; height: auto; border-radius: 4px; }
+  .diagram-caption { font-style: italic; color: #666; margin-top: 8px; font-size: 0.9em; }
   footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 0.9em; color: #666; text-align: center; }
 </style>
 </head>
@@ -185,9 +188,9 @@
   <li><code>PERMANENT_SESSION_LIFETIME = timedelta(hours=8)</code></li>
   <li><code>SECRET_KEY</code> desde variable de entorno.</li>
   <li><code>SQLALCHEMY_DATABASE_URI</code> desde <code>DATABASE_URL</code>.</li>
-  <li><code>SQLALCHEMY_ENGINE_OPTIONS</code>: <code>pool_pre_ping = True</code>, <code>pool_recycle = 3600</code>.</li>
-  <li><code>TestingConfig</code>: usa SQLite en memoria por defecto.</li>
-  <li><code>ProductionConfig</code>: <code>SESSION_COOKIE_SECURE = True</code> y exige <code>SECRET_KEY</code> segura.</li>
+  <li><code>SQLALCHEMY_ENGINE_OPTIONS</code>: <code>pool_pre_ping = True</code>, <code>pool_recycle = 3600</code></li>
+  <li><code>TestingConfig</code>: usa SQLite en memoria por defecto</li>
+  <li><code>ProductionConfig</code>: <code>SESSION_COOKIE_SECURE = True</code> y exige <code>SECRET_KEY</code> segura</li>
 </ul>
 
 <h3>3.3 Arquitectura modular por capas</h3>
@@ -204,20 +207,92 @@
 
 <h3>3.4 Diagramas C4</h3>
 <table>
-  <tr><th>Diagrama</th><th>Contenido</th><th>Archivo SVG</th></tr>
-  <tr><td>C4 de Contexto</td><td>Actores (cliente público, mesero, cocina, caja, administrador) y sistema ConectaResto-MVP</td><td><code>diagramas/01_contexto.svg</code></td></tr>
-  <tr><td>C4 de Contenedores</td><td>Navegador, SPA, Flask, MySQL 8, sistema de archivos</td><td><code>diagramas/02_contenedores.svg</code></td></tr>
-  <tr><td>C4 de Componentes</td><td>Blueprints, repositorios, DTO, modelos, extensiones, configuración</td><td><code>diagramas/03_componentes.svg</code></td></tr>
+  <tr><th>Diagrama</th><th>Contenido</th><th>Visualización</th></tr>
+  <tr>
+    <td>C4 de Contexto</td>
+    <td>Actores (cliente público, mesero, cocina, caja, administrador) y sistema ConectaResto-MVP</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/01_contexto.svg" alt="C4 — Diagrama de Contexto">
+        <div class="diagram-caption">C4 de Contexto — Actores y sistema</div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>C4 de Contenedores</td>
+    <td>Navegador, SPA, Flask, MySQL 8, sistema de archivos</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/02_contenedores.svg" alt="C4 — Diagrama de Contenedores">
+        <div class="diagram-caption">C4 de Contenedores — Componentes del sistema</div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>C4 de Componentes</td>
+    <td>Blueprints, repositorios, DTO, modelos, extensiones, configuración</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/03_componentes.svg" alt="C4 — Diagrama de Componentes">
+        <div class="diagram-caption">C4 de Componentes — Arquitectura de componentes</div>
+      </div>
+    </td>
+  </tr>
 </table>
 
 <h3>3.5 Diagramas UML y arquitectura lógica</h3>
 <table>
-  <tr><th>Diagrama</th><th>Contenido</th><th>Archivo SVG</th></tr>
-  <tr><td>Clases / Entidades del dominio</td><td>Roles, usuarios, categorías, productos, mesas, servicios, pedidos, detalles de pedido, pagos</td><td><code>diagramas/05_clases.svg</code></td></tr>
-  <tr><td>Arquitectura por capas</td><td>Capas de presentación, API, aplicación, repositorios, DTO, dominio y datos</td><td><code>diagramas/04_capas.svg</code></td></tr>
-  <tr><td>Secuencia (pedido QR hasta cierre)</td><td>Flujo completo desde el cliente hasta el cierre de servicio</td><td><code>diagramas/06_secuencia.svg</code></td></tr>
-  <tr><td>Modelo de datos MySQL (ER)</td><td>10 tablas, relaciones, restricciones CHECK y únicas</td><td><code>diagramas/07_modelo_datos.svg</code></td></tr>
-  <tr><td>Despliegue local</td><td>Navegador, servidor Flask, MySQL 8, sistema de archivos</td><td><code>diagramas/08_despliegue.svg</code></td></tr>
+  <tr><th>Diagrama</th><th>Contenido</th><th>Visualización</th></tr>
+  <tr>
+    <td>Clases / Entidades del dominio</td>
+    <td>Roles, usuarios, categorías, productos, mesas, servicios, pedidos, detalles de pedido, pagos</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/05_clases.svg" alt="Diagrama de Clases — Entidades del Dominio">
+        <div class="diagram-caption">Diagrama de clases / entidades del dominio</div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>Arquitectura por capas</td>
+    <td>Capas de presentación, API, aplicación, repositorios, DTO, dominio y datos</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/04_capas.svg" alt="Arquitectura por Capas">
+        <div class="diagram-caption">Arquitectura modular por capas</div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>Secuencia (pedido QR hasta cierre)</td>
+    <td>Flujo completo desde el cliente hasta el cierre de servicio</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/06_secuencia.svg" alt="Diagrama de Secuencia — Pedido QR hasta Cierre">
+        <div class="diagram-caption">Diagrama de secuencia del flujo completo</div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>Modelo de datos MySQL (ER)</td>
+    <td>10 tablas, relaciones, restricciones CHECK y únicas</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/07_modelo_datos.svg" alt="Modelo de Datos MySQL — ER">
+        <div class="diagram-caption">Modelo lógico y físico de MySQL</div>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td>Despliegue local</td>
+    <td>Navegador, servidor Flask, MySQL 8, sistema de archivos</td>
+    <td>
+      <div class="diagram-container">
+        <img src="diagramas/08_despliegue.svg" alt="Diagrama de Despliegue Local">
+        <div class="diagram-caption">Diagrama de despliegue local</div>
+      </div>
+    </td>
+  </tr>
 </table>
 
 <h3>3.6 Atributos de calidad</h3>
@@ -300,7 +375,122 @@
 <h3>5.3 Bloqueo de concurrencia</h3>
 <p>Las operaciones de pedido y caja utilizan bloqueo de fila (<code>with_for_update()</code>) en MySQL para serializar accesos concurrentes. La función <code>bloquear_servicio()</code> bloquea la mesa y el servicio antes de leer, y el commit/rollback es atómico.</p>
 
-<h3>5.4 Resultados de pruebas ejecutadas por Agente D</h3>
+<h3>5.4 Modelo de datos MySQL — Tablas y relaciones</h3>
+<div class="evidence">
+  <p><strong>Evidencia verificada:</strong> <code>app/models/*.py</code>, migraciones <code>migrations/versions/001</code> a <code>014</code> (HEAD: <code>014_add_image_filename_to_products</code>), <code>app/catalog/CONTRACT.md</code> §Modelo.</p>
+</div>
+
+<p>El esquema físico se gestiona mediante 14 migraciones versionadas de Flask-Migrate. Todas las tablas heredan de <code>BaseModel</code> con columnas <code>id</code> (PK), <code>created_at</code> y <code>updated_at</code>.</p>
+
+<table>
+  <tr><th>Tabla</th><th>Columnas principales</th><th>Relaciones / restricciones</th></tr>
+  <tr><td><code>roles</code></td><td><code>id</code>, <code>name</code> (unique), <code>description</code></td><td>Roles: ADMIN, WAITER, KITCHEN, CASHIER.</td></tr>
+  <tr><td><code>usuarios</code></td><td><code>id</code>, <code>username</code> (unique), <code>email</code> (unique), <code>password_hash</code>, <code>rol_id</code> FK, <code>is_active</code></td><td>FK a <code>roles.id</code>. Un usuario tiene un rol.</td></tr>
+  <tr><td><code>categories</code></td><td><code>id</code>, <code>name</code> (unique, collation utf8mb4_0900_ai_ci), <code>description</code>, <code>is_active</code></td><td>Nombre único sin distinguir mayúsculas/acentos.</td></tr>
+  <tr><td><code>products</code></td><td><code>id</code>, <code>name</code>, <code>description</code>, <code>price</code> NUMERIC(10,2), <code>categoria_id</code> FK, <code>is_active</code>, <code>is_available</code>, <code>image_filename</code></td><td>FK a <code>categories.id</code>. Nombre único por categoría. Precio como Decimal serializado como cadena.</td></tr>
+  <tr><td><code>mesas</code></td><td><code>id</code>, <code>numero</code> (unique, &gt;0), <code>estado</code> (DISPONIBLE/OCUPADA/CERRADA), <code>public_token</code> (unique, 64 hex)</td><td>Token público estable entre servicios para menú QR.</td></tr>
+  <tr><td><code>servicios</code></td><td><code>id</code>, <code>mesa_id</code> FK, <code>abierto_por_id</code> FK nullable, <code>estado</code> (ACTIVO/CERRADO), columna generada <code>estado_activo</code></td><td>Índice único parcial <code>uq_servicios_una_activa_por_mesa</code> (solo un ACTIVO por mesa). FK a <code>mesas.id</code> y <code>usuarios.id</code>.</td></tr>
+  <tr><td><code>pedidos</code></td><td><code>id</code>, <code>servicio_id</code> FK, <code>origen</code> (MESERO/PUBLICO), <code>creado_por_id</code> FK, <code>autorizado_por_id</code> FK, <code>autorizado_at</code>, <code>estado</code>, <code>estado_preparacion</code></td><td>FK a <code>servicios.id</code> y <code>usuarios.id</code>. Check constraints en estados y origen.</td></tr>
+  <tr><td><code>detalles_pedido</code></td><td><code>id</code>, <code>pedido_id</code> FK, <code>producto_id</code> FK, <code>cantidad</code>, <code>precio_unitario</code> NUMERIC(10,2)</td><td>FK a <code>pedidos.id</code> y <code>products.id</code>. Precio capturado al crear el pedido.</td></tr>
+  <tr><td><code>pagos</code></td><td><code>id</code>, <code>servicio_id</code> (unique) FK, <code>registrado_por_id</code> FK, <code>importe</code> NUMERIC(10,2) (&gt;0), <code>fecha_registro</code></td><td>FK a <code>servicios.id</code> y <code>usuarios.id</code>. Un pago por servicio.</td></tr>
+</table>
+
+<h3>5.5 Estados de pedido y preparación</h3>
+<table>
+  <tr><th>Acción</th><th>Estado del pedido</th><th>Estado de preparación</th><th>Rol</th></tr>
+  <tr><td>Crear</td><td>PENDIENTE</td><td>NO_ENVIADO</td><td>WAITER / Público</td></tr>
+  <tr><td>Autorizar</td><td>PENDIENTE</td><td>NO_ENVIADO</td><td>WAITER</td></tr>
+  <tr><td>Enviar a cocina</td><td>EN_PREPARACION</td><td>RECIBIDO</td><td>WAITER</td></tr>
+  <tr><td>Cocina comienza</td><td>EN_PREPARACION</td><td>EN_COCINA</td><td>KITCHEN</td></tr>
+  <tr><td>Cocina termina</td><td>LISTO</td><td>LISTO_PARA_SERVIR</td><td>KITCHEN</td></tr>
+  <tr><td>Mesero entrega</td><td>ENTREGADO</td><td>LISTO_PARA_SERVIR</td><td>WAITER</td></tr>
+</table>
+
+<h3>5.6 Endpoints REST existentes</h3>
+<div class="evidence">
+  <p><strong>Evidencia verificada:</strong> <code>app/pedidos/CONTRACT.md</code>, <code>app/catalog/CONTRACT.md</code>, <code>docs/ESTADO_CIERRE_MVP.md</code> (tabla de rutas contrastadas), código fuente de rutas.</p>
+</div>
+
+<table>
+  <tr><th>Método</th><th>Ruta</th><th>Rol</th><th>Descripción</th></tr>
+  <tr><td>GET</td><td><code>/health</code></td><td>Público</td><td>Health check (HTTP 200).</td></tr>
+  <tr><td>GET</td><td><code>/auth/csrf</code></td><td>Público</td><td>Obtiene token CSRF.</td></tr>
+  <tr><td>POST</td><td><code>/auth/login</code></td><td>Público</td><td>Inicia sesión (username/password).</td></tr>
+  <tr><td>POST</td><td><code>/auth/logout</code></td><td>Autenticado</td><td>Cierra sesión.</td></tr>
+  <tr><td>GET</td><td><code>/auth/me</code></td><td>Autenticado</td><td>Usuario actual.</td></tr>
+  <tr><td>GET</td><td><code>/users</code></td><td>ADMIN</td><td>Lista usuarios.</td></tr>
+  <tr><td>GET</td><td><code>/users/&lt;id&gt;</code></td><td>ADMIN</td><td>Consulta usuario.</td></tr>
+  <tr><td>POST</td><td><code>/users</code></td><td>ADMIN</td><td>Crea usuario.</td></tr>
+  <tr><td>PATCH</td><td><code>/users/&lt;id&gt;</code></td><td>ADMIN</td><td>Actualiza/reactiva usuario.</td></tr>
+  <tr><td>DELETE</td><td><code>/users/&lt;id&gt;</code></td><td>ADMIN</td><td>Desactiva usuario lógicamente.</td></tr>
+  <tr><td>GET</td><td><code>/categories</code></td><td>Público</td><td>Lista categorías activas.</td></tr>
+  <tr><td>POST</td><td><code>/categories</code></td><td>ADMIN</td><td>Crea categoría.</td></tr>
+  <tr><td>GET</td><td><code>/categories/&lt;id&gt;</code></td><td>Público</td><td>Consulta categoría activa.</td></tr>
+  <tr><td>PATCH</td><td><code>/categories/&lt;id&gt;</code></td><td>ADMIN</td><td>Actualiza/reactiva categoría.</td></tr>
+  <tr><td>DELETE</td><td><code>/categories/&lt;id&gt;</code></td><td>ADMIN</td><td>Desactiva categoría lógicamente.</td></tr>
+  <tr><td>GET</td><td><code>/products</code></td><td>Público</td><td>Lista productos disponibles (filtro ?categoria_id).</td></tr>
+  <tr><td>GET</td><td><code>/admin/products</code></td><td>ADMIN</td><td>Lista productos (incluye no disponibles).</td></tr>
+  <tr><td>POST</td><td><code>/products</code></td><td>ADMIN</td><td>Crea producto.</td></tr>
+  <tr><td>GET</td><td><code>/products/&lt;id&gt;</code></td><td>Público</td><td>Consulta producto disponible.</td></tr>
+  <tr><td>PATCH</td><td><code>/products/&lt;id&gt;</code></td><td>ADMIN</td><td>Actualiza producto.</td></tr>
+  <tr><td>DELETE</td><td><code>/products/&lt;id&gt;</code></td><td>ADMIN</td><td>Desactiva producto lógicamente.</td></tr>
+  <tr><td>PUT/DELETE</td><td><code>/products/&lt;id&gt;/image</code></td><td>ADMIN</td><td>Sube/elimina imagen de producto.</td></tr>
+  <tr><td>GET</td><td><code>/products/&lt;id&gt;/image</code></td><td>Público</td><td>Sirve imagen de producto.</td></tr>
+  <tr><td>GET</td><td><code>/mesas</code></td><td>WAITER</td><td>Lista mesas con filtros.</td></tr>
+  <tr><td>GET</td><td><code>/admin/mesas</code></td><td>ADMIN</td><td>Lista mesas con token público.</td></tr>
+  <tr><td>POST</td><td><code>/admin/mesas</code></td><td>ADMIN</td><td>Crea mesa.</td></tr>
+  <tr><td>GET/PATCH</td><td><code>/admin/mesas/&lt;id&gt;</code></td><td>ADMIN</td><td>Consulta/actualiza mesa.</td></tr>
+  <tr><td>GET</td><td><code>/admin/mesas/&lt;id&gt;/qr.svg</code></td><td>ADMIN</td><td>Genera QR SVG de la mesa.</td></tr>
+  <tr><td>GET</td><td><code>/public/mesas/&lt;token&gt;</code></td><td>Público</td><td>JSON con número y enlaces al menú.</td></tr>
+  <tr><td>GET</td><td><code>/public/mesas/&lt;token&gt;/menu</code></td><td>Público</td><td>Menú público por categorías.</td></tr>
+  <tr><td>POST</td><td><code>/public/mesas/&lt;token&gt;/pedidos</code></td><td>Público + CSRF</td><td>Crea pedido público (apertura automática si es necesario).</td></tr>
+  <tr><td>POST</td><td><code>/servicios</code></td><td>WAITER</td><td>Abre servicio para una mesa.</td></tr>
+  <tr><td>GET</td><td><code>/servicios</code></td><td>WAITER, CASHIER</td><td>Lista servicios (filtro ?estado=ACTIVO/CERRADO).</td></tr>
+  <tr><td>GET</td><td><code>/servicios/&lt;id&gt;</code></td><td>WAITER, CASHIER</td><td>Consulta servicio con pedidos, total y pago.</td></tr>
+  <tr><td>POST</td><td><code>/servicios/&lt;id&gt;/pago-simulado</code></td><td>CASHIER</td><td>Registra pago simulado.</td></tr>
+  <tr><td>POST</td><td><code>/servicios/&lt;id&gt;/cerrar</code></td><td>CASHIER</td><td>Cierra servicio y libera mesa.</td></tr>
+  <tr><td>POST</td><td><code>/servicios/&lt;id&gt;/pedidos</code></td><td>WAITER</td><td>Crea pedido interno.</td></tr>
+  <tr><td>GET</td><td><code>/pedidos</code></td><td>WAITER, KITCHEN</td><td>Lista pedidos (filtro ?estado).</td></tr>
+  <tr><td>GET</td><td><code>/pedidos/&lt;id&gt;</code></td><td>WAITER, KITCHEN</td><td>Consulta pedido con detalles y precios históricos.</td></tr>
+  <tr><td>POST</td><td><code>/pedidos/&lt;id&gt;/autorizar</code></td><td>WAITER</td><td>Autoriza pedido pendiente.</td></tr>
+  <tr><td>POST</td><td><code>/pedidos/&lt;id&gt;/enviar-cocina</code></td><td>WAITER</td><td>Envía a cocina (estado EN_PREPARACION).</td></tr>
+  <tr><td>PATCH</td><td><code>/pedidos/&lt;id&gt;/preparacion</code></td><td>KITCHEN</td><td>Actualiza estado de preparación.</td></tr>
+  <tr><td>POST</td><td><code>/pedidos/&lt;id&gt;/entregar</code></td><td>WAITER</td><td>Marca pedido como entregado.</td></tr>
+</table>
+
+<p class="code">Formato de respuesta JSON: <code>{"success": true, "data": ..., "message": ...}</code> para éxito; <code>{"success": false, "error": ..., "errors": ...}</code> para error. Los precios se serializan como cadena con dos decimales para preservar precisión Decimal.</p>
+
+<h3>5.7 Autenticación, autorización y CSRF</h3>
+<div class="evidence">
+  <p><strong>Evidencia verificada:</strong> <code>app/auth/routes.py</code>, <code>app/auth/service.py</code>, <code>app/auth/decorators.py</code>, <code>app/auth/csrf.py</code>, <code>app/config.py</code>, <code>app/models/usuario.py</code>.</p>
+</div>
+
+<h4>5.7.1 Autenticación</h4>
+<ul>
+  <li>Login mediante <code>POST /auth/login</code> con <code>username</code> y <code>password</code>.</li>
+  <li>Contraseñas hasheadas con Werkzeug (<code>generate_password_hash</code> / <code>check_password_hash</code>).</li>
+  <li>Sesión basada en cookies Flask con <code>session["user_id"]</code> y <code>session["authenticated_at"]</code>.</li>
+  <li>Cookie de sesión: HttpOnly, SameSite=Lax, expiración absoluta de 8 horas (<code>PERMANENT_SESSION_LIFETIME</code>).</li>
+  <li><code>SESSION_REFRESH_EACH_REQUEST = False</code> (la sesión no se renueva en cada petición).</li>
+</ul>
+
+<h4>5.7.2 Autorización por rol</h4>
+<ul>
+  <li>Decorador <code>login_required</code>: devuelve 401 si no hay sesión.</li>
+  <li>Decorador <code>roles_required(*roles)</code>: combina <code>login_required</code> y verifica que el rol del usuario esté en la lista permitida (403 si no coincide).</li>
+  <li>ADMIN no hereda acceso automático a KITCHEN/CASHIER; los permisos son explícitos por endpoint.</li>
+  <li>El cierre de servicio corresponde a CASHIER; WAITER no realiza cierre de caja.</li>
+</ul>
+
+<h4>5.7.3 Protección CSRF</h4>
+<ul>
+  <li>Token CSRF generado por sesión (<code>secrets.token_hex(32)</code>) y obtenido mediante <code>GET /auth/csrf</code>.</li>
+  <li>Middleware <code>protect_csrf</code> aplicado en <code>before_request</code>; exige encabezado <code>X-CSRF-Token</code> en métodos no seguros (POST, PATCH, PUT, DELETE).</li>
+  <li>Lista de exenciones CSRF vacía (<code>CSRF_EXEMPT_ENDPOINTS = frozenset()</code>): ninguna ruta está exenta.</li>
+  <li>Comparación constante con <code>hmac.compare_digest</code>.</li>
+</ul>
+
+<h3>5.8 Resultados de pruebas ejecutadas por Agente D</h3>
 <div class="evidence">
   <p><strong>Evidencia verificada:</strong> Resultados ejecutados por Agente D en las cinco fases de su entrega, incluyendo pruebas pytest contra SQLite y pruebas API contra MySQL 8.0.46 con 14 migraciones aplicadas.</p>
 </div>
@@ -317,7 +507,7 @@
 
 <p class="warning"><strong>No se presentan pruebas API como pruebas visuales.</strong> Las 692 pruebas pytest fueron ejecutadas contra SQLite; MySQL 8.0.46 y las 14 migraciones se verificaron por separado. Las pruebas visuales por rol y la confirmación del recorrido completo son evidencias manuales del usuario, no pruebas automatizadas.</p>
 
-<h3>5.5 Confirmación manual del usuario</h3>
+<h3>5.9 Confirmación manual del usuario</h3>
 <div class="evidence">
   <p><strong>Confirmación manual (no prueba automatizada):</strong> El usuario confirmó manualmente el funcionamiento completo del recorrido del restaurante: apertura del QR en la SPA, menú visible, cuatro paneles en Chrome con sesiones independientes (ADMIN, WAITER, KITCHEN, CASHIER), flujo completo QR → pedido → mesero → cocina → caja → cierre.</p>
 </div>
@@ -382,7 +572,7 @@
   <li>Que se ha leído el contenido íntegro de los documentos Word de Drive: solo se conoce el inventario verificado por el coordinador.</li>
 </ul>
 
-<h3>8.3 Limitaciones del informe</h3>
+<h3>8.4 Limitaciones del informe</h3>
 <ul>
   <li>La consigna oficial del profesor no está disponible como archivo en el repositorio. Solo se referencia en <code>docs/ORQUESTACION_ENTREGA_21NOV2026.md</code> como prioridad #1.</li>
   <li>No se han inventado reuniones comerciales, contratos, clientes reales, sprints ni resultados de pruebas.</li>
