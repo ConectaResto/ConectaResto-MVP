@@ -38,7 +38,7 @@
 
   <!-- 2: GET /public/mesas/<token>/menu -->
   <line x1="350" y1="120" x2="450" y2="120" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="390" y="112" font-family="Arial" font-size="10" fill="#333333">2. GET /public/mesas/<token>/menu</text>
+  <text x="390" y="112" font-family="Arial" font-size="10" fill="#333333">2. GET /public/mesas/&lt;token&gt;/menu</text>
 
   <!-- 3: Consultar mesa -->
   <line x1="450" y1="140" x2="450" y2="160" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -58,7 +58,7 @@
 
   <!-- 7: POST /public/mesas/<token>/pedidos -->
   <line x1="350" y1="260" x2="450" y2="260" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="390" y="252" font-family="Arial" font-size="10" fill="#333333">7. POST /public/mesas/<token>/pedidos (CSRF)</text>
+  <text x="390" y="252" font-family="Arial" font-size="10" fill="#333333">7. POST /public/mesas/&lt;token&gt;/pedidos (CSRF)</text>
 
   <!-- 8: Buscar servicio ACTIVO -->
   <line x1="450" y1="280" x2="450" y2="300" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -78,7 +78,7 @@
 
   <!-- 12: Mesero autoriza -->
   <line x1="550" y1="420" x2="350" y2="420" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="420" y="412" font-family="Arial" font-size="10" fill="#333333">12. POST /pedidos/<id>/autorizar</text>
+  <text x="420" y="412" font-family="Arial" font-size="10" fill="#333333">12. POST /pedidos/&lt;id&gt;/autorizar</text>
 
   <!-- 13: Bloquear fila -->
   <line x1="350" y1="440" x2="450" y2="440" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -94,7 +94,7 @@
 
   <!-- 16: Mesero envía a cocina -->
   <line x1="550" y1="520" x2="350" y2="520" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="420" y="512" font-family="Arial" font-size="10" fill="#333333">16. POST /pedidos/<id>/enviar-cocina</text>
+  <text x="420" y="512" font-family="Arial" font-size="10" fill="#333333">16. POST /pedidos/&lt;id&gt;/enviar-cocina</text>
 
   <!-- 17: Estado EN_PREPARACION -->
   <line x1="350" y1="540" x2="450" y2="540" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -118,7 +118,7 @@
 
   <!-- 22: Mesero entrega -->
   <line x1="550" y1="640" x2="350" y2="640" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="420" y="632" font-family="Arial" font-size="10" fill="#333333">22. POST /pedidos/<id>/entregar</text>
+  <text x="420" y="632" font-family="Arial" font-size="10" fill="#333333">22. POST /pedidos/&lt;id&gt;/entregar</text>
 
   <!-- 23: Pedido ENTREGADO -->
   <line x1="350" y1="660" x2="450" y2="660" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
@@ -126,11 +126,11 @@
 
   <!-- 24: Caja paga -->
   <line x1="750" y1="680" x2="350" y2="680" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="520" y="672" font-family="Arial" font-size="10" fill="#333333">24. POST /servicios/<id>/pago-simulado</text>
+  <text x="520" y="672" font-family="Arial" font-size="10" fill="#333333">24. POST /servicios/&lt;id&gt;/pago-simulado</text>
 
   <!-- 25: Caja cierra -->
   <line x1="750" y1="700" x2="350" y2="700" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="520" y="692" font-family="Arial" font-size="10" fill="#333333">25. POST /servicios/<id>/cerrar</text>
+  <text x="520" y="692" font-family="Arial" font-size="10" fill="#333333">25. POST /servicios/&lt;id&gt;/cerrar</text>
 
   <!-- 26: Mesa DISPONIBLE -->
   <line x1="350" y1="720" x2="550" y2="720" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
