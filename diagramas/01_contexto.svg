@@ -41,9 +41,9 @@
   <line x1="130" y1="290" x2="200" y2="300" stroke="#333333" stroke-width="2" marker-end="url(#arrow)"/>
 
   <!-- Labels on relationships -->
-  <text x="180" y="155" font-family="Arial" font-size="10" fill="#666666">Escanea QR, consulta menú, pide</text>
-  <text x="320" y="155" font-family="Arial" font-size="10" fill="#666666">Gestiona pedidos, mesas</text>
-  <text x="450" y="155" font-family="Arial" font-size="10" fill="#666666">Prepara pedidos</text>
-  <text x="650" y="155" font-family="Arial" font-size="10" fill="#666666">Registra pagos, cierra caja</text>
-  <text x="150" y="295" font-family="Arial" font-size="10" fill="#666666">Gestiona usuarios, productos, mesas</text>
+  <text x="180" y="140" font-family="Arial" font-size="10" fill="#666666" text-anchor="middle">Escanea QR, consulta menú, pide</text>
+  <text x="320" y="140" font-family="Arial" font-size="10" fill="#666666" text-anchor="middle">Gestiona pedidos, mesas</text>
+  <text x="450" y="140" font-family="Arial" font-size="10" fill="#666666" text-anchor="middle">Prepara pedidos</text>
+  <text x="650" y="140" font-family="Arial" font-size="10" fill="#666666" text-anchor="middle">Registra pagos, cierra caja</text>
+  <text x="150" y="285" font-family="Arial" font-size="10" fill="#666666" text-anchor="middle">Gestiona usuarios, productos, mesas</text>
 </svg>
