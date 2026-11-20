@@ -547,14 +547,14 @@
 <h2>13. Secciones pendientes de evidencia</h2>
 
 <div class="pending">
-  <p>Las siguientes secciones del informe académico <strong>no pueden completarse</strong> hasta que el coordinador proporcione las fuentes faltantes o los agentes A y B completen sus implementaciones. No se ha inventado contenido para estas secciones.</p>
+  <p>Las siguientes secciones del informe académico no pueden completarse hasta que el coordinador proporcione las fuentes faltantes. No se ha inventado contenido para estas secciones.</p>
 </div>
 
 <table>
   <tr><th>Sección pendiente</th><th>Fuente requerida</th><th>Estado</th></tr>
   <tr><td>Consigna oficial del profesor (referencia obligatoria para fases 01-05)</td><td>Documento proporcionado por el coordinador</td><td><span class="badge badge-pend">NO ACCESIBLE</span></td></tr>
   <tr><td>Contenido íntegro de los cinco documentos Word de Drive</td><td>Documentos verificados por el coordinador (solo inventario disponible)</td><td><span class="badge badge-pend">PENDIENTE DE LECTURA ÍNTEGRA</span></td></tr>
-  <tr><td>Tickets Jira CRMVP-1 a CRMVP-14 (evidencias históricas)</td><td>https://conectarestoteam.atlassian.net, proyecto CRMVP</td><td><span class="badge badge-pend">ESPACIO Jira DIFERENTE (SCRUM solo)</span></td></tr>
+  <tr><td>Tickets Jira CRMVP-1 a CRMVP-14 (evidencias históricas)</td><td>Proyecto CRMVP en Jira, disponible en el entorno del coordinador</td><td><span class="badge badge-pend">PENDIENTE DE ACCESO</span></td></tr>
   <tr><td>Diagramas C4 (contexto, contenedores, componentes)</td><td>Creados en el informe HTML, derivados del código (sección 10.1 a 10.3)</td><td><span class="badge badge-ok">CREADOS (HTML)</span></td></tr>
   <tr><td>Diagrama UML de clases / entidades del dominio</td><td>Creado en el informe HTML, derivado de modelos ORM y migraciones (sección 10.5)</td><td><span class="badge badge-ok">CREADO (HTML)</span></td></tr>
   <tr><td>Diagrama de arquitectura por capas</td><td>Creado en el informe HTML, derivado del código (sección 10.4)</td><td><span class="badge badge-ok">CREADO (HTML)</span></td></tr>
@@ -582,16 +582,13 @@
 <ul>
   <li>Consigna oficial del profesor (referencia principal, prioridad 1 según <code>docs/ORQUESTACION_ENTREGA_21NOV2026.md</code>).</li>
   <li>Contenido íntegro de los cinco documentos Word de Google Drive (verificados por el coordinador, pero no leídos por el Agente C).</li>
-  <li>Acceso al proyecto Jira CRMVP (tickets CRMVP-1 a CRMVP-14) o sus documentos/evidencias.</li>
-  <li>Implementaciones de Agente A (SPA) y Agente B (repositorios/DTO) para actualizar ADR y reflejar el estado final.</li>
-  <li>Autorización del coordinador para crear diagramas faltantes y completar secciones pendientes.</li>
 </ul>
 
 <footer>
-  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-final-academico</code>, creada a partir de <code>main</code>. Commit <code>22e9020</code> (docs: cerrar informe académico con estado final del proyecto y PR #57). PR #57 fusionado en main (commit <code>cc76c26</code>). Working tree contiene únicamente el archivo <code>Informe_Proyecto_Final_ConectaResto.html</code> modificado. No se ha realizado commit, push ni merge.</p>
+  <p><strong>Estado de Git:</strong> Rama <code>docs/informe-final-academico</code>, creada a partir de <code>main</code>. Commit <code>1a594ab</code> (docs: corregir contradicciones en informe y reflejar confirmación manual de usuario). PR #57 fusionado en main (commit <code>cc76c26</code>). Working tree limpio.</p>
   <p><strong>Archivos creados:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code>, <code>diagramas/</code> (8 SVG).</p>
-  <p><strong>Archivos modificados en esta sesión:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code> (estado final del proyecto, confirmación manual del usuario, PR #57, corrección de afirmaciones sobre integración A/B/D).</p>
-  <p><strong>Restricciones respetadas:</strong> No se modificó backend, frontend, modelos, migraciones, pruebas ni contratos. No se realizó commit, push ni merge.</p>
+  <p><strong>Archivos modificados en esta sesión:</strong> <code>Informe_Proyecto_Final_ConectaResto.html</code> (corrección de contradicciones, confirmación manual del usuario, PR #57, actualización de estado de Git).</p>
+  <p><strong>Restricciones respetadas:</strong> No se modificó backend, frontend, modelos, migraciones, pruebas ni contratos. No se realizó merge.</p>
   <p><strong>Clasificación de evidencias en este informe:</strong></p>
   <ul>
     <li><strong>Respaldadas por código:</strong> secciones 1 a 9 y 10 (arquitectura, modelos, endpoints, seguridad, flujo, SPA de Agente A, repositorios/DTO de Agente B, integración Flask de Agente D, PR #57 en main, y diagramas arquitectónicos derivados del código).</li>
