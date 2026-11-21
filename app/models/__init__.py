@@ -1,23 +1,10 @@
-from app.models.base import BaseModel
-from app.models.category import Category
-from app.models.detalle_pedido import DetallePedido
-from app.models.mesa import Mesa
-from app.models.pago import Pago
-from app.models.pedido import Pedido
-from app.models.product import Product
-from app.models.rol import Rol
-from app.models.servicio import Servicio
-from app.models.usuario import Usuario
+"""Shared model infrastructure and SQLAlchemy registration."""
 
-__all__ = [
-    "BaseModel",
-    "Category",
-    "Product",
-    "Rol",
-    "Usuario",
-    "Mesa",
-    "Servicio",
-    "Pedido",
-    "DetallePedido",
-    "Pago",
-]
+
+def register_models():
+    """Import each domain's models so SQLAlchemy can resolve all mappings."""
+    import app.catalog.models  # noqa: F401
+    import app.mesas.models  # noqa: F401
+    import app.pedidos.models  # noqa: F401
+    import app.servicios.models  # noqa: F401
+    import app.users.models  # noqa: F401

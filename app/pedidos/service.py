@@ -2,7 +2,10 @@ from datetime import datetime, timezone
 
 from app.catalog.service import get_product
 from app.extensions import db
-from app.models import DetallePedido, Mesa, Pago, Pedido, Servicio, Usuario
+from app.mesas.models import Mesa
+from app.pedidos.models import DetallePedido, Pedido
+from app.servicios.models import Pago, Servicio
+from app.users.models import Usuario
 from app.pedidos.repository import PedidoRepository
 
 

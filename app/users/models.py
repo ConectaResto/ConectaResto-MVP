@@ -1,6 +1,17 @@
+from werkzeug.security import generate_password_hash, check_password_hash
+
 from app.extensions import db
 from app.models.base import BaseModel
-from werkzeug.security import generate_password_hash, check_password_hash
+
+
+class Rol(BaseModel):
+    __tablename__ = "roles"
+
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    def __repr__(self):
+        return f"<Rol {self.name}>"
 
 
 class Usuario(BaseModel):

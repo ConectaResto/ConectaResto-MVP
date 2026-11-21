@@ -2,7 +2,7 @@ import pytest
 
 from app.auth.decorators import roles_required
 from app.extensions import db
-from app.models import Rol, Usuario
+from app.users.models import Rol, Usuario
 
 
 @pytest.mark.parametrize("role", ["ADMIN", "WAITER", "KITCHEN", "CASHIER"])

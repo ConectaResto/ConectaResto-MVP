@@ -4,7 +4,7 @@ from app.auth.decorators import roles_required
 from app.auth.service import current_user
 from app.common.responses import error_response, success_response
 from app.extensions import db
-from app.models import Pedido
+from app.pedidos.models import Pedido
 from app.pedidos.dto import PedidoDTO
 from app.pedidos.repository import PedidoRepository
 from app.pedidos.service import PedidoError, actualizar_pedido

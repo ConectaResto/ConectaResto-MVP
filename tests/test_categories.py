@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 from sqlalchemy.exc import IntegrityError
 from app import create_app
 from app.extensions import db
-from app.models.category import Category
+from app.catalog.models import Category
 from app.catalog.service import (
     CategoryAlreadyExists,
     CategoryNotFound,

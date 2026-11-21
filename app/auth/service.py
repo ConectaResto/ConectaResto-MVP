@@ -3,7 +3,7 @@ import time
 from flask import g, session
 
 from app.extensions import db
-from app.models import Usuario
+from app.users.models import Usuario
 
 
 SESSION_SECONDS = 8 * 60 * 60

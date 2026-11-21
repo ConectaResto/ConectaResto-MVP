@@ -12,8 +12,7 @@ from decimal import Decimal, InvalidOperation
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 from app.extensions import db
-from app.models.category import Category
-from app.models.product import Product
+from app.catalog.models import Category, Product
 
 
 def _is_duplicate_category_name_error(exc: IntegrityError) -> bool:

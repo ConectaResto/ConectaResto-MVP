@@ -3,7 +3,7 @@ import time
 import pytest
 
 from app.extensions import db
-from app.models import Rol, Usuario
+from app.users.models import Rol, Usuario
 
 
 @pytest.fixture

@@ -5,10 +5,9 @@ from flask import current_app
 from flask.cli import with_appcontext
 
 from app.extensions import db
-from app.models import Rol, Usuario
-from app.models.category import Category
-from app.models.mesa import Mesa
-from app.models.product import Product
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
+from app.users.models import Rol, Usuario
 from app.users.service import ensure_roles, get_rol_by_name, seed_demo
 
 

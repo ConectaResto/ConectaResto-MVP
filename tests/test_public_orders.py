@@ -4,7 +4,11 @@ from pathlib import Path
 import pytest
 
 from app.extensions import db
-from app.models import Category, DetallePedido, Mesa, Pedido, Product, Rol, Servicio, Usuario
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
+from app.pedidos.models import DetallePedido, Pedido
+from app.servicios.models import Servicio
+from app.users.models import Rol, Usuario
 from tests.test_servicios import autenticar
 
 

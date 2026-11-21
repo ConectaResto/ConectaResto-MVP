@@ -1,5 +1,4 @@
-from app.models.rol import Rol
-from app.models.usuario import Usuario
+from app.users.models import Rol, Usuario
 
 
 def test_crear_roles_estandar(app):

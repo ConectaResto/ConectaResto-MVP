@@ -3,7 +3,10 @@ from decimal import Decimal
 import pytest
 
 from app.extensions import db
-from app.models import Category, DetallePedido, Mesa, Pedido, Product, Servicio
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
+from app.pedidos.models import DetallePedido, Pedido
+from app.servicios.models import Servicio
 from app.pedidos.service import PedidoError, actualizar_pedido, crear_pedido
 from tests.test_servicios import autenticar
 

@@ -6,14 +6,11 @@ from decimal import Decimal
 
 from app import create_app
 from app.extensions import db
-from app.models.category import Category
-from app.models.mesa import Mesa
-from app.models.pago import Pago
-from app.models.pedido import Pedido
-from app.models.product import Product
-from app.models.rol import Rol
-from app.models.servicio import Servicio
-from app.models.usuario import Usuario
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
+from app.pedidos.models import Pedido
+from app.servicios.models import Pago, Servicio
+from app.users.models import Rol, Usuario
 from app.users.cli import seed_demo_cmd
 from app.users.service import seed_demo
 
