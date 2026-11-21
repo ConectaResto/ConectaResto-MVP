@@ -110,17 +110,37 @@ def actualizar_pedido(pedido_id, accion, *, actor, estado_preparacion=None):
         rol = "KITCHEN" if accion == "preparacion" else "WAITER"
         if not actor.is_active or actor.rol.name != rol:
             raise PedidoError("Prohibido", 403)
+        if type(pedido_id) is not int or not 0 < pedido_id <= 2147483647:
+            raise PedidoError("Pedido no encontrado", 404)
+        servicio_id = db.session.execute(
+            db.select(Pedido.servicio_id).where(Pedido.id == pedido_id)
+        ).scalar_one_or_none()
+        if servicio_id is None:
+            raise PedidoError("Pedido no encontrado", 404)
+
+        # Igual que caja: mesa, servicio, pago (si se consulta) y pedido.
+        servicio = bloquear_servicio(servicio_id)
+        if servicio.estado != "ACTIVO":
+            raise PedidoError("El servicio no esta activo", 409)
+        if accion == "cancelar":
+            pago = db.session.execute(
+                db.select(Pago.id).where(Pago.servicio_id == servicio.id).with_for_update()
+            ).first()
+            if pago is not None:
+                raise PedidoError("El servicio ya tiene un pago registrado", 409)
         pedido = PedidoRepository.get_by_id_for_update(pedido_id)
         if pedido is None:
             raise PedidoError("Pedido no encontrado", 404)
-        if pedido.servicio.estado != "ACTIVO":
-            raise PedidoError("El servicio no esta activo", 409)
         if accion == "autorizar":
             if (pedido.estado != "PENDIENTE" or pedido.estado_preparacion != "NO_ENVIADO"
                     or pedido.autorizado_por_id is not None):
                 raise PedidoError("El pedido no puede autorizarse en su estado actual", 409)
             pedido.autorizado_por_id = actor.id
             pedido.autorizado_at = datetime.now(timezone.utc)
+        elif accion == "cancelar":
+            if pedido.estado != "PENDIENTE" or pedido.estado_preparacion != "NO_ENVIADO":
+                raise PedidoError("Solo pueden cancelarse pedidos pendientes sin enviar a cocina", 409)
+            pedido.estado = "CANCELADO"
         elif accion == "enviar-cocina":
             if (pedido.estado != "PENDIENTE" or pedido.estado_preparacion != "NO_ENVIADO"
                     or pedido.autorizado_por_id is None or not pedido.detalles):
