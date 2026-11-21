@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, request
 from app.config import get_config
 from app.extensions import db, migrate
 from app.common.errors import register_error_handlers
@@ -16,6 +16,21 @@ def create_app(config_name=None):
         or app.config["SECRET_KEY"] == "dev-secret-key-change-in-production"
     ):
         raise ValueError("Production requires a secure SECRET_KEY")
+
+    if config_class is not get_config("production"):
+        app.config["LOCAL_FRONTEND_ORIGIN"] = "http://127.0.0.1:8000"
+
+        @app.after_request
+        def allow_local_frontend(response):
+            response.vary.add("Origin")
+            origin = request.headers.get("Origin")
+            if origin == app.config["LOCAL_FRONTEND_ORIGIN"]:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Access-Control-Allow-Credentials"] = "true"
+                if request.method == "OPTIONS":
+                    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE"
+                    response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRF-Token"
+            return response
 
     db.init_app(app)
     if migrate is not None:

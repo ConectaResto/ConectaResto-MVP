@@ -166,12 +166,6 @@ Para aislar la suite de MySQL, establece `$env:TEST_DATABASE_URL = 'sqlite:///:m
 | El QR no abre en un teléfono | `127.0.0.1` es el propio dispositivo; para probar con teléfono hace falta una URL accesible desde la red y una configuración adecuada del servidor. |
 | El puerto 5000 está ocupado | Detén la otra instancia de Flask antes de volver a iniciarlo. |
 
-## Documentación adicional
-
-- [Estado y verificación del cierre del MVP](docs/ESTADO_CIERRE_MVP.md)
-- [Plan de trabajo del MVP](PLAN_DE_TRABAJO_MVP.md)
-- [Reglas de colaboración y arquitectura](AGENTS.md)
-
 **Nota:** ConectaResto-MVP es un proyecto académico. El pago es simulado y los datos de demostración deben mantenerse separados de datos reales.
 
 ## Reactivación administrativa

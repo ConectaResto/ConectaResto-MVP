@@ -116,10 +116,14 @@ def update_table(mesa_id):
 @roles_required("ADMIN")
 def qr_table(mesa_id):
     mesa = db.get_or_404(Mesa, mesa_id)
-    base_url = current_app.config.get("PUBLIC_BASE_URL")
-    if not base_url:
-        return error_response("PUBLIC_BASE_URL no configurada", 500)
-    menu_url = f"{base_url.rstrip('/')}/app/?token={mesa.public_token}#public"
+    local_origin = current_app.config.get("LOCAL_FRONTEND_ORIGIN")
+    if local_origin and request.headers.get("Origin") == local_origin:
+        menu_url = f"{local_origin}/?token={mesa.public_token}#public"
+    else:
+        base_url = current_app.config.get("PUBLIC_BASE_URL")
+        if not base_url:
+            return error_response("PUBLIC_BASE_URL no configurada", 500)
+        menu_url = f"{base_url.rstrip('/')}/app/?token={mesa.public_token}#public"
     qr = segno.make(menu_url)
     svg = BytesIO()
     qr.save(svg, kind="svg", scale=4, light="#fff")
