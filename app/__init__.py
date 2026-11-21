@@ -3,6 +3,7 @@ from flask import Flask, request
 from app.config import get_config
 from app.extensions import db, migrate
 from app.common.errors import register_error_handlers
+from app.models import register_models
 
 
 def create_app(config_name=None):
@@ -32,6 +33,7 @@ def create_app(config_name=None):
                     response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-CSRF-Token"
             return response
 
+    register_models()
     db.init_app(app)
     if migrate is not None:
         migrate.init_app(app, db)
@@ -43,8 +45,6 @@ def create_app(config_name=None):
 
     from app.frontend.routes import frontend_bp
     app.register_blueprint(frontend_bp)
-
-    from app import models  # noqa: F401  Registra modelos con SQLAlchemy
 
     from app.auth.routes import auth_bp
     from app.auth.csrf import protect_csrf

@@ -5,7 +5,9 @@ from threading import Barrier
 from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
-from app.models import Mesa, Rol, Servicio, Usuario
+from app.mesas.models import Mesa
+from app.servicios.models import Servicio
+from app.users.models import Rol, Usuario
 from app.pedidos.service import PedidoError
 from app.servicios.service import abrir_servicio
 

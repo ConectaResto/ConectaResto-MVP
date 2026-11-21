@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models import Pedido
+from app.pedidos.models import Pedido
 
 
 class PedidoRepository:

@@ -3,7 +3,8 @@
 import pytest
 
 from app.extensions import db
-from app.models import Category, Mesa, Product
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
 
 
 @pytest.fixture

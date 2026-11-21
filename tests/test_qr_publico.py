@@ -6,7 +6,8 @@ import pytest
 
 from app import create_app
 from app.extensions import db
-from app.models import Mesa, Rol, Usuario
+from app.mesas.models import Mesa
+from app.users.models import Rol, Usuario
 
 
 def csrf_headers(client):

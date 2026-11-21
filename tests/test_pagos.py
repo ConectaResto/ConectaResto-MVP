@@ -5,12 +5,10 @@ from sqlalchemy import text
 
 from app import create_app
 from app.extensions import db
-from app.models.mesa import Mesa
-from app.models.pago import Pago
-from app.models.pedido import Pedido
-from app.models.rol import Rol
-from app.models.servicio import Servicio
-from app.models.usuario import Usuario
+from app.mesas.models import Mesa
+from app.pedidos.models import Pedido
+from app.servicios.models import Pago, Servicio
+from app.users.models import Rol, Usuario
 
 
 @pytest.fixture

@@ -7,7 +7,11 @@ import pytest
 from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
-from app.models import Category, DetallePedido, Mesa, Pago, Pedido, Product, Rol, Servicio, Usuario
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
+from app.pedidos.models import DetallePedido, Pedido
+from app.servicios.models import Pago, Servicio
+from app.users.models import Rol, Usuario
 from app.pedidos.service import PedidoError, crear_pedido
 from app.servicios.service import calcular_total_servicio, procesar_caja
 from tests.test_servicios import autenticar

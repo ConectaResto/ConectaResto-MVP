@@ -6,7 +6,8 @@ from flask import Blueprint, render_template, request, url_for
 
 from app.common.responses import error_response, success_response
 from app.extensions import db
-from app.models import Mesa, Servicio
+from app.mesas.models import Mesa
+from app.servicios.models import Servicio
 from app.pedidos.routes import responder_error
 from app.pedidos.service import PedidoError, crear_pedido
 from app.servicios.service import _crear_servicio_para_mesa

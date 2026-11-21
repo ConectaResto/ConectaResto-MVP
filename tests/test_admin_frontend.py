@@ -384,7 +384,7 @@ def test_reactivacion_rechaza_datos_y_no_aplica_cambios(app, client, bad):
 
 def test_reactivacion_usuario_preserva_password_y_rol(app, client):
     from app.extensions import db
-    from app.models import Rol, Usuario
+    from app.users.models import Rol, Usuario
     _, headers = autenticar(client, "ADMIN")
     role = Rol(name="KITCHEN")
     user = Usuario(username="cocinero1", email="c@example.test", rol=role, is_active=False)

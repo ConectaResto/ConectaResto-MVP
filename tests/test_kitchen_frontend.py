@@ -1,7 +1,7 @@
 import pytest
 
 from app.extensions import db
-from app.models import Rol, Usuario
+from app.users.models import Rol, Usuario
 
 
 @pytest.fixture
@@ -149,7 +149,10 @@ def test_kitchen_clasificacion_transiciones_y_responsive_en_navegador(
     from pathlib import Path
 
     from werkzeug.serving import make_server
-    from app.models import Category, DetallePedido, Mesa, Pedido, Product, Servicio
+    from app.catalog.models import Category, Product
+    from app.mesas.models import Mesa
+    from app.pedidos.models import DetallePedido, Pedido
+    from app.servicios.models import Servicio
     from tests.browser_helpers import CDP_SETUP
     from tests.test_servicios import autenticar
 

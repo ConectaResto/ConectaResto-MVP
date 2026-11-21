@@ -4,7 +4,8 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Mesa, Rol, Usuario
+from app.mesas.models import Mesa
+from app.users.models import Rol, Usuario
 
 
 def csrf_headers(client):
@@ -158,7 +159,7 @@ def test_database_uniqueness(app, field):
 
 
 def test_token_collision_returns_conflict(client, admin_headers, monkeypatch):
-    monkeypatch.setattr("app.models.mesa.secrets.token_hex", lambda size: "a" * (size * 2))
+    monkeypatch.setattr("app.mesas.models.secrets.token_hex", lambda size: "a" * (size * 2))
     assert client.post("/admin/mesas", json={"numero": 1}, headers=admin_headers).status_code == 201
     assert client.post("/admin/mesas", json={"numero": 2}, headers=admin_headers).status_code == 409
     assert len(client.get("/admin/mesas").json["data"]) == 1
@@ -166,7 +167,7 @@ def test_token_collision_returns_conflict(client, admin_headers, monkeypatch):
 
 def test_listar_mesas_waiter_listado_ordenado_sin_public_token(client):
     waiter_headers = authenticate(client, "WAITER")
-    from app.models import Mesa
+    from app.mesas.models import Mesa
     db.session.add_all([Mesa(numero=3), Mesa(numero=1), Mesa(numero=2)])
     db.session.commit()
     response = client.get("/mesas", headers=waiter_headers)
@@ -181,7 +182,7 @@ def test_listar_mesas_waiter_listado_ordenado_sin_public_token(client):
 
 def test_listar_mesas_waiter_filtros(client):
     waiter_headers = authenticate(client, "WAITER")
-    from app.models import Mesa
+    from app.mesas.models import Mesa
     db.session.add_all([
         Mesa(numero=1, estado="DISPONIBLE"),
         Mesa(numero=2, estado="OCUPADA"),

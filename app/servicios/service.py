@@ -3,7 +3,9 @@ from decimal import Decimal
 from sqlalchemy.exc import IntegrityError
 
 from app.extensions import db
-from app.models import Mesa, Pago, Pedido, Servicio
+from app.mesas.models import Mesa
+from app.pedidos.models import Pedido
+from app.servicios.models import Pago, Servicio
 from app.pedidos.service import PedidoError, bloquear_servicio
 from app.servicios.repository import ServicioRepository
 

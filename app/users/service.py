@@ -1,10 +1,9 @@
 from decimal import Decimal
 
 from app.extensions import db
-from app.models import Rol, Usuario
-from app.models.category import Category
-from app.models.mesa import Mesa
-from app.models.product import Product
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
+from app.users.models import Rol, Usuario
 
 
 def list_users():

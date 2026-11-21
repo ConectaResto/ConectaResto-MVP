@@ -6,8 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.datastructures import FileStorage
 from app import create_app
 from app.extensions import db
-from app.models.category import Category
-from app.models.product import Product
+from app.catalog.models import Category, Product
 from app.catalog.service import (
     create_category,
     create_product,
@@ -49,7 +48,7 @@ def login(client, username, password):
 
 def _make_admin_user(app):
     with app.app_context():
-        from app.models import Rol, Usuario
+        from app.users.models import Rol, Usuario
         for nombre in ["ADMIN", "WAITER"]:
             rol = Rol(name=nombre, description=f"Rol {nombre}")
             db.session.add(rol)

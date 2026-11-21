@@ -8,7 +8,7 @@ import segno
 from app.auth.decorators import roles_required
 from app.common.responses import error_response, success_response
 from app.extensions import db
-from app.models import Mesa
+from app.mesas.models import Mesa
 
 
 mesas_bp = Blueprint("mesas", __name__)

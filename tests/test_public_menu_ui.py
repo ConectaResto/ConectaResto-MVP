@@ -17,7 +17,11 @@ from werkzeug.serving import make_server
 from tests.browser_helpers import CDP_SETUP
 
 from app.extensions import db
-from app.models import Category, Mesa, Pedido, Product, Rol, Servicio, Usuario
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
+from app.pedidos.models import Pedido
+from app.servicios.models import Servicio
+from app.users.models import Rol, Usuario
 
 
 @pytest.fixture

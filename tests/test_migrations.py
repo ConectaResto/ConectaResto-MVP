@@ -4,14 +4,11 @@ import re
 import pytest
 from app.extensions import db
 from app.models.base import BaseModel
-from app.models.category import Category
-from app.models.detalle_pedido import DetallePedido
-from app.models.mesa import Mesa
-from app.models.pedido import Pedido
-from app.models.product import Product
-from app.models.rol import Rol
-from app.models.servicio import Servicio
-from app.models.usuario import Usuario
+from app.catalog.models import Category, Product
+from app.mesas.models import Mesa
+from app.pedidos.models import DetallePedido, Pedido
+from app.servicios.models import Pago, Servicio
+from app.users.models import Rol, Usuario
 
 
 # ---------------------------------------------------------------------------
@@ -82,6 +79,7 @@ EXPECTED_TABLES = {
     "servicios": Servicio,
     "pedidos": Pedido,
     "detalles_pedido": DetallePedido,
+    "pagos": Pago,
 }
 
 
@@ -102,14 +100,12 @@ def test_model_table_names_match_expected():
         )
 
 
-def test_models_are_registered_in_models_init():
-    """Todos los modelos están exportados desde app.models.__init__."""
-    from app import models
-
+def test_models_are_registered_in_alembic_metadata(app):
+    """Alembic comparte los metadatos de todos los modelos de dominio."""
+    metadata = app.extensions["migrate"].db.metadata
+    assert set(metadata.tables) == set(EXPECTED_TABLES)
     for table_name, model_class in EXPECTED_TABLES.items():
-        assert hasattr(models, model_class.__name__), (
-            f"{model_class.__name__} no está exportado en app.models.__init__"
-        )
+        assert metadata.tables[table_name] is model_class.__table__
 
 
 def test_all_models_have_id_created_at_updated_at(app):

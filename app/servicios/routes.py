@@ -4,7 +4,7 @@ from app.auth.decorators import roles_required
 from app.auth.service import current_user
 from app.common.responses import success_response
 from app.extensions import db
-from app.models import Servicio
+from app.servicios.models import Servicio
 from app.pedidos.dto import PedidoDTO
 from app.pedidos.routes import responder_error
 from app.pedidos.service import PedidoError, crear_pedido
