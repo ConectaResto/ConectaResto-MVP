@@ -51,7 +51,7 @@ excluyendo booleanos. Cada item contiene exclusivamente `producto_id` y
 y categoría activa. Copia `Product.price` a `DetallePedido.precio_unitario`.
 
 Para `MESERO`, `creado_por_id` identifica un WAITER activo. Para `PUBLICO`,
-el adaptador de Portátil Codex 2 debe resolver el servicio mediante el token
+el adaptador debe resolver el servicio mediante el token
 de mesa e invocar la función sin usuario creador. El contrato compartido
 está disponible para esa integración.
 
@@ -83,7 +83,7 @@ atómicamente. Todas requieren servicio activo.
 La apertura cambia condicionalmente la mesa de DISPONIBLE a OCUPADA y crea
 el servicio en una transacción. También comprueba servicios activos previos.
 La migración 008 aporta la restricción única por mesa para servicios activos.
-Las instalaciones MySQL deben tener aplicadas las migraciones de Kilo 1.
+Las instalaciones MySQL deben tener aplicadas las migraciones de la versión 008.
 `db.create_all()` por sí solo no crea esa restricción definida en migración.
 
 Las respuestas reutilizan `success_response` y `error_response`. Creaciones
