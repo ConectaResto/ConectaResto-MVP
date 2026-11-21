@@ -1,6 +1,6 @@
 from io import BytesIO
 
-from flask import Blueprint, current_app, request, Response
+from flask import Blueprint, current_app, request, Response, url_for
 from sqlalchemy.exc import IntegrityError
 
 import segno
@@ -123,7 +123,8 @@ def qr_table(mesa_id):
         base_url = current_app.config.get("PUBLIC_BASE_URL")
         if not base_url:
             return error_response("PUBLIC_BASE_URL no configurada", 500)
-        menu_url = f"{base_url.rstrip('/')}/app/?token={mesa.public_token}#public"
+        menu_path = url_for("public_mesas.public_menu", token=mesa.public_token)
+        menu_url = f"{base_url.rstrip('/')}{menu_path}"
     qr = segno.make(menu_url)
     svg = BytesIO()
     qr.save(svg, kind="svg", scale=4, light="#fff")

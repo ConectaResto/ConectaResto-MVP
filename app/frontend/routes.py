@@ -221,11 +221,10 @@ def kitchen_pedidos():
     )
 
 
-@frontend_bp.get("/app/")
+# La SPA independiente se sirve fuera de Flask.
 def spa_index():
     return send_from_directory(FRONTEND_DIR, "index.html")
 
 
-@frontend_bp.get("/app/<path:filename>")
 def spa_assets(filename):
     return send_from_directory(FRONTEND_DIR, filename)
