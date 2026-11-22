@@ -1,5 +1,7 @@
 from decimal import Decimal
 
+from sqlalchemy.orm import joinedload
+
 from app.extensions import db
 from app.pedidos.models import DetallePedido, Pedido
 from app.servicios.models import Servicio
@@ -10,7 +12,11 @@ class ServicioRepository:
 
     @staticmethod
     def list_by_estado(estado=None):
-        consulta = db.select(Servicio).order_by(Servicio.id)
+        consulta = (
+            db.select(Servicio)
+            .options(joinedload(Servicio.mesa))
+            .order_by(Servicio.id)
+        )
         if estado is not None:
             consulta = consulta.where(Servicio.estado == estado)
         return db.session.execute(consulta).scalars().all()

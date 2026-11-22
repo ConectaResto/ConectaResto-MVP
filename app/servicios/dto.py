@@ -11,6 +11,7 @@ class ServicioDTO:
         pago = servicio.pago
         return {
             "id": servicio.id, "mesa_id": servicio.mesa_id,
+            "mesa_numero": servicio.mesa.numero,
             "abierto_por_id": servicio.abierto_por_id, "estado": servicio.estado,
             "pedidos": [PedidoDTO.serialize(p) for p in servicio.pedidos],
             "total": format(ServicioRepository.calcular_total(

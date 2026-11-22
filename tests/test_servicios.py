@@ -1,15 +1,18 @@
 import pytest
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
+from decimal import Decimal
 
 from app import create_app
 from app.config import TestingConfig
 from app.extensions import db
+from app.catalog.models import Category, Product
 from app.mesas.models import Mesa
-from app.servicios.models import Servicio
-from app.users.models import Rol, Usuario
-from app.pedidos.service import PedidoError
+from app.pedidos.models import DetallePedido, Pedido
+from app.pedidos.service import PedidoError, crear_pedido
+from app.servicios.models import Pago, Servicio
 from app.servicios.service import abrir_servicio
+from app.users.models import Rol, Usuario
 
 
 def autenticar(client, role="WAITER", nombre="operador"):
@@ -42,6 +45,7 @@ def test_abrir_consultar_y_no_duplicar(client, mesa):
     assert response.status_code == 201
     servicio = response.json["data"]
     assert servicio == {"id": servicio["id"], "mesa_id": mesa.id,
+                        "mesa_numero": mesa.numero,
                         "abierto_por_id": usuario.id, "estado": "ACTIVO", "pedidos": [],
                         "total": "0.00", "pago": None}
     db.session.refresh(mesa)
@@ -195,6 +199,7 @@ def test_listar_servicios_cashier_ver_datos_reales(client, mesa):
     servicio = data[0]
     assert servicio["id"] == servicio_id
     assert servicio["mesa_id"] == mesa.id
+    assert servicio["mesa_numero"] == mesa.numero
     assert servicio["estado"] == "ACTIVO"
     assert servicio["pedidos"] == []
     assert servicio["total"] == "0.00"
@@ -212,7 +217,80 @@ def test_consultar_servicio_cashier_ver_datos_reales(client, mesa):
     servicio = response.json["data"]
     assert servicio["id"] == servicio_id
     assert servicio["mesa_id"] == mesa.id
+    assert servicio["mesa_numero"] == mesa.numero
     assert servicio["estado"] == "ACTIVO"
     assert servicio["total"] == "0.00"
     assert servicio["pago"] is None
     assert "pedidos" in servicio
+
+
+def _crear_servicio_con_pedido_entregado(client, mesa_id, producto_id, cantidad=1):
+    """Crea un servicio y un pedido ENTREGADO para pruebas de caja."""
+    mesero, wheaders = autenticar(client, "WAITER", "mesero")
+    servicio_id = client.post("/servicios", json={"mesa_id": mesa_id},
+                              headers=wheaders).json["data"]["id"]
+    pedido = crear_pedido(servicio_id, [{"producto_id": producto_id, "cantidad": cantidad}],
+                          origen="MESERO", creado_por_id=mesero.id)
+    pedido.estado = "ENTREGADO"
+    pedido.estado_preparacion = "LISTO_PARA_SERVIR"
+    db.session.commit()
+    _, cheaders = autenticar(client, "CASHIER", "cajero")
+    return servicio_id, cheaders
+
+
+def test_cashier_pago_simulado_con_mesa_numero(client, mesa):
+    categoria = Category(name="Bebidas")
+    db.session.add(categoria)
+    db.session.flush()
+    producto = Product(name="Cafe", price=Decimal("10.00"), categoria_id=categoria.id)
+    db.session.add(producto)
+    db.session.commit()
+    servicio_id, cheaders = _crear_servicio_con_pedido_entregado(client, mesa.id, producto.id)
+    response = client.post(f"/servicios/{servicio_id}/pago-simulado",
+                           headers=cheaders)
+    assert response.status_code == 201
+    servicio = response.json["data"]
+    assert servicio["mesa_id"] == mesa.id
+    assert servicio["mesa_numero"] == mesa.numero
+    assert servicio["estado"] == "ACTIVO"
+    assert servicio["pago"] is not None
+
+
+def test_cashier_cerrar_con_mesa_numero(client, mesa):
+    categoria = Category(name="Bebidas")
+    db.session.add(categoria)
+    db.session.flush()
+    producto = Product(name="Cafe", price=Decimal("10.00"), categoria_id=categoria.id)
+    db.session.add(producto)
+    db.session.commit()
+    servicio_id, cheaders = _crear_servicio_con_pedido_entregado(client, mesa.id, producto.id)
+    client.post(f"/servicios/{servicio_id}/pago-simulado", headers=cheaders)
+    response = client.post(f"/servicios/{servicio_id}/cerrar", headers=cheaders)
+    assert response.status_code == 200
+    servicio = response.json["data"]
+    assert servicio["mesa_id"] == mesa.id
+    assert servicio["mesa_numero"] == mesa.numero
+    assert servicio["estado"] == "CERRADO"
+
+
+def test_mesa_id_diferente_de_numero(client):
+    """Verifica mesa_id (PK interna) y mesa_numero (numero visible) son distintos cuando corresponden."""
+    _, wheaders = autenticar(client, "WAITER", "mesero")
+    mesa_visible = Mesa(numero=12)
+    db.session.add(mesa_visible)
+    db.session.commit()
+    assert mesa_visible.id != mesa_visible.numero
+    creado = client.post("/servicios", json={"mesa_id": mesa_visible.id},
+                         headers=wheaders)
+    assert creado.status_code == 201
+    servicio = creado.json["data"]
+    assert servicio["mesa_id"] == mesa_visible.id
+    assert servicio["mesa_numero"] == mesa_visible.numero
+    assert servicio["mesa_id"] != servicio["mesa_numero"]
+
+
+def test_cashier_no_acceso_mesas(client):
+    """CASHIER no puede consultar GET /mesas (protección de permisos existente)."""
+    _, cheaders = autenticar(client, "CASHIER", "cajero")
+    response = client.get("/mesas", headers=cheaders)
+    assert response.status_code == 403
