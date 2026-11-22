@@ -24,10 +24,19 @@ Las escrituras utilizan la protección CSRF global y el encabezado
 por número visible. Los filtros opcionales `id`, `numero` y `estado` se
 combinan mediante AND. Los dos primeros son enteros positivos hasta
 2147483647. Los estados admitidos son DISPONIBLE, OCUPADA y CERRADA.
+Sin filtro `estado`, se excluyen las mesas CERRADA, también al filtrar por
+`id` o `numero`. El filtro explícito `estado=CERRADA` sigue disponible.
 Un filtro inválido devuelve 400. Una búsqueda sin coincidencias devuelve
 200 con `data: []`. Esta consulta utiliza la sesión existente y devuelve
-exclusivamente esos tres campos de mesa. Las rutas `/admin/mesas` conservan
-su contrato y permiso ADMIN.
+exclusivamente esos tres campos de mesa.
+
+`GET /admin/mesas` requiere ADMIN y excluye las mesas CERRADA. El cierre
+lógico usa `PATCH /admin/mesas/<id>` con `{"estado": "CERRADA"}` y conserva
+el registro y su historial. Con un servicio ACTIVO, cambiar el estado
+a CERRADA o DISPONIBLE devuelve 409.
+Una mesa CERRADA no puede pasar directamente a OCUPADA: el PATCH devuelve
+409 sin modificar ninguno de los campos enviados. Puede regresar a DISPONIBLE
+mediante el PATCH autorizado para ADMIN, siempre que no tenga un servicio ACTIVO.
 
 `GET /servicios?estado=ACTIVO` permite a CASHIER descubrir servicios sin
 conocer sus IDs. Reutiliza la misma respuesta del listado de WAITER,

@@ -9,6 +9,7 @@ from app.auth.decorators import roles_required
 from app.common.responses import error_response, success_response
 from app.extensions import db
 from app.mesas.models import Mesa
+from app.servicios.models import Servicio
 
 
 mesas_bp = Blueprint("mesas", __name__)
@@ -69,6 +70,8 @@ def consultar_mesas():
         if error:
             return error_response(error, 400)
         consulta = consulta.where(Mesa.estado == estado)
+    else:
+        consulta = consulta.where(Mesa.estado != "CERRADA")
     mesas = db.session.execute(consulta).scalars()
     return success_response([serialize(mesa, include_public_token=False) for mesa in mesas])
 
@@ -76,7 +79,9 @@ def consultar_mesas():
 @mesas_bp.get("/admin/mesas")
 @roles_required("ADMIN")
 def list_tables():
-    mesas = db.session.execute(db.select(Mesa).order_by(Mesa.numero)).scalars()
+    mesas = db.session.execute(
+        db.select(Mesa).where(Mesa.estado != "CERRADA").order_by(Mesa.numero)
+    ).scalars()
     return success_response([serialize(mesa) for mesa in mesas])
 
 
@@ -102,11 +107,32 @@ def get_table(mesa_id):
 @mesas_bp.patch("/admin/mesas/<int:mesa_id>")
 @roles_required("ADMIN")
 def update_table(mesa_id):
-    mesa = db.get_or_404(Mesa, mesa_id)
+    # Lock the table before reading service state, in the same order as opening a
+    # service and processing payments. SQLite needs a write to acquire the lock.
+    if db.session.get_bind().dialect.name == "sqlite":
+        db.session.execute(
+            db.update(Mesa).where(Mesa.id == mesa_id)
+            .values(estado=Mesa.estado, updated_at=Mesa.updated_at)
+            .execution_options(synchronize_session=False)
+        )
+    mesa = db.get_or_404(Mesa, mesa_id, with_for_update=True)
     data = request.get_json(silent=True)
     error = validate(data)
     if error:
+        db.session.rollback()
         return error_response(error, 400)
+    if mesa.estado == "CERRADA" and data.get("estado") == "OCUPADA":
+        db.session.rollback()
+        return error_response("Una mesa cerrada no puede pasar directamente a ocupada", 409)
+    if data.get("estado") in ("DISPONIBLE", "CERRADA"):
+        activo = db.session.execute(
+            db.select(Servicio.id)
+            .where(Servicio.mesa_id == mesa.id, Servicio.estado == "ACTIVO")
+            .with_for_update()
+        ).first()
+        if activo is not None:
+            db.session.rollback()
+            return error_response("La mesa tiene un servicio activo", 409)
     for key, value in data.items():
         setattr(mesa, key, value)
     return save(mesa)
