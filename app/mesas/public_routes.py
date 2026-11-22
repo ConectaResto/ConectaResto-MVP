@@ -2,7 +2,7 @@
 
 import re
 
-from flask import Blueprint, render_template, request, url_for
+from flask import Blueprint, current_app, redirect, request, url_for
 
 from app.common.responses import error_response, success_response
 from app.extensions import db
@@ -15,7 +15,6 @@ from app.servicios.service import _crear_servicio_para_mesa
 
 public_mesas_bp = Blueprint(
     "public_mesas", __name__, url_prefix="/public/mesas",
-    template_folder="../templates",
 )
 
 
@@ -48,7 +47,10 @@ def public_menu(token):
     mesa = _find_public_table(token)
     if mesa is None:
         return error_response("Mesa no encontrada", 404)
-    return render_template("public/menu.html", mesa=mesa)
+    base_url = current_app.config.get("PUBLIC_BASE_URL")
+    if not base_url:
+        return error_response("PUBLIC_BASE_URL no configurada", 500)
+    return redirect(f"{base_url.rstrip('/')}/?token={mesa.public_token}#public", code=302)
 
 
 @public_mesas_bp.post("/<token>/pedidos")

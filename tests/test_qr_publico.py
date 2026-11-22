@@ -1,6 +1,9 @@
 """Pruebas del generador QR de mesa y del menú público (Portátil Codex 2)."""
 
+from io import BytesIO
 from xml.etree import ElementTree
+
+import segno
 
 import pytest
 
@@ -83,7 +86,7 @@ def test_qr_svg_sin_public_base_url_devuelve_error(client, mesa_token,
     assert "PUBLIC_BASE_URL" in response.json["error"]
 
 
-def _qr_svg(monkeypatch, base_url, numero, token=None):
+def _qr_svg(monkeypatch, base_url, numero, token=None, origin=None):
     monkeypatch.setenv("PUBLIC_BASE_URL", base_url)
     app = create_app("testing")
     with app.app_context():
@@ -97,15 +100,24 @@ def _qr_svg(monkeypatch, base_url, numero, token=None):
         mesa_id = mesa.id
     client = app.test_client()
     login_admin(client, app)
-    response = client.get(f"/admin/mesas/{mesa_id}/qr.svg")
+    headers = {"Origin": origin} if origin else {}
+    response = client.get(f"/admin/mesas/{mesa_id}/qr.svg", headers=headers)
     with app.app_context():
         db.drop_all()
         db.session.remove()
     return response
 
 
-def test_qr_con_public_base_url_devuelve_svg(monkeypatch):
-    response = _qr_svg(monkeypatch, "https://resto.example.com", 8)
+@pytest.mark.parametrize("origin", [None, "http://127.0.0.1:8000"])
+def test_qr_con_public_base_url_devuelve_svg(monkeypatch, origin):
+    base_url = "https://resto.example.com/"
+    token = "a" * 64
+    response = _qr_svg(monkeypatch, base_url, 8, token=token, origin=origin)
+    expected = BytesIO()
+    segno.make(f"{origin or base_url.rstrip('/')}/?token={token}#public").save(
+        expected, kind="svg", scale=4, light="#fff",
+    )
+    assert response.get_data() == expected.getvalue()
     assert response.status_code == 200
     assert response.headers["Content-Type"].startswith("image/svg+xml")
     root = ElementTree.fromstring(response.get_data())
@@ -135,25 +147,20 @@ def test_menu_publico_token_invalido_404(client, token):
 
 
 @pytest.mark.parametrize("estado", ["DISPONIBLE", "OCUPADA", "CERRADA"])
-def test_menu_publico_html(client, estado):
+def test_menu_publico_redirige_a_spa(client, estado, monkeypatch):
+    monkeypatch.setitem(client.application.config, "PUBLIC_BASE_URL", "https://resto.example.com/")
     mesa = Mesa(numero=3, estado=estado)
     db.session.add(mesa)
     db.session.commit()
     token = mesa.public_token
     response = client.get(f"/public/mesas/{token}/menu")
-    assert response.status_code == 200
-    assert "text/html" in response.headers.get("Content-Type", "")
-    body = response.get_data(as_text=True)
-    assert "Mesa" in body and "3" in body
-    assert token not in body
-    assert 'data-categories-url="/categories"' in body
-    assert 'data-products-url="/products"' in body
-    assert 'action="pedidos"' in body
-    assert 'public_menu.js' in body
+    assert response.status_code == 302
+    assert response.headers["Location"] == f"https://resto.example.com/?token={token}#public"
     assert "Set-Cookie" not in response.headers
 
 
-def test_menu_publico_no_crea_sesion(client):
+def test_menu_publico_no_crea_sesion(client, monkeypatch):
+    monkeypatch.setitem(client.application.config, "PUBLIC_BASE_URL", "https://resto.example.com")
     mesa = Mesa(numero=3)
     db.session.add(mesa)
     db.session.commit()
