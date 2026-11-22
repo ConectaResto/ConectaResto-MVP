@@ -47,6 +47,10 @@ def consultar_pedido(pedido_id):
 
 @pedidos_bp.post("/<int:pedido_id>/autorizar", defaults={"accion": "autorizar"})
 @pedidos_bp.post("/<int:pedido_id>/enviar-cocina", defaults={"accion": "enviar-cocina"})
+@pedidos_bp.post(
+    "/<int:pedido_id>/autorizar-y-enviar-cocina",
+    defaults={"accion": "autorizar-y-enviar-cocina"},
+)
 @pedidos_bp.post("/<int:pedido_id>/entregar", defaults={"accion": "entregar"})
 @pedidos_bp.post("/<int:pedido_id>/cancelar", defaults={"accion": "cancelar"})
 @roles_required("WAITER")

@@ -14,6 +14,7 @@ Las escrituras utilizan la protección CSRF global y el encabezado
 | GET /pedidos/<id> | Pedido y detalles con precios históricos | WAITER, KITCHEN |
 | POST /pedidos/<id>/autorizar | Cuerpo vacío o `{}` | WAITER |
 | POST /pedidos/<id>/enviar-cocina | Cuerpo vacío o `{}` | WAITER |
+| POST /pedidos/<id>/autorizar-y-enviar-cocina | Cuerpo vacío o `{}` | WAITER |
 | PATCH /pedidos/<id>/preparacion | `{"estado": "EN_COCINA"}` o `LISTO_PARA_SERVIR` | KITCHEN |
 | POST /pedidos/<id>/entregar | Cuerpo vacío o `{}` | WAITER |
 
@@ -71,6 +72,7 @@ conservan los precios y productos registrados aunque cambie el catálogo.
 | Crear | PENDIENTE | NO_ENVIADO |
 | Autorizar | PENDIENTE | NO_ENVIADO |
 | Enviar autorizado con detalles | EN_PREPARACION | RECIBIDO |
+| Autorizar y enviar a cocina con detalles | EN_PREPARACION | RECIBIDO |
 | Cocina comienza | EN_PREPARACION | EN_COCINA |
 | Cocina termina | LISTO | LISTO_PARA_SERVIR |
 | Mesero entrega | ENTREGADO | LISTO_PARA_SERVIR |
@@ -79,6 +81,19 @@ Autorizar registra usuario y fecha, incluso para pedidos creados por el
 propio mesero. Las acciones repetidas o fuera de secuencia devuelven 409.
 Las transiciones bloquean la fila del pedido en MySQL y se confirman
 atómicamente. Todas requieren servicio activo.
+
+La acción combinada usa el CSRF global y requiere un WAITER activo, un
+pedido `PENDIENTE` y `NO_ENVIADO` con detalles, y un servicio activo sin pago.
+Si el pedido aún no está autorizado, registra el usuario de la sesión y la
+fecha. Si ya fue autorizado, conserva `autorizado_por_id` y `autorizado_at`,
+aunque lo envíe otro mesero. La autorización y el envío se confirman juntos
+en una sola transacción. Devuelve 200 con el pedido y sus detalles históricos.
+
+Para esta acción se devuelve 400 ante un cuerpo inválido o CSRF inválido,
+401 sin sesión con CSRF válido, 403 para roles distintos de WAITER, 404 si el
+pedido no existe y 409 si el servicio está cerrado o pagado, el pedido carece
+de detalles o ya no está pendiente sin enviar. Los endpoints individuales
+`/autorizar` y `/enviar-cocina` siguen disponibles con sus reglas previas.
 
 La apertura cambia condicionalmente la mesa de DISPONIBLE a OCUPADA y crea
 el servicio en una transacción. También comprueba servicios activos previos.

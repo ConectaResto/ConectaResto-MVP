@@ -1,12 +1,18 @@
+from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
+from threading import Barrier
 
 import pytest
 
+from app import create_app
+from app.config import TestingConfig
 from app.extensions import db
 from app.catalog.models import Category, Product
 from app.mesas.models import Mesa
 from app.pedidos.models import DetallePedido, Pedido
-from app.servicios.models import Servicio
+from app.servicios.models import Pago, Servicio
+from app.servicios.service import procesar_caja
+from app.users.models import Usuario
 from app.pedidos.service import PedidoError, actualizar_pedido, crear_pedido
 from tests.test_servicios import autenticar
 
@@ -201,7 +207,7 @@ def test_permisos_acciones_mesero(client, contexto, rol):
             session.clear()
         headers = {"X-CSRF-Token": client.get("/auth/csrf").json["data"]["csrf_token"]}
     expected = 403 if rol else 401
-    for accion in ("autorizar", "enviar-cocina", "entregar"):
+    for accion in ("autorizar", "enviar-cocina", "autorizar-y-enviar-cocina", "entregar"):
         assert client.post(f'/pedidos/{pedido["id"]}/{accion}', headers=headers).status_code == expected
     if rol in (None, "ADMIN", "CASHIER"):
         assert client.get("/pedidos").status_code == expected
@@ -237,8 +243,13 @@ def test_errores_y_csrf(client, contexto):
         assert client.post(f"/servicios/{servicio_id}/pedidos", json=data, headers=headers).status_code == 400
     assert client.post(f'/pedidos/{pedido["id"]}/autorizar', json={"autorizado_por_id": 99},
                        headers=headers).status_code == 400
+    combinar = f'/pedidos/{pedido["id"]}/autorizar-y-enviar-cocina'
+    for data in ([], {"autorizado_por_id": 99}):
+        assert client.post(combinar, headers=headers, json=data).status_code == 400
+    assert client.post(combinar, headers={"X-CSRF-Token": "incorrecto"}).status_code == 400
+    assert client.post("/pedidos/999/autorizar-y-enviar-cocina", headers=headers).status_code == 404
     for path in (f'/pedidos/{pedido["id"]}/autorizar', f'/pedidos/{pedido["id"]}/enviar-cocina',
-                 f'/pedidos/{pedido["id"]}/entregar', f"/servicios/{servicio_id}/pedidos"):
+                 f'/pedidos/{pedido["id"]}/entregar', combinar, f"/servicios/{servicio_id}/pedidos"):
         assert client.post(path, json={}).status_code == 400
     assert client.patch(f'/pedidos/{pedido["id"]}/preparacion', json={"estado": "EN_COCINA"}).status_code == 400
 
@@ -278,7 +289,8 @@ def test_servicio_cerrado_y_sin_detalles(client, contexto):
     assert client.post(f'/pedidos/{pedido["id"]}/enviar-cocina', headers=headers).status_code == 409
 
 
-def test_transicion_revierte_fallo_de_commit(client, contexto, monkeypatch):
+@pytest.mark.parametrize("accion", ["autorizar", "autorizar-y-enviar-cocina"])
+def test_transicion_revierte_fallo_de_commit(client, contexto, monkeypatch, accion):
     usuario, _, _, _ = contexto
     pedido = pedir(client, contexto)
     def fallar():
@@ -287,11 +299,156 @@ def test_transicion_revierte_fallo_de_commit(client, contexto, monkeypatch):
     with monkeypatch.context() as patch:
         patch.setattr(db.session, "commit", fallar)
         with pytest.raises(RuntimeError):
-            actualizar_pedido(pedido["id"], "autorizar", actor=usuario)
+            actualizar_pedido(pedido["id"], accion, actor=usuario)
     almacenado = db.session.get(Pedido, pedido["id"])
     assert almacenado.autorizado_por_id is None
     assert almacenado.autorizado_at is None
     assert almacenado.estado == "PENDIENTE"
+    assert almacenado.estado_preparacion == "NO_ENVIADO"
+
+
+@pytest.mark.parametrize("origen", ["MESERO", "PUBLICO"])
+@pytest.mark.parametrize("ya_autorizado", [False, True])
+def test_autorizar_y_enviar_preserva_historico(app, client, contexto, origen, ya_autorizado):
+    creador, headers, producto, servicio_id = contexto
+    if origen == "MESERO":
+        pedido_id = pedir(client, contexto)["id"]
+    else:
+        pedido_id = crear_pedido(
+            servicio_id, [{"producto_id": producto.id, "cantidad": 2}], origen="PUBLICO",
+        ).id
+    path = f"/pedidos/{pedido_id}"
+    if ya_autorizado:
+        assert client.post(f"{path}/autorizar", headers=headers).status_code == 200
+    antes = client.get(path).json["data"]
+    cocina = app.test_client()
+    autenticar(cocina, "KITCHEN", "cocina_combinada")
+    assert cocina.get(path).status_code == 404
+
+    mesero = app.test_client()
+    actor, csrf = autenticar(mesero, nombre="mesero_envio")
+    assert actor.id != creador.id
+    body = {"json": {}} if ya_autorizado else {}
+    response = mesero.post(f"{path}/autorizar-y-enviar-cocina", headers=csrf, **body)
+    assert response.status_code == 200
+    despues = response.json["data"]
+    assert (despues["estado"], despues["estado_preparacion"]) == ("EN_PREPARACION", "RECIBIDO")
+    if ya_autorizado:
+        assert despues["autorizado_por_id"] == antes["autorizado_por_id"] == creador.id
+        assert despues["autorizado_at"] == antes["autorizado_at"]
+    else:
+        assert despues["autorizado_por_id"] == actor.id
+    assert despues["autorizado_at"]
+    for campo in ("id", "servicio_id", "origen", "creado_por_id", "items", "total"):
+        assert despues[campo] == antes[campo]
+    assert cocina.get(path).json["data"] == despues
+    assert mesero.post(f"{path}/autorizar-y-enviar-cocina", headers=csrf).status_code == 409
+
+
+@pytest.mark.parametrize("estado,preparacion,bloqueo", [
+    ("CANCELADO", "NO_ENVIADO", None),
+    ("PENDIENTE", "RECIBIDO", None),
+    ("EN_PREPARACION", "RECIBIDO", None),
+    ("LISTO", "LISTO_PARA_SERVIR", None),
+    ("ENTREGADO", "LISTO_PARA_SERVIR", None),
+    ("PENDIENTE", "NO_ENVIADO", "sin_detalles"),
+    ("PENDIENTE", "NO_ENVIADO", "cerrado"),
+    ("PENDIENTE", "NO_ENVIADO", "pagado"),
+])
+def test_autorizar_y_enviar_rechaza_conflictos(app, client, contexto, estado, preparacion, bloqueo):
+    _, headers, _, servicio_id = contexto
+    pedido = db.session.get(Pedido, pedir(client, contexto)["id"])
+    pedido.estado = estado
+    pedido.estado_preparacion = preparacion
+    if bloqueo == "sin_detalles":
+        for detalle in list(pedido.detalles):
+            db.session.delete(detalle)
+    if bloqueo == "cerrado":
+        pedido.servicio.estado = "CERRADO"
+    if bloqueo == "pagado":
+        cajero, _ = autenticar(app.test_client(), "CASHIER", "caja_combinada")
+        db.session.add(Pago(servicio_id=servicio_id, importe=Decimal("24.70"), registrado_por_id=cajero.id))
+    db.session.commit()
+    path = f"/pedidos/{pedido.id}"
+    antes = client.get(f"/servicios/{servicio_id}").json["data"]
+    response = client.post(f"{path}/autorizar-y-enviar-cocina", headers=headers, json={})
+    assert response.status_code == 409
+    if bloqueo == "pagado":
+        assert "pago registrado" in response.json["error"]
+    assert client.get(f"/servicios/{servicio_id}").json["data"] == antes
+
+
+@pytest.mark.parametrize("competidor", [
+    "autorizar-y-enviar-cocina", "autorizar", "enviar-cocina", "cancelar", "cerrar", "pago-simulado",
+])
+def test_carrera_autorizar_y_enviar(tmp_path, monkeypatch, competidor):
+    monkeypatch.setattr(TestingConfig, "SQLALCHEMY_DATABASE_URI", f"sqlite:///{tmp_path / 'envio.db'}")
+    app = create_app("testing")
+    with app.app_context():
+        db.create_all()
+        mesero, _ = autenticar(app.test_client(), nombre="mesero_carrera")
+        otro, _ = autenticar(app.test_client(), nombre="otro_mesero")
+        cajero, _ = autenticar(app.test_client(), "CASHIER", "cajero_carrera")
+        servicio = Servicio(mesa=Mesa(numero=1, estado="OCUPADA"), abierto_por=mesero)
+        categoria = Category(name="Bebidas")
+        db.session.add_all([servicio, categoria])
+        db.session.flush()
+        producto = Product(name="Cafe", price=Decimal("12.35"), categoria_id=categoria.id)
+        db.session.add(producto)
+        db.session.flush()
+        pedido = crear_pedido(servicio.id, [{"producto_id": producto.id, "cantidad": 1}], origen="PUBLICO")
+        if competidor == "enviar-cocina":
+            actualizar_pedido(pedido.id, "autorizar", actor=mesero)
+        pedido_id, servicio_id = pedido.id, servicio.id
+        mesero_id, otro_id, cajero_id = mesero.id, otro.id, cajero.id
+        autorizacion = pedido.autorizado_at
+
+    barrera = Barrier(2)
+
+    def ejecutar(accion, actor_id):
+        with app.app_context():
+            actor = db.session.get(Usuario, actor_id)
+            barrera.wait(timeout=10)
+            try:
+                if accion in ("cerrar", "pago-simulado"):
+                    procesar_caja(servicio_id, accion, actor=actor)
+                else:
+                    actualizar_pedido(pedido_id, accion, actor=actor)
+                return 200
+            except PedidoError as error:
+                return error.status_code
+
+    actor_rival = cajero_id if competidor in ("cerrar", "pago-simulado") else otro_id
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            combinado = pool.submit(ejecutar, "autorizar-y-enviar-cocina", mesero_id)
+            rival = pool.submit(ejecutar, competidor, actor_rival)
+            resultados = (combinado.result(), rival.result())
+        with app.app_context():
+            pedido = db.session.get(Pedido, pedido_id)
+            servicio = db.session.get(Servicio, servicio_id)
+            assert servicio.estado == "ACTIVO"
+            assert servicio.pago is None
+            if competidor in ("cerrar", "pago-simulado"):
+                assert resultados == (200, 409)
+            elif competidor == "autorizar":
+                assert resultados in ((200, 200), (200, 409))
+            else:
+                assert sorted(resultados) == [200, 409]
+            if competidor == "cancelar" and resultados[1] == 200:
+                assert (pedido.estado, pedido.estado_preparacion) == ("CANCELADO", "NO_ENVIADO")
+                assert pedido.autorizado_por_id is None and pedido.autorizado_at is None
+            else:
+                assert (pedido.estado, pedido.estado_preparacion) == ("EN_PREPARACION", "RECIBIDO")
+                if competidor == "enviar-cocina":
+                    assert (pedido.autorizado_por_id, pedido.autorizado_at) == (mesero_id, autorizacion)
+                else:
+                    assert pedido.autorizado_por_id == (otro_id if resultados[1] == 200 else mesero_id)
+                    assert pedido.autorizado_at
+            assert len(pedido.detalles) == 1
+    finally:
+        with app.app_context():
+            db.engine.dispose()
 
 
 def test_cocina_conserva_historial_despues_de_entrega_pago_y_cierre(app, client, contexto):
