@@ -68,13 +68,13 @@ Adapta los valores de ejemplo a tu instalación:
 FLASK_APP=run.py
 FLASK_ENV=development
 SECRET_KEY=reemplazar-por-una-clave-larga-y-privada
-PUBLIC_BASE_URL=http://127.0.0.1:5000
+PUBLIC_BASE_URL=http://127.0.0.1:8000
 DATABASE_URL=mysql+pymysql://USUARIO:CONTRASENA@127.0.0.1:3306/conectaresto_mvp
 ```
 
 - Sustituye `USUARIO` y `CONTRASENA` por las credenciales **locales** de MySQL.
 - Si la contraseña de MySQL tiene caracteres especiales (por ejemplo, `@`, `#`, `/` o `:`), codifícalos para utilizarlos dentro de una URL.
-- `PUBLIC_BASE_URL` debe apuntar a una dirección accesible desde el dispositivo que abre el QR. `127.0.0.1` sirve para probar en el **mismo computador**, pero no desde un teléfono distinto.
+- `PUBLIC_BASE_URL` apunta a la SPA independiente, por ejemplo `http://127.0.0.1:8000` para la demo local. Cambia el valor si tu configuración anterior apuntaba a Flask. Los QR nuevos abren `/?token=<token>#public`; los enlaces antiguos `/public/mesas/<token>/menu` redirigen a la SPA.
 - **Nunca subas `.env`, contraseñas ni claves a GitHub.**
 
 ## 5. Aplicar las migraciones
@@ -115,10 +115,15 @@ La contraseña **no está escrita en el repositorio**: es la que introduces al e
 python -m flask --app run.py run --no-debugger --no-reload
 ```
 
-Abre en tu navegador:
+Flask sirve la API en **http://127.0.0.1:5000**. Comprueba el arranque en **http://127.0.0.1:5000/health**.
 
-- Inicio de sesión: **http://127.0.0.1:5000/login**
-- Comprobación del servidor: **http://127.0.0.1:5000/health**
+En otra terminal, desde el repositorio [ConectaResto-MVP-Frontend](https://github.com/ConectaResto/ConectaResto-MVP-Frontend), ejecuta:
+
+```powershell
+python -m http.server 8000 --bind 127.0.0.1
+```
+
+Abre **http://127.0.0.1:8000/#login**.
 
 Mantén abierta la terminal de Flask mientras pruebas la aplicación. Para detener el servidor, presiona `Ctrl+C`.
 
@@ -129,7 +134,7 @@ Mantén abierta la terminal de Flask mientras pruebas la aplicación. Para deten
    Puedes guardar una imagen del QR y cargarla en el [lector QR online](https://www.codigos-qr.com/lector-qr-online/#result) para consultar el enlace que contiene. El lector es un servicio externo a ConectaResto.
 
 2. **CLIENTE:** abre el enlace del QR en una ventana privada, sin iniciar sesión; agrega productos y confirma un pedido.
-3. **WAITER:** entra con `mesero1`, localiza el pedido en Pendientes de autorización, pulsa **Autorizar** y luego **Enviar a cocina** en Pedidos en curso.
+3. **WAITER:** entra con `mesero1`, localiza el pedido en Pendientes de autorización, pulsa **Autorizar y enviar a Cocina**.
 4. **KITCHEN:** entra con `cocinero1`, pulsa **En cocina** y luego **Listo para servir**.
 5. **WAITER:** pulsa **Entregar** cuando esté Listo; el pedido pasa al Historial de pedidos entregados.
 6. **CASHIER:** entra con `cajero1`, registra el **pago simulado** y cierra el servicio.

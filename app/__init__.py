@@ -43,9 +43,6 @@ def create_app(config_name=None):
     from app.health.routes import health_bp
     app.register_blueprint(health_bp)
 
-    from app.frontend.routes import frontend_bp
-    app.register_blueprint(frontend_bp)
-
     from app.auth.routes import auth_bp
     from app.auth.csrf import protect_csrf
     app.register_blueprint(auth_bp)
