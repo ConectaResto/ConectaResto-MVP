@@ -122,7 +122,7 @@ def actualizar_pedido(pedido_id, accion, *, actor, estado_preparacion=None):
         servicio = bloquear_servicio(servicio_id)
         if servicio.estado != "ACTIVO":
             raise PedidoError("El servicio no esta activo", 409)
-        if accion == "cancelar":
+        if accion in ("cancelar", "autorizar-y-enviar-cocina"):
             pago = db.session.execute(
                 db.select(Pago.id).where(Pago.servicio_id == servicio.id).with_for_update()
             ).first()
@@ -141,10 +141,16 @@ def actualizar_pedido(pedido_id, accion, *, actor, estado_preparacion=None):
             if pedido.estado != "PENDIENTE" or pedido.estado_preparacion != "NO_ENVIADO":
                 raise PedidoError("Solo pueden cancelarse pedidos pendientes sin enviar a cocina", 409)
             pedido.estado = "CANCELADO"
-        elif accion == "enviar-cocina":
+        elif accion in ("enviar-cocina", "autorizar-y-enviar-cocina"):
+            envio_individual = accion == "enviar-cocina"
             if (pedido.estado != "PENDIENTE" or pedido.estado_preparacion != "NO_ENVIADO"
-                    or pedido.autorizado_por_id is None or not pedido.detalles):
-                raise PedidoError("El pedido debe estar pendiente, autorizado y tener productos", 409)
+                    or not pedido.detalles or (envio_individual and pedido.autorizado_por_id is None)):
+                requisito = "pendiente, autorizado y" if envio_individual else "pendiente, sin enviar y"
+                raise PedidoError(
+                    f"El pedido debe estar {requisito} tener productos", 409)
+            if pedido.autorizado_por_id is None:
+                pedido.autorizado_por_id = actor.id
+                pedido.autorizado_at = datetime.now(timezone.utc)
             pedido.estado = "EN_PREPARACION"
             pedido.estado_preparacion = "RECIBIDO"
         elif accion == "preparacion":
