@@ -1,10 +1,14 @@
 import re
+from decimal import Decimal
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
+from app.catalog.models import Category, Product
 from app.extensions import db
 from app.mesas.models import Mesa
+from app.pedidos.models import DetallePedido, Pedido
+from app.servicios.models import Pago, Servicio
 from app.users.models import Rol, Usuario
 
 
@@ -14,7 +18,8 @@ def csrf_headers(client):
 
 
 def authenticate(client, role):
-    user = Usuario(username="tables-user", email="tables@example.test", rol=Rol(name=role))
+    username = f"tables-{role.lower()}"
+    user = Usuario(username=username, email=f"{username}@example.test", rol=Rol(name=role))
     user.set_password("test-password")
     db.session.add(user)
     db.session.commit()
@@ -47,9 +52,117 @@ def test_create_read_update_without_delete(client, admin_headers):
     response = client.post("/admin/mesas", json={"numero": 1, "estado": "CERRADA"}, headers=admin_headers)
     assert response.status_code == 201
     assert response.json["data"]["public_token"] != mesa["public_token"]
-    assert [m["numero"] for m in client.get("/admin/mesas").json["data"]] == [1, 3]
+    assert [m["numero"] for m in client.get("/admin/mesas").json["data"]] == [3]
     assert client.delete(path, headers=admin_headers).status_code == 405
     assert client.get(path).status_code == 200
+
+
+def test_soft_delete_preserves_history_and_blocks_old_qr(app, client, admin_headers, monkeypatch):
+    monkeypatch.setitem(app.config, "PUBLIC_BASE_URL", "https://resto.example.test")
+    mesa = Mesa(numero=1)
+    other = Mesa(numero=2)
+    category = Category(name="Bebidas")
+    db.session.add(category)
+    db.session.flush()
+    product = Product(name="Cafe", price=Decimal("10.00"), categoria_id=category.id)
+    service = Servicio(mesa=mesa, estado="CERRADO")
+    order = Pedido(servicio=service, origen="PUBLICO", estado="ENTREGADO")
+    detail = DetallePedido(pedido=order, producto=product, precio_unitario=product.price)
+    cashier = Usuario(username="cashier", email="cashier@example.test", rol=Rol(name="CASHIER"))
+    cashier.set_password("test-password")
+    payment = Pago(servicio=service, registrado_por=cashier, importe=product.price)
+    db.session.add_all([mesa, other, detail, payment])
+    db.session.commit()
+    mesa_id, other_id = mesa.id, other.id
+    token, other_token = mesa.public_token, other.public_token
+    service_id, order_id, detail_id, payment_id = service.id, order.id, detail.id, payment.id
+    order_data = {"items": [{"producto_id": product.id, "cantidad": 1}]}
+
+    response = client.patch(f"/admin/mesas/{mesa_id}", json={"estado": "CERRADA"}, headers=admin_headers)
+    assert response.status_code == 200
+    assert response.json["data"]["estado"] == "CERRADA"
+    assert [row["id"] for row in client.get("/admin/mesas").json["data"]] == [other_id]
+
+    forbidden = client.patch(
+        f"/admin/mesas/{mesa_id}", json={"numero": 99, "estado": "OCUPADA"},
+        headers=admin_headers,
+    )
+    assert forbidden.status_code == 409
+
+    db.session.remove()
+    stored = db.session.get(Mesa, mesa_id)
+    assert (stored.numero, stored.estado, stored.public_token) == (1, "CERRADA", token)
+    assert (stored.servicios[0].id, stored.servicios[0].estado) == (service_id, "CERRADO")
+    assert stored.servicios[0].pedidos[0].id == order_id
+    assert stored.servicios[0].pedidos[0].detalles[0].id == detail_id
+    assert stored.servicios[0].pago.id == payment_id
+
+    waiter = app.test_client()
+    waiter_headers = authenticate(waiter, "WAITER")
+    assert [row["id"] for row in waiter.get("/mesas").json["data"]] == [other_id]
+    assert waiter.get(f"/mesas?id={mesa_id}").json["data"] == []
+    assert waiter.get(f"/mesas?id={mesa_id}&estado=CERRADA").json["data"] == [
+        {"id": mesa_id, "numero": 1, "estado": "CERRADA"},
+    ]
+    assert waiter.post("/servicios", json={"mesa_id": mesa_id}, headers=waiter_headers).status_code == 409
+
+    public = app.test_client()
+    public_headers = csrf_headers(public)
+    assert public.get(f"/public/mesas/{token}").status_code == 200
+    blocked = public.post(f"/public/mesas/{token}/pedidos", json=order_data, headers=public_headers)
+    assert blocked.status_code == 409
+    assert Servicio.query.count() == Pedido.query.count() == 1
+    assert client.get(f"/admin/mesas/{other_id}/qr.svg").status_code == 200
+    assert public.get(f"/public/mesas/{other_token}/menu").status_code == 302
+    assert public.post(
+        f"/public/mesas/{other_token}/pedidos", json=order_data, headers=public_headers,
+    ).status_code == 201
+    assert db.session.get(Mesa, other_id).estado == "OCUPADA"
+
+
+@pytest.mark.parametrize("extra", [{}, {"numero": 99}])
+def test_closed_table_requires_available_reactivation(client, admin_headers, extra):
+    response = client.post(
+        "/admin/mesas", json={"numero": 10, "estado": "CERRADA"}, headers=admin_headers,
+    )
+    assert response.status_code == 201
+    original = response.json["data"]
+    path = f"/admin/mesas/{original['id']}"
+
+    forbidden = client.patch(path, json={**extra, "estado": "OCUPADA"}, headers=admin_headers)
+    assert forbidden.status_code == 409
+    assert forbidden.json == {
+        "success": False,
+        "error": "Una mesa cerrada no puede pasar directamente a ocupada",
+    }
+    db.session.remove()
+    stored = db.session.get(Mesa, original["id"])
+    assert (stored.numero, stored.estado, stored.public_token) == (
+        original["numero"], "CERRADA", original["public_token"],
+    )
+    assert client.get(path).json["data"] == original
+    assert client.get("/admin/mesas").json["data"] == []
+
+    reactivated = client.patch(path, json={"estado": "DISPONIBLE"}, headers=admin_headers)
+    assert reactivated.status_code == 200
+    assert reactivated.json["data"] == {**original, "estado": "DISPONIBLE"}
+    assert client.get("/admin/mesas").json["data"] == [reactivated.json["data"]]
+
+
+@pytest.mark.parametrize("estado", ["CERRADA", "DISPONIBLE"])
+def test_active_service_blocks_incompatible_table_update(client, admin_headers, estado):
+    mesa = Mesa(numero=1, estado="OCUPADA")
+    service = Servicio(mesa=mesa)
+    db.session.add(service)
+    db.session.commit()
+    path = f"/admin/mesas/{mesa.id}"
+
+    response = client.patch(path, json={"numero": 2, "estado": estado}, headers=admin_headers)
+    assert response.status_code == 409
+    assert response.json["error"] == "La mesa tiene un servicio activo"
+    assert (mesa.numero, mesa.estado, service.estado) == (1, "OCUPADA", "ACTIVO")
+    assert [row["id"] for row in client.get("/admin/mesas").json["data"]] == [mesa.id]
+    assert client.patch(path, json={"numero": 2, "estado": "OCUPADA"}, headers=admin_headers).status_code == 200
 
 
 @pytest.mark.parametrize("method,path", [("GET", "/admin/mesas/999"), ("PATCH", "/admin/mesas/999")])
