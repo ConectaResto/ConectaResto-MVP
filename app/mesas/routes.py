@@ -92,6 +92,38 @@ def create_table():
     error = validate(data, creating=True)
     if error:
         return error_response(error, 400)
+    numero = data["numero"]
+    # Lock an existing row by ID. For new numbers, let the unique constraint
+    # resolve concurrent inserts without locking an empty MySQL index range.
+    mesa_id = db.session.execute(
+        db.select(Mesa.id).where(Mesa.numero == numero)
+    ).scalar_one_or_none()
+    if mesa_id is not None:
+        if db.session.get_bind().dialect.name == "sqlite":
+            db.session.execute(
+                db.update(Mesa).where(Mesa.id == mesa_id)
+                .values(estado=Mesa.estado, updated_at=Mesa.updated_at)
+                .execution_options(synchronize_session=False)
+            )
+        mesa = db.session.get(Mesa, mesa_id, with_for_update=True)
+        if mesa is not None and mesa.numero == numero:
+            if mesa.estado != "CERRADA":
+                db.session.rollback()
+                return error_response("Conflicto de unicidad de la mesa", 409)
+            if data.get("estado", "DISPONIBLE") != "DISPONIBLE":
+                db.session.rollback()
+                return error_response("La mesa cerrada solo puede reactivarse como disponible", 409)
+            activo = db.session.execute(
+                db.select(Servicio.id)
+                .where(Servicio.mesa_id == mesa.id, Servicio.estado == "ACTIVO")
+                .with_for_update()
+            ).first()
+            if activo is not None:
+                db.session.rollback()
+                return error_response("La mesa tiene un servicio activo", 409)
+            mesa.estado = "DISPONIBLE"
+            return save(mesa)
+
     mesa = Mesa(**data)
     db.session.add(mesa)
     return save(mesa, 201)

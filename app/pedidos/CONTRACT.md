@@ -38,6 +38,12 @@ Una mesa CERRADA no puede pasar directamente a OCUPADA: el PATCH devuelve
 409 sin modificar ninguno de los campos enviados. Puede regresar a DISPONIBLE
 mediante el PATCH autorizado para ADMIN, siempre que no tenga un servicio ACTIVO.
 
+`POST /admin/mesas` devuelve 201 al crear un número nuevo. Si el número ya
+pertenece a una mesa CERRADA, un POST sin estado o con `estado=DISPONIBLE`
+reactiva esa fila y devuelve 200 con el mismo ID, número y token QR. Un
+servicio ACTIVO, un estado incompatible o un número de mesa activa devuelven
+409.
+
 `GET /servicios?estado=ACTIVO` permite a CASHIER descubrir servicios sin
 conocer sus IDs. Reutiliza la misma respuesta del listado de WAITER,
 incluidos `pedidos`, `total` decimal como cadena y `pago` (objeto o null).

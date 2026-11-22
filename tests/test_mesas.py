@@ -57,7 +57,7 @@ def test_create_read_update_without_delete(client, admin_headers):
     assert client.get(path).status_code == 200
 
 
-def test_soft_delete_preserves_history_and_blocks_old_qr(app, client, admin_headers, monkeypatch):
+def test_soft_delete_and_reactivation_preserve_history_and_qr(app, client, admin_headers, monkeypatch):
     monkeypatch.setitem(app.config, "PUBLIC_BASE_URL", "https://resto.example.test")
     mesa = Mesa(numero=1)
     other = Mesa(numero=2)
@@ -118,6 +118,65 @@ def test_soft_delete_preserves_history_and_blocks_old_qr(app, client, admin_head
         f"/public/mesas/{other_token}/pedidos", json=order_data, headers=public_headers,
     ).status_code == 201
     assert db.session.get(Mesa, other_id).estado == "OCUPADA"
+
+    history = waiter.get(f"/servicios/{service_id}").json["data"]
+    assert history["mesa_numero"] == 1
+    assert history["estado"] == "CERRADO"
+    assert history["pedidos"][0]["id"] == order_id
+    assert history["pedidos"][0]["items"][0]["producto_id"] == order_data["items"][0]["producto_id"]
+    assert history["pago"]["id"] == payment_id
+
+    reactivated = client.post("/admin/mesas", json={"numero": 1}, headers=admin_headers)
+    assert reactivated.status_code == 200
+    assert reactivated.json["data"] == {
+        "id": mesa_id, "numero": 1, "estado": "DISPONIBLE", "public_token": token,
+    }
+    db.session.remove()
+    assert Mesa.query.count() == 2
+    assert db.session.get(Mesa, mesa_id).estado == "DISPONIBLE"
+    assert waiter.get(f"/servicios/{service_id}").json["data"] == history
+    assert waiter.get("/servicios?estado=CERRADO").json["data"] == [history]
+    assert waiter.get(f"/mesas?id={mesa_id}").json["data"] == [
+        {"id": mesa_id, "numero": 1, "estado": "DISPONIBLE"},
+    ]
+    assert public.post(
+        f"/public/mesas/{token}/pedidos", json=order_data, headers=public_headers,
+    ).status_code == 201
+    assert waiter.get(f"/servicios/{service_id}").json["data"] == history
+
+
+def test_reactivation_rejects_closed_table_with_active_service(client, admin_headers):
+    mesa = Mesa(numero=1, estado="CERRADA")
+    servicio = Servicio(mesa=mesa)
+    db.session.add(servicio)
+    db.session.commit()
+    mesa_id, token, servicio_id = mesa.id, mesa.public_token, servicio.id
+
+    response = client.post("/admin/mesas", json={"numero": 1}, headers=admin_headers)
+    assert response.status_code == 409
+    assert response.json["error"] == "La mesa tiene un servicio activo"
+
+    db.session.remove()
+    assert Mesa.query.count() == 1
+    stored = db.session.get(Mesa, mesa_id)
+    assert (stored.estado, stored.public_token) == ("CERRADA", token)
+    assert db.session.get(Servicio, servicio_id).estado == "ACTIVO"
+
+
+@pytest.mark.parametrize("estado", ["OCUPADA", "CERRADA"])
+def test_reactivation_requires_available_state(client, admin_headers, estado):
+    original = client.post(
+        "/admin/mesas", json={"numero": 1, "estado": "CERRADA"}, headers=admin_headers,
+    ).json["data"]
+    response = client.post("/admin/mesas", json={"numero": 1, "estado": estado}, headers=admin_headers)
+    assert response.status_code == 409
+    assert client.get(f"/admin/mesas/{original['id']}").json["data"] == original
+
+    response = client.post(
+        "/admin/mesas", json={"numero": 1, "estado": "DISPONIBLE"}, headers=admin_headers,
+    )
+    assert response.status_code == 200
+    assert response.json["data"] == {**original, "estado": "DISPONIBLE"}
 
 
 @pytest.mark.parametrize("extra", [{}, {"numero": 99}])
@@ -198,8 +257,11 @@ def test_invalid_patch_is_atomic(client, admin_headers, data):
     assert client.get(path).json["data"] == mesa
 
 
-def test_duplicate_number_rolls_back(client, admin_headers):
-    first = client.post("/admin/mesas", json={"numero": 1}, headers=admin_headers).json["data"]
+@pytest.mark.parametrize("estado", ["DISPONIBLE", "OCUPADA"])
+def test_duplicate_number_rolls_back(client, admin_headers, estado):
+    first = client.post(
+        "/admin/mesas", json={"numero": 1, "estado": estado}, headers=admin_headers,
+    ).json["data"]
     second = client.post("/admin/mesas", json={"numero": 2}, headers=admin_headers).json["data"]
     assert client.post("/admin/mesas", json={"numero": 1}, headers=admin_headers).status_code == 409
     path = f'/admin/mesas/{second["id"]}'
