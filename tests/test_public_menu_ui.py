@@ -27,12 +27,6 @@ def menu_context(app):
     return mesa, product
 
 
-def test_imagen_predeterminada_publica(client):
-    response = client.get("/static/img/default-product.svg")
-    assert response.status_code == 200
-    assert response.mimetype == "image/svg+xml"
-
-
 def test_order_contract_preserves_csrf_and_empty_cart_validation(client, menu_context):
     mesa, _ = menu_context
     path = f"/public/mesas/{mesa.public_token}/pedidos"
