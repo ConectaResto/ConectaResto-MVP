@@ -24,9 +24,8 @@ pedidos_bp.register_error_handler(PedidoError, responder_error)
 @roles_required("WAITER", "KITCHEN")
 def listar_pedidos():
     estado = request.args.get("estado")
-    if estado is not None:
-        if estado not in ("PENDIENTE", "EN_PREPARACION", "LISTO", "ENTREGADO"):
-            raise PedidoError("Estado invalido")
+    if estado is not None and estado not in Pedido.ESTADOS:
+        raise PedidoError("Estado invalido")
     pedidos = PedidoRepository.list_by_rol_and_estado(
         current_user().rol.name, estado
     )
@@ -39,7 +38,9 @@ def consultar_pedido(pedido_id):
     if not 0 < pedido_id <= 2147483647:
         raise PedidoError("Pedido no encontrado", 404)
     pedido = db.get_or_404(Pedido, pedido_id)
-    if current_user().rol.name == "KITCHEN" and pedido.estado_preparacion == "NO_ENVIADO":
+    if current_user().rol.name == "KITCHEN" and (
+        pedido.estado_preparacion == "NO_ENVIADO" or pedido.estado == "CANCELADO"
+    ):
         raise PedidoError("Pedido no encontrado", 404)
     return success_response(PedidoDTO.serialize(pedido))
 
@@ -47,6 +48,7 @@ def consultar_pedido(pedido_id):
 @pedidos_bp.post("/<int:pedido_id>/autorizar", defaults={"accion": "autorizar"})
 @pedidos_bp.post("/<int:pedido_id>/enviar-cocina", defaults={"accion": "enviar-cocina"})
 @pedidos_bp.post("/<int:pedido_id>/entregar", defaults={"accion": "entregar"})
+@pedidos_bp.post("/<int:pedido_id>/cancelar", defaults={"accion": "cancelar"})
 @roles_required("WAITER")
 def ejecutar_accion(pedido_id, accion):
     if request.get_data() and request.get_json(silent=True) != {}:

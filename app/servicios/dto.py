@@ -1,4 +1,5 @@
 from app.pedidos.dto import PedidoDTO
+from app.pedidos.models import Pedido
 from app.servicios.repository import ServicioRepository
 
 
@@ -12,7 +13,9 @@ class ServicioDTO:
             "id": servicio.id, "mesa_id": servicio.mesa_id,
             "abierto_por_id": servicio.abierto_por_id, "estado": servicio.estado,
             "pedidos": [PedidoDTO.serialize(p) for p in servicio.pedidos],
-            "total": format(ServicioRepository.calcular_total(servicio.id), ".2f"),
+            "total": format(ServicioRepository.calcular_total(
+                servicio.id, estados=Pedido.ESTADOS_NO_CANCELADOS,
+            ), ".2f"),
             "pago": {
                 "id": pago.id, "servicio_id": pago.servicio_id,
                 "importe": format(pago.importe, ".2f"),

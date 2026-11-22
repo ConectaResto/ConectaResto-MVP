@@ -11,6 +11,7 @@ from app.servicios.repository import ServicioRepository
 
 
 def calcular_total_servicio(servicio_id, *, bloquear=False):
+    """Devuelve el total histórico, incluidos los pedidos cancelados."""
     return ServicioRepository.calcular_total(servicio_id, bloquear=bloquear)
 
 
@@ -35,11 +36,13 @@ def procesar_caja(servicio_id, accion, *, actor):
             db.select(Pedido).where(Pedido.servicio_id == servicio.id)
             .with_for_update().execution_options(populate_existing=True)
         ).scalars().all()
-        if any(p.estado != "ENTREGADO" for p in pedidos):
-            raise PedidoError("Todos los pedidos deben estar entregados", 409)
-        total = ServicioRepository.calcular_total(servicio.id, bloquear=True)
+        if any(p.estado not in ("ENTREGADO", "CANCELADO") for p in pedidos):
+            raise PedidoError("Los pedidos deben estar entregados o cancelados", 409)
+        total = ServicioRepository.calcular_total(
+            servicio.id, bloquear=True, estados=("ENTREGADO",),
+        )
         if accion == "pago-simulado":
-            if not pedidos or total <= 0:
+            if total <= 0:
                 raise PedidoError("El servicio debe tener pedidos y un total mayor a cero", 409)
             if total > Decimal("99999999.99"):
                 raise PedidoError("El total excede la capacidad del importe de pago", 409)
@@ -47,7 +50,7 @@ def procesar_caja(servicio_id, accion, *, actor):
                 servicio_id=servicio.id, importe=total, registrado_por_id=actor.id,
             ))
         else:
-            if pedidos and pago is None:
+            if total > 0 and pago is None:
                 raise PedidoError("El servicio requiere un pago completo", 409)
             if pago is not None and pago.importe != total:
                 raise PedidoError("El pago no coincide con el total del servicio", 409)

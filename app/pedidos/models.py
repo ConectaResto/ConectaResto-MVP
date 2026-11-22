@@ -5,10 +5,13 @@ from app.models.base import BaseModel
 
 
 class Pedido(BaseModel):
+    ESTADOS_NO_CANCELADOS = ("PENDIENTE", "EN_PREPARACION", "LISTO", "ENTREGADO")
+    ESTADOS = (*ESTADOS_NO_CANCELADOS, "CANCELADO")
+
     __tablename__ = "pedidos"
     __table_args__ = (
         db.CheckConstraint(
-            "estado IN ('PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO')",
+            "estado IN ('PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO', 'CANCELADO')",
             name="ck_pedidos_estado",
         ),
         db.CheckConstraint(

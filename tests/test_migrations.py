@@ -597,11 +597,11 @@ def test_image_migration_widens_version_before_mysql_version_update(
         dialect_name=dialect,
         opts={"as_sql": True, "output_buffer": output,
               "starting_rev": module.down_revision,
-              "fn": lambda heads, context: script._upgrade_revs("head", heads)},
+              "fn": lambda heads, context: script._upgrade_revs(module.revision, heads)},
     )
     # ScriptDirectory loads the actual revision module separately; run the
     # same approved upgrade through its revision step with inspection mocked.
-    step = script.get_revision("head")
+    step = script.get_revision(module.revision)
     monkeypatch.setattr(step.module, "upgrade", module.upgrade)
     with Operations.context(migration), migration.begin_transaction():
         migration.run_migrations()
@@ -627,7 +627,7 @@ def test_image_migration_retry_preserves_products_and_revision_chain(partial_upg
     config = Config()
     config.set_main_option("script_location", os.path.dirname(MIGRATIONS_DIR))
     script = ScriptDirectory.from_config(config)
-    revision = script.get_revision("head")
+    revision = script.get_revision("014_add_image_filename_to_products")
     assert revision.revision == "014_add_image_filename_to_products"
     assert revision.down_revision == "013_allow_null_abierto_por_id"
     metadata = sa.MetaData()
@@ -649,7 +649,7 @@ def test_image_migration_retry_preserves_products_and_revision_chain(partial_upg
             connection.execute(versions.insert(), {"version_num": revision.down_revision})
             context = MigrationContext.configure(
                 connection,
-                opts={"fn": lambda heads, context: script._upgrade_revs("head", heads)},
+                opts={"fn": lambda heads, context: script._upgrade_revs(revision.revision, heads)},
             )
             with Operations.context(context):
                 context.run_migrations()
@@ -657,7 +657,7 @@ def test_image_migration_retry_preserves_products_and_revision_chain(partial_upg
             assert connection.execute(sa.text(
                 "SELECT name, image_filename FROM products WHERE id=1"
             )).one() == ("Producto previo", "existing.png" if partial_upgrade else None)
-            # Repeating upgrade at head must not repeat DDL or lose existing data.
+            # Reapplying this revision must not repeat DDL or lose existing data.
             with Operations.context(context):
                 context.run_migrations()
             assert len(sa.inspect(connection).get_columns("products")) == 3

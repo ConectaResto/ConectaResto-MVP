@@ -16,12 +16,15 @@ class ServicioRepository:
         return db.session.execute(consulta).scalars().all()
 
     @staticmethod
-    def calcular_total(servicio_id, *, bloquear=False):
+    def calcular_total(servicio_id, *, bloquear=False, estados=None):
+        """Suma el histórico completo salvo que el consumidor indique estados."""
         consulta = (
             db.select(DetallePedido).join(Pedido)
             .where(Pedido.servicio_id == servicio_id)
             .execution_options(populate_existing=True)
         )
+        if estados is not None:
+            consulta = consulta.where(Pedido.estado.in_(estados))
         if bloquear:
             consulta = consulta.with_for_update()
         detalles = db.session.execute(consulta).scalars()

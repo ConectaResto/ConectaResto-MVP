@@ -16,7 +16,9 @@ class PedidoRepository:
     def list_by_rol_and_estado(rol_name, estado=None):
         consulta = db.select(Pedido).order_by(Pedido.id)
         if rol_name == "KITCHEN":
-            consulta = consulta.where(Pedido.estado_preparacion != "NO_ENVIADO")
+            consulta = consulta.where(
+                Pedido.estado_preparacion != "NO_ENVIADO", Pedido.estado != "CANCELADO",
+            )
         if estado is not None:
             consulta = consulta.where(Pedido.estado == estado)
         return db.session.execute(consulta).scalars().all()
