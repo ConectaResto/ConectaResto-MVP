@@ -1,6 +1,8 @@
 # ConectaResto-MVP
 
-Aplicación académica de gestión de restaurantes desarrollada con **Python, Flask, MySQL 8 y HTML/CSS/JavaScript**. Permite gestionar mesas y productos, recibir pedidos mediante QR, autorizarlos, prepararlos y registrar pagos simulados.
+API REST académica para la gestión de restaurantes, desarrollada con **Python, Flask, SQLAlchemy y MySQL 8**. El código se organiza por dominio. Las rutas reciben las solicitudes HTTP, los servicios aplican las reglas de negocio y los modelos gestionan la persistencia con SQLAlchemy. Los módulos de pedidos y servicios incluyen repositorios para las consultas.
+
+Flask conserva la API JSON, las reglas de negocio, la persistencia, las fotografías de productos y la generación de códigos QR. La interfaz HTML, CSS y JavaScript vive en una SPA independiente que consume esta API. [Repositorio oficial del frontend](https://github.com/ConectaResto/ConectaResto-MVP-Frontend).
 
 > **Alcance:** demostración local. No incluye pagos reales ni despliegue comercial.
 
@@ -39,7 +41,7 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
 
-Cuando aparezca `(.venv)` al comienzo de la terminal, el entorno estará activo. Las dependencias incluyen Flask, Flask-Migrate, PyMySQL, python-dotenv, pytest y segno.
+Cuando aparezca `(.venv)` al comienzo de la terminal, el entorno estará activo. Las dependencias incluyen Flask, Flask-SQLAlchemy, Flask-Migrate, PyMySQL, python-dotenv, pytest y segno.
 
 ## 3. Preparar una base MySQL vacía
 
@@ -72,9 +74,9 @@ PUBLIC_BASE_URL=http://127.0.0.1:8000
 DATABASE_URL=mysql+pymysql://USUARIO:CONTRASENA@127.0.0.1:3306/conectaresto_mvp
 ```
 
-- Sustituye `USUARIO` y `CONTRASENA` por las credenciales **locales** de MySQL.
-- Si la contraseña de MySQL tiene caracteres especiales (por ejemplo, `@`, `#`, `/` o `:`), codifícalos para utilizarlos dentro de una URL.
-- `PUBLIC_BASE_URL` apunta a la SPA independiente, por ejemplo `http://127.0.0.1:8000` para la demo local. Cambia el valor si tu configuración anterior apuntaba a Flask. Los QR nuevos abren `/?token=<token>#public`; los enlaces antiguos `/public/mesas/<token>/menu` redirigen a la SPA.
+- `DATABASE_URL` es la URL de conexión de SQLAlchemy a MySQL. Sustituye `USUARIO`, `CONTRASENA` y el nombre de la base por los de tu instalación. Codifica los caracteres reservados de la contraseña (por ejemplo, `@`, `#`, `/` o `:`) para utilizarlos en la URL.
+- `SECRET_KEY` firma las cookies de sesión de Flask. Usa una clave larga, privada y propia de la instalación.
+- `PUBLIC_BASE_URL` debe apuntar a la SPA independiente. Para la demo local usa `http://127.0.0.1:8000`.
 - **Nunca subas `.env`, contraseñas ni claves a GitHub.**
 
 ## 5. Aplicar las migraciones
@@ -86,7 +88,7 @@ python -m flask --app run.py db upgrade
 python -m flask --app run.py db current
 ```
 
-La segunda instrucción debe indicar la revisión `014_add_image_filename_to_products (head)`.
+La segunda instrucción debe indicar la revisión `015_add_cancelado_to_pedidos (head)`.
 
 Las tablas se crean mediante **Flask-Migrate**. No uses `db.create_all()` para sustituir este paso.
 
@@ -98,45 +100,45 @@ Ejecuta **solo en una base local de prueba**:
 python -m flask --app run.py seed-demo
 ```
 
-El comando muestra la base de datos de destino, solicita confirmación y pide una contraseña (con confirmación). **Esa contraseña se utiliza para los usuarios de demostración**:
+El comando pide una contraseña y su confirmación, muestra la base de datos de destino y solicita confirmación antes de cargar los datos. **Esa contraseña se utiliza para los usuarios de demostración.**
 
 | Usuario | Rol | Función |
 | --- | --- | --- |
-| `admin1` | ADMIN | Administrar mesas, catálogo y QR |
-| `mesero1` | WAITER | Abrir servicios, autorizar y entregar pedidos |
+| `admin1` | ADMIN | Administrar mesas, catálogo, usuarios y QR |
+| `mesero1` | WAITER | Abrir servicios, autorizar y enviar pedidos a Cocina y registrar la entrega |
 | `cocinero1` | KITCHEN | Preparar pedidos |
 | `cajero1` | CASHIER | Registrar pago simulado y cerrar servicios |
 
 La contraseña **no está escrita en el repositorio**: es la que introduces al ejecutar `seed-demo`.
 
-## 7. Iniciar la aplicación
+## 7. Iniciar la API y la SPA
 
 ```powershell
-python -m flask --app run.py run --no-debugger --no-reload
+python -m flask --app run.py run --host 127.0.0.1 --port 5000 --no-debugger --no-reload
 ```
 
-Flask sirve la API en **http://127.0.0.1:5000**. Comprueba el arranque en **http://127.0.0.1:5000/health**.
+Flask sirve la API en `http://127.0.0.1:5000`. Para comprobar el arranque, abre `http://127.0.0.1:5000/health`. `GET /health` devuelve HTTP `200` y JSON con `status: "ok"`.
 
-En otra terminal, desde el repositorio [ConectaResto-MVP-Frontend](https://github.com/ConectaResto/ConectaResto-MVP-Frontend), ejecuta:
+Desde la raíz del frontend oficial, abre otra terminal y ejecuta el siguiente comando. [README del frontend](https://github.com/ConectaResto/ConectaResto-MVP-Frontend/blob/main/README.md).
 
 ```powershell
 python -m http.server 8000 --bind 127.0.0.1
 ```
 
-Abre **http://127.0.0.1:8000/#login**.
+Abre `http://127.0.0.1:8000/#login`. En desarrollo, Flask permite solicitudes con credenciales desde el origen exacto `http://127.0.0.1:8000`. Usa esa URL en el navegador.
 
-Mantén abierta la terminal de Flask mientras pruebas la aplicación. Para detener el servidor, presiona `Ctrl+C`.
+Mantén ambos servidores en ejecución durante la prueba. Para detenerlos, presiona `Ctrl+C` en cada terminal.
 
 ## 8. Recorrido rápido de demostración
 
 1. **ADMIN:** entra con `admin1`, comprueba o crea una mesa, categoría y producto; muestra **Ver QR** de la mesa.
 
-   Puedes guardar una imagen del QR y cargarla en el [lector QR online](https://www.codigos-qr.com/lector-qr-online/#result) para consultar el enlace que contiene. El lector es un servicio externo a ConectaResto.
+   Puedes guardar una imagen del QR y cargarla en el [lector QR online](https://www.codigos-qr.com/lector-qr-online/) para consultar el enlace que contiene. El lector es un servicio externo a ConectaResto.
 
 2. **CLIENTE:** abre el enlace del QR en una ventana privada, sin iniciar sesión; agrega productos y confirma un pedido.
 3. **WAITER:** entra con `mesero1`, localiza el pedido en Pendientes de autorización, pulsa **Autorizar y enviar a Cocina**.
 4. **KITCHEN:** entra con `cocinero1`, pulsa **En cocina** y luego **Listo para servir**.
-5. **WAITER:** pulsa **Entregar** cuando esté Listo; el pedido pasa al Historial de pedidos entregados.
+5. **WAITER:** pulsa **Entregar** cuando el pedido esté listo. El pedido pasa a **Historial de entregados y cancelados**.
 6. **CASHIER:** entra con `cajero1`, registra el **pago simulado** y cierra el servicio.
 7. **WAITER:** comprueba que la mesa vuelve a **Disponible**.
 
@@ -144,21 +146,18 @@ Al confirmar un pedido público, el backend reutiliza el servicio activo de la m
 
 Para usar sesiones de roles distintos, cierra sesión o utiliza perfiles de navegador separados. Las pestañas del mismo perfil suelen compartir sesión.
 
-### Mejoras integradas de las vistas (D, E y F)
-
-- **D:** estados legibles en español en administración, mesero, cocina y caja; sin cambiar valores internos ni transiciones.
-- **E:** pendientes de autorización, pedidos en curso e historial de entregados, ordenados por ID descendente. Detalles muestra nombres y cantidades en las tres secciones; el historial no tiene acciones operativas.
-- **F:** columna MESA con el número visible, resaltada en pendientes/en curso y sin resaltado en historial. Si falta la relación muestra «Mesa desconocida», sin sustituir el número por un ID interno.
+Mesero distingue pendientes de autorización, pedidos en curso e historial de entregados y cancelados. **Ver detalles** permite consultar productos y cantidades en las tres secciones. La tabla muestra el número visible de mesa o «Mesa sin identificar» si falta la relación.
 
 ## 9. Ejecutar las pruebas automatizadas
 
-Con las dependencias instaladas:
+Con las dependencias instaladas, ejecuta la suite en una terminal de pruebas con SQLite en memoria:
 
 ```powershell
+$env:TEST_DATABASE_URL = 'sqlite:///:memory:'
 python -m pytest -q
 ```
 
-Para aislar la suite de MySQL, establece `$env:TEST_DATABASE_URL = 'sqlite:///:memory:'` en la terminal de pruebas antes de ejecutarla. La suite general se probó con SQLite durante la auditoría; una prueba de collation requiere MySQL y puede omitirse con SQLite. **No apuntes los tests a una base con datos que quieras conservar**: algunos fixtures crean y eliminan tablas.
+Una prueba de cotejamiento (`utf8mb4_0900_ai_ci`) requiere MySQL 8 y se omite con SQLite. Usa únicamente bases desechables para las pruebas porque algunos fixtures crean y eliminan tablas.
 
 ## Solución de problemas
 
@@ -166,12 +165,10 @@ Para aislar la suite de MySQL, establece `$env:TEST_DATABASE_URL = 'sqlite:///:m
 | --- | --- |
 | `ModuleNotFoundError` | Activa `.venv` y reinstala `requirements.txt`. |
 | Error de conexión MySQL | Servicio MySQL activo, nombre de base, usuario, contraseña y `DATABASE_URL`. |
-| Error por tabla o columna faltante | Ejecuta `db current` y verifica que las migraciones lleguen a `014_add_image_filename_to_products`. |
+| Error por tabla o columna faltante | Ejecuta `db current` y verifica que las migraciones lleguen a `015_add_cancelado_to_pedidos`. |
 | El inicio de sesión falla | Comprueba que `seed-demo` terminó y usa la contraseña que elegiste allí. |
-| El QR no abre en un teléfono | `127.0.0.1` es el propio dispositivo; para probar con teléfono hace falta una URL accesible desde la red y una configuración adecuada del servidor. |
+| El QR no abre en un teléfono | La demo usa `127.0.0.1` para ambos servidores. Abre el enlace del QR en el mismo equipo que ejecuta la demo. |
 | El puerto 5000 está ocupado | Detén la otra instancia de Flask antes de volver a iniciarlo. |
-
-**Nota:** ConectaResto-MVP es un proyecto académico. El pago es simulado y los datos de demostración deben mantenerse separados de datos reales.
 
 ## Reactivación administrativa
 
@@ -186,3 +183,30 @@ Los listados `/categories?include_inactive=true` y
 siguen ocultando inactivos. Reactivar una categoría no reactiva sus productos;
 un producto requiere una categoría activa y conserva su disponibilidad.
 **Activo** y **Disponible** son estados independientes.
+
+## API y recursos
+
+| Módulo | Endpoints principales |
+| --- | --- |
+| Autenticación | `GET /auth/csrf`, `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` |
+| Mesas y usuarios | `GET /mesas` para Mesero. Administración usa `GET /admin/mesas`, `POST /admin/mesas`, `GET /admin/mesas/<id>/qr.svg` y `GET /users`. |
+| Catálogo | `GET /categories` y `GET /products` para el catálogo público. `GET /admin/products` para Administración. |
+| Servicios | `GET /servicios` y `GET /servicios/<id>` para Mesero y Caja. `POST /servicios` y `POST /servicios/<id>/pedidos` para Mesero. |
+| Pedidos públicos | `GET /public/mesas/<token>` consulta la mesa. `POST /public/mesas/<token>/pedidos` registra el pedido con CSRF y sin iniciar sesión. |
+| Mesero | `GET /pedidos` y `GET /pedidos/<id>` consultan pedidos. `POST /pedidos/<id>/autorizar-y-enviar-cocina`, `POST /pedidos/<id>/entregar` y `POST /pedidos/<id>/cancelar` aplican las transiciones permitidas. |
+| Cocina | `GET /pedidos` y `GET /pedidos/<id>` consultan pedidos de Cocina. `PATCH /pedidos/<id>/preparacion` actualiza su preparación. |
+| Caja | `POST /servicios/<id>/pago-simulado` y `POST /servicios/<id>/cerrar` registran el pago simulado y el cierre. |
+
+- **QR.** Flask genera el SVG al solicitarlo. El enlace abre `/?token=<token>#public` en la SPA. En la demo, la generación usa el origen local permitido cuando la solicitud viene de ese origen y `PUBLIC_BASE_URL` en los demás casos. El enlace anterior `GET /public/mesas/<token>/menu` redirige con HTTP `302` a `PUBLIC_BASE_URL` para un token válido y devuelve `404` para uno inválido.
+- **Fotografías.** Flask sirve las imágenes reales de productos activos y disponibles en `GET /products/<id>/image`, desde `instance/uploads/products/`. El SVG predeterminado se sirve desde `img/default-product.svg` en el repositorio frontend.
+
+## Estructura del backend
+
+| Ruta | Responsabilidad |
+| --- | --- |
+| `run.py`, `app/__init__.py`, `app/config.py` | Punto de entrada, registro de módulos y configuración de Flask. |
+| `app/auth/`, `app/users/` | Sesiones, CSRF, roles, usuarios y comandos de carga inicial. |
+| `app/catalog/`, `app/mesas/` | Catálogo, fotografías, mesas y acceso al menú por QR. |
+| `app/servicios/`, `app/pedidos/` | Servicios de mesa, pedidos, preparación, pago simulado y cierre. |
+| `app/common/`, `app/models/`, `app/health/` | Respuestas y errores comunes, registro y base de modelos y comprobación de arranque. |
+| `migrations/`, `tests/` | Migraciones de Alembic y pruebas automatizadas. |
